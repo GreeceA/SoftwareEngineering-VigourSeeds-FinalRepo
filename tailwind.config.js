@@ -10,6 +10,10 @@ export default {
         './resources/js/**/*.jsx',
     ],
 
+    safelist: [
+    'font-[900]',
+    ],
+
     theme: {
         extend: {
             fontFamily: {
