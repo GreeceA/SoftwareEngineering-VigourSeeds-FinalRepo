@@ -24,7 +24,7 @@ export default function AuthenticatedLayout({ header, children }) {
                     <div className="flex h-16 justify-between">
                         <div className="flex">
                             <div className="flex shrink-0 items-center">
-                                <Link href="/">
+                                <Link href="http://localhost/dashboard/SoftwareEngineering-VigourSeeds-FinalRepo/public/dashboard">
                                     <img
                                         src={Vlogo}   alt="Vigour Seeds Logo"  className="block h-9 w-auto"
                                     />
@@ -110,26 +110,26 @@ export default function AuthenticatedLayout({ header, children }) {
                             <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
                                 {/* CONTRACTS */}
                                 <NavLink
-                                    href={route('dashboard')}
-                                    active={route().current('dashboard')}
+                                    // href={route('dashboard')}
+                                    // active={route().current('dashboard')}
                                 >
                                     Contracts
                                 </NavLink>
                                 <NavLink
-                                    href={route('dashboard')}
-                                    active={route().current('dashboard')}
+                                    // href={route('dashboard')}
+                                    // active={route().current('dashboard')}
                                 >
                                     Partners
                                 </NavLink>
                                 <NavLink
-                                    href={route('dashboard')}
-                                    active={route().current('dashboard')}
+                                    // href={route('dashboard')}
+                                    // active={route().current('dashboard')}
                                 >
                                     Inventory
                                 </NavLink>
                                 <NavLink
-                                    href={route('dashboard')}
-                                    active={route().current('dashboard')}
+                                    // href={route('dashboard')}
+                                    // active={route().current('dashboard')}
                                 >
                                     Field Visit
                                 </NavLink>
