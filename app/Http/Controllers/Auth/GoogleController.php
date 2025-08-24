@@ -42,14 +42,16 @@ class GoogleController extends Controller
             $user = User::where('email', $googleUser->getEmail())->first();
 
             if ($user) {
+                // User exists - only update Google-specific fields, preserve existing name
                 $user->update([
                     'google_id' => $googleUser->getId(),
                     'avatar' => $googleUser->getAvatar(),
                     'email_verified_at' => $user->email_verified_at ?? now(),
-                    'first_name' => $firstName,
-                    'last_name' => $lastName,
+                    // Don't update first_name and last_name if user already exists
+                    // This preserves the names entered during registration
                 ]);
             } else {
+                // New user - use Google name as fallback
                 $user = User::create([
                     'first_name' => $firstName,
                     'last_name' => $lastName,
@@ -78,6 +80,17 @@ class GoogleController extends Controller
 
             return redirect()->route('login')->with('error', 'Google login failed: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Redirect to Google OAuth for linking account during registration
+     */
+    public function redirectToGoogleForLinking()
+    {
+        \Log::info('Redirecting to Google OAuth for account linking');
+        return Socialite::driver('google')
+            ->redirectUrl(config('services.google.redirect'))
+            ->redirect();
     }
 
 }

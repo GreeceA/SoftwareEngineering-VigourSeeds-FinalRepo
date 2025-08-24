@@ -8,6 +8,9 @@ import Vlogo from '@/assets/vigour-logo.png';
 
 export default function AuthenticatedLayout({ header, children }) {
     const user = usePage().props.auth.user;
+    
+    // Get full name from first_name and last_name
+    const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
 
     const [showingNavigationDropdown, setShowingNavigationDropdown] =
         useState(false);
@@ -54,7 +57,23 @@ export default function AuthenticatedLayout({ header, children }) {
                                                 type="button"
                                                 className="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none"
                                             >
-                                                {user.name}
+                                                {/* Avatar */}
+                                                <div className="mr-3">
+                                                    {user.avatar ? (
+                                                        <img
+                                                            src={user.avatar}
+                                                            alt={`${fullName}'s avatar`}
+                                                            className="h-8 w-8 rounded-full border border-gray-300 object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="h-8 w-8 rounded-full bg-[#37692F] flex items-center justify-center text-white text-sm font-bold">
+                                                            {(user.first_name?.[0] || user.email[0]).toUpperCase()}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                
+                                                {/* Full Name */}
+                                                {fullName}
 
                                                 <svg
                                                     className="-me-0.5 ms-2 h-4 w-4"
@@ -150,11 +169,28 @@ export default function AuthenticatedLayout({ header, children }) {
 
                     <div className="border-t border-gray-200 pb-1 pt-4">
                         <div className="px-4">
-                            <div className="text-base font-medium text-gray-800">
-                                {user.name}
-                            </div>
-                            <div className="text-sm font-medium text-gray-500">
-                                {user.email}
+                            <div className="flex items-center space-x-3">
+                                {/* Mobile Avatar */}
+                                {user.avatar ? (
+                                    <img
+                                        src={user.avatar}
+                                        alt={`${fullName}'s avatar`}
+                                        className="h-10 w-10 rounded-full border border-gray-300 object-cover"
+                                    />
+                                ) : (
+                                    <div className="h-10 w-10 rounded-full bg-[#37692F] flex items-center justify-center text-white text-sm font-bold">
+                                        {(user.first_name?.[0] || user.email[0]).toUpperCase()}
+                                    </div>
+                                )}
+                                
+                                <div>
+                                    <div className="text-base font-medium text-gray-800">
+                                        {fullName}
+                                    </div>
+                                    <div className="text-sm font-medium text-gray-500">
+                                        {user.email}
+                                    </div>
+                                </div>
                             </div>
                         </div>
 

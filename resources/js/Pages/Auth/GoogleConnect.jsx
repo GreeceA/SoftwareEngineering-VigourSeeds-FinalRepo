@@ -5,7 +5,7 @@ import { Head, router } from '@inertiajs/react';
 
 export default function GoogleConnect() {
     const handleConnectGoogle = () => {
-        window.location.href = route('google.link');
+        window.location.href = route('register.google.redirect');
     };
 
     const handleSkip = () => {
