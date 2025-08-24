@@ -1,10 +1,13 @@
 import Checkbox from '@/Components/Checkbox';
 import InputError from '@/Components/InputError';
 import InputLabel from '@/Components/InputLabel';
-import PrimaryButton from '@/Components/PrimaryButton';
 import TextInput from '@/Components/TextInput';
 import GuestLayout from '@/Layouts/GuestLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
+import Gpic from '@/assets/google-logo.png'; 
+import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { useState } from 'react';
+import '../../../css/fonts.css';
 
 export default function Login({ status, canResetPassword }) {
     const { data, setData, post, processing, errors, reset } = useForm({
@@ -13,16 +16,18 @@ export default function Login({ status, canResetPassword }) {
         remember: false,
     });
 
+    const [showPassword, setShowPassword] = useState(false);
+    const togglePasswordVisibility = () => setShowPassword((prev) => !prev);
+
     const submit = (e) => {
         e.preventDefault();
-
         post(route('login'), {
             onFinish: () => reset('password'),
         });
     };
 
     return (
-        <GuestLayout title={"Log In"}>
+        <GuestLayout title="Log In">
             <Head title="Log in" />
 
             {status && (
@@ -38,7 +43,6 @@ export default function Login({ status, canResetPassword }) {
                         value="Email" 
                         className="text-[16px] text-[#666666] font-medium mb-1" 
                     />
-
                     <TextInput
                         id="email"
                         type="email"
@@ -49,7 +53,6 @@ export default function Login({ status, canResetPassword }) {
                         isFocused={true}
                         onChange={(e) => setData('email', e.target.value)}
                     />
-
                     <InputError message={errors.email} className="mt-1" />
                 </div>
 
@@ -59,17 +62,28 @@ export default function Login({ status, canResetPassword }) {
                         value="Password" 
                         className="text-[16px] text-[#666666] font-medium mb-1" 
                     />
-
-                    <TextInput
-                        id="password"
-                        type="password"
-                        name="password"
-                        value={data.password}
-                        className="mt-1 block w-full border-[#666666] border-opacity-35 rounded-md"
-                        autoComplete="current-password"
-                        onChange={(e) => setData('password', e.target.value)}
-                    />
-
+                    <div className="relative">
+                        <TextInput
+                            id="password"
+                            type={showPassword ? "text" : "password"}
+                            name="password"
+                            value={data.password}
+                            className="mt-1 block w-full pr-10 border-[#666666] border-opacity-35 rounded-md"
+                            autoComplete="current-password"
+                            onChange={(e) => setData('password', e.target.value)}
+                        />
+                        <button
+                            type="button"
+                            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500"
+                            onClick={togglePasswordVisibility}
+                        >
+                            {showPassword ? (
+                                <EyeSlashIcon className="w-5 h-5" />
+                            ) : (
+                                <EyeIcon className="w-5 h-5" />
+                            )}
+                        </button>
+                    </div>
                     <InputError message={errors.password} className="mt-1" />
                 </div>
 
@@ -78,13 +92,9 @@ export default function Login({ status, canResetPassword }) {
                         <Checkbox
                             name="remember"
                             checked={data.remember}
-                            onChange={(e) =>
-                                setData('remember', e.target.checked)
-                            }
+                            onChange={(e) => setData('remember', e.target.checked)}
                         />
-                        <span className="ms-2 text-[16px] text-[#666666]">
-                            Remember me
-                        </span>
+                        <span className="ms-2 text-[16px] text-[#666666]">Remember me</span>
                     </label>
                     
                     {canResetPassword && (
@@ -107,29 +117,29 @@ export default function Login({ status, canResetPassword }) {
                     </button>
                 </div>
 
-                <div className="mt-6">
-                    <div className="relative">
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-gray-300" />
-                        </div>
-                        <div className="relative flex justify-center text-sm">
-                            <span className="bg-white px-2 text-[16px] text-[#666666]">Or continue with</span>
-                        </div>
+                <div className="mt-6 relative">
+                    <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-gray-300" />
                     </div>
+                    <div className="relative flex justify-center text-sm">
+                        <span className="bg-white px-2 text-[16px] text-[#666666]">
+                            Or continue with
+                        </span>
+                    </div>
+                </div>
 
-                    <div className="mt-6">
-                        <a
-                            href={route('google.redirect')}
-                            className="w-full inline-flex justify-center items-center py-3 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-[16px] font-medium text-gray-700 hover:bg-gray-50 transition duration-150 ease-in-out"
-                        >
-                            <img 
-                                src={`${window.location.origin}/dashboard/SoftwareEngineering-VigourSeeds-FinalRepo/public/images/google-logo.png`}
-                                alt="Google Logo" 
-                                className="w-5 h-5 mr-2"
-                            />
-                            Continue with Google
-                        </a>
-                    </div>
+                <div className="mt-6">
+                    <a
+                        href={route('google.redirect')}
+                        className="w-full inline-flex justify-center items-center py-3 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-[16px] font-medium text-gray-700 hover:bg-gray-50 transition duration-150 ease-in-out"
+                    >
+                        <img 
+                            src={Gpic}
+                            alt="Google Logo" 
+                            className="w-5 h-5 mr-2"
+                        />
+                        Continue with Google
+                    </a>
                 </div>
             </form>
         </GuestLayout>

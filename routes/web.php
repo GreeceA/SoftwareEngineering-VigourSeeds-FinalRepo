@@ -26,9 +26,10 @@ Route::middleware('auth')->group(function () {
 });
 
 // Google OAuth Routes
+
 Route::get('/auth/google', [GoogleController::class, 'redirectToGoogle'])->name('google.redirect');
-Route::get('/auth/google/link', [GoogleController::class, 'redirectToGoogleForLinking'])->name('google.link')->middleware('auth');
 Route::get('/auth/google/callback', [GoogleController::class, 'handleGoogleCallback'])->name('google.callback');
+Route::get('/auth/google/link', [GoogleController::class, 'redirectToGoogleForLinking'])->name('google.link')->middleware('auth');
 
 // Debug route to check Google config
 Route::get('/debug/google', function() {
