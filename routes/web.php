@@ -53,6 +53,8 @@ Route::get('/dashboard', function () {
     Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
     Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
     Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
+    Route::get('/users/roles', [UserController::class, 'roles'])->name('users.roles');
+    Route::get('/users/permissions', [UserController::class, 'permissions'])->name('users.permissions');
 });
 
 
@@ -71,11 +73,3 @@ Route::post('/register/skip-google', [App\Http\Controllers\Auth\RegisteredUserCo
 Route::get('/register/google', [GoogleController::class, 'redirectToGoogle'])->name('register.google.redirect');
 
 require __DIR__.'/auth.php';
-
-//User Management Routes
-Route::middleware(['auth'])->group(function () {
-    Route::get('/users', [UserController::class, 'index'])->name('users.index');
-    Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
-    Route::get('/users/roles', [UserController::class, 'roles'])->name('users.roles');
-    Route::get('/users/permissions', [UserController::class, 'permissions'])->name('users.permissions');
-});
