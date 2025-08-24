@@ -30,7 +30,7 @@ export default function AuthenticatedLayout({ header, children }) {
 
                             <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
                                 {/* DASHBOARD */}
-                                <NavLink
+                                <NavLink 
                                     href={route('dashboard')}
                                     active={route().current('dashboard')}
                                 >
@@ -41,8 +41,8 @@ export default function AuthenticatedLayout({ header, children }) {
                             <div className="relative hidden sm:-my-px sm:ms-10 sm:flex">
                                 {/* USERS */}
                                 <NavLink
-                                    href={route("dashboard")}
-                                    active={route().current("dashboard")}
+                                    href={route("users.index")}
+                                    active={route().current("users.index")}
                                     className="inline-flex items-center"
                                 >
                                 Users
@@ -77,25 +77,25 @@ export default function AuthenticatedLayout({ header, children }) {
                                 {open && (
                                     <div className="absolute top-5 left-0 mt-10 w-48 rounded-md bg-gray-50 shadow-lg text-sans text-[14px]">
                                         <Link
-                                            href={route("dashboard")}
+                                            href={route("users.index")}
                                             className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
                                         >
                                             All Users
                                         </Link>
                                         <Link
-                                            href={route("dashboard")}
+                                            href={route("users.create")}
                                             className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
                                         >
                                             Add User
                                         </Link>
                                         <Link
-                                            href={route("dashboard")}
+                                            href={route("users.roles")}
                                             className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
                                         >
                                             User Roles
                                         </Link>
                                         <Link
-                                            href={route("dashboard")}
+                                            href={route("users.permissions")}
                                             className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
                                         >
                                             User Permissions
