@@ -36,9 +36,9 @@ return [
     ],
     
     'google' => [
-        'client_id' => env('691970185899-mstu1rcopfsscin9kqdtnphh577h4o3r.apps.googleusercontent.com'),
-        'client_secret' => env('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'),
-        'redirect' => env('http://localhost/dashboard/SoftwareEngineering-VigourSeeds-FinalRepo/public/auth/google/callback'),
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI'),
     ],
 
 

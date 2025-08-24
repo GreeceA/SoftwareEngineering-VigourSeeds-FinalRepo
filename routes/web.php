@@ -34,20 +34,12 @@ Route::get('/auth/google', [GoogleController::class, 'redirectToGoogle'])->name(
 Route::get('/auth/google/callback', [GoogleController::class, 'handleGoogleCallback'])->name('google.callback');
 Route::get('/auth/google/link', [GoogleController::class, 'redirectToGoogleForLinking'])->name('google.link')->middleware('auth');
 
-// Debug route to check Google config
-Route::get('/debug/google', function() {
-    return response()->json([
-        'client_id' => config('services.google.client_id'),
-        'redirect_uri' => config('services.google.redirect'),
-        'app_url' => config('app.url')
-    ]);
-});
-
-// Registration Google Connect Routes
+// Registration Google Connect Routes (no auth required during registration)
 Route::get('/register/google-connect', [App\Http\Controllers\Auth\RegisteredUserController::class, 'showGoogleConnect'])
-    ->middleware('auth')->name('register.google-connect');
+    ->name('register.google-connect');
 Route::post('/register/skip-google', [App\Http\Controllers\Auth\RegisteredUserController::class, 'skipGoogleConnect'])
-    ->middleware('auth')->name('register.skip-google');
+    ->name('register.skip-google');
+Route::get('/register/google', [GoogleController::class, 'redirectToGoogle'])->name('register.google.redirect');
 
 require __DIR__.'/auth.php';
 
