@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Auth\GoogleController;
+use App\Http\Controllers\UserController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -25,6 +26,8 @@ Route::middleware('auth')->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
+
+
 // Google OAuth Routes
 
 Route::get('/auth/google', [GoogleController::class, 'redirectToGoogle'])->name('google.redirect');
@@ -39,3 +42,11 @@ Route::post('/register/skip-google', [App\Http\Controllers\Auth\RegisteredUserCo
 Route::get('/register/google', [GoogleController::class, 'redirectToGoogle'])->name('register.google.redirect');
 
 require __DIR__.'/auth.php';
+
+//User Management Routes
+Route::middleware(['auth'])->group(function () {
+    Route::get('/users', [UserController::class, 'index'])->name('users.index');
+    Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
+    Route::get('/users/roles', [UserController::class, 'roles'])->name('users.roles');
+    Route::get('/users/permissions', [UserController::class, 'permissions'])->name('users.permissions');
+});

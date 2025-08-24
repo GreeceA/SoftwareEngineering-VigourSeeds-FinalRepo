@@ -5,6 +5,7 @@ import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
 import { Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import Vlogo from '@/assets/vigour-logo.png';
+import DashLogo from '@/assets/dashboard-bg-logo.png';
 
 export default function AuthenticatedLayout({ header, children }) {
     const user = usePage().props.auth.user;
@@ -15,8 +16,9 @@ export default function AuthenticatedLayout({ header, children }) {
     const [showingNavigationDropdown, setShowingNavigationDropdown] =
         useState(false);
 
+        const [open, setOpen] = useState(false);
     return (
-        <div className="min-h-screen bg-gray-100">
+        <div className="min-h-screen bg-gray-50">
             <nav className="border-b border-gray-100 bg-white">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                     <div className="flex h-16 justify-between">
@@ -30,20 +32,106 @@ export default function AuthenticatedLayout({ header, children }) {
                             </div>
 
                             <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                                <NavLink
+                                {/* DASHBOARD */}
+                                <NavLink 
                                     href={route('dashboard')}
                                     active={route().current('dashboard')}
                                 >
                                     Dashboard
                                 </NavLink>
                             </div>
+
+                            <div className="relative hidden sm:-my-px sm:ms-10 sm:flex">
+                                {/* USERS */}
+                                <NavLink
+                                    href={route("users.index")}
+                                    active={route().current("users.index")}
+                                    className="inline-flex items-center"
+                                >
+                                Users
+                                </NavLink>
+
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.preventDefault(); // prevent NavLink navigation
+                                        setOpen(!open);
+                                    }}
+                                    className="ml-2 focus:outline-none"
+                                >
+                                    <svg
+                                        className={`h-4 w-4 transition-transform duration-200 ${
+                                            open ? "rotate-180" : "rotate-0"
+                                        }`}
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        viewBox="0 0 20 20"
+                                        fill="#111827"
+                                    >
+                                        <path
+                                            fillRule="evenodd"
+                                            d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                            clipRule="evenodd"
+                                        />
+                                    </svg>
+                                </button>
+            
+
+                                {/* Dropdown */}
+                                {open && (
+                                    <div className="absolute top-5 left-0 mt-10 w-48 rounded-md bg-gray-50 shadow-lg text-sans text-[14px]">
+                                        <Link
+                                            href={route("users.index")}
+                                            className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
+                                        >
+                                            All Users
+                                        </Link>
+                                        <Link
+                                            href={route("users.create")}
+                                            className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
+                                        >
+                                            Add User
+                                        </Link>
+                                        <Link
+                                            href={route("users.roles")}
+                                            className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
+                                        >
+                                            User Roles
+                                        </Link>
+                                        <Link
+                                            href={route("users.permissions")}
+                                            className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
+                                        >
+                                            User Permissions
+                                        </Link>
+                                    </div>
+                                )}
+                            </div>
+
                             <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                                
+                                {/* CONTRACTS */}
                                 <NavLink
                                     href={route('dashboard')}
                                     active={route().current('dashboard')}
                                 >
-                                    Users
+                                    Contracts
+                                </NavLink>
+                                <NavLink
+                                    href={route('dashboard')}
+                                    active={route().current('dashboard')}
+                                >
+                                    Partners
+                                </NavLink>
+                                <NavLink
+                                    href={route('dashboard')}
+                                    active={route().current('dashboard')}
+                                >
+                                    Inventory
+                                </NavLink>
+                                <NavLink
+                                    href={route('dashboard')}
+                                    active={route().current('dashboard')}
+                                >
+                                    Field Visit
                                 </NavLink>
                             </div>
                         </div>
@@ -79,7 +167,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                                     className="-me-0.5 ms-2 h-4 w-4"
                                                     xmlns="http://www.w3.org/2000/svg"
                                                     viewBox="0 0 20 20"
-                                                    fill="currentColor"
+                                                    fill="#111827"
                                                 >
                                                     <path
                                                         fillRule="evenodd"
@@ -218,7 +306,12 @@ export default function AuthenticatedLayout({ header, children }) {
                 </header>
             )}
 
-            <main>{children}</main>
+            <main>
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                    <img src= {DashLogo}    alt="Background Logo"   className="w-[400px] h-auto"/>
+                </div>
+                {children}
+            </main>
         </div>
     );
 }
