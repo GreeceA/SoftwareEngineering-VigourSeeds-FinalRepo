@@ -48,6 +48,44 @@ class UserController extends Controller
         return redirect()->route('users.index')->with('success', 'User created successfully.');
     }
 
+    public function edit(User $user)
+    {
+        // Check if user is trying to edit a deactivated account
+        if ($user->status === 'inactive') {
+            return redirect()->route('users.index')->with('error', 'Cannot edit deactivated accounts');
+        }
+
+        return Inertia::render('Users/Edit', [
+            'user' => $user->only(['id', 'first_name', 'last_name', 'email', 'role', 'status', 'created_at'])
+        ]);
+    }
+
+    public function update(Request $request, User $user)
+    {
+        // Check if user is trying to update a deactivated account
+        if ($user->status === 'inactive') {
+            return back()->with('error', 'Cannot edit deactivated accounts');
+        }
+
+        $request->validate([
+            'first_name' => ['required', 'string', 'max:255'],
+            'last_name'  => ['required', 'string', 'max:255'],
+            'role'       => ['required', 'in:Employee,Manager'],
+        ]);
+
+        try {
+            $user->update([
+                'first_name' => $request->first_name,
+                'last_name'  => $request->last_name,
+                'role'       => $request->role,
+            ]);
+
+            return back()->with('success', 'User updated successfully');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to update user');
+        }
+    }
+
     public function roles()
     {
         return Inertia::render('Users/Roles');

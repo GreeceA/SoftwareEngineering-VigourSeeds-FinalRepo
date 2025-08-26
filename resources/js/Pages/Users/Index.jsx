@@ -1,18 +1,45 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link } from '@inertiajs/react';
-import { router } from '@inertiajs/react'; // Import router instead of Inertia
-import { useState, useMemo } from 'react';
+import { router } from '@inertiajs/react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { debounce } from 'lodash';
 import '../../../css/fonts.css';
-import { UserMinusIcon } from '@heroicons/react/24/outline'; 
+import { UserMinusIcon, ChevronDownIcon, FunnelIcon, ArrowsUpDownIcon } from '@heroicons/react/24/outline';
 import DeactivateModal from './DeactivateModal';
-import ReactivateModal from './ReactivateModal'; 
+import ReactivateModal from './ReactivateModal';
 
 export default function Index({ auth, users }) {
     const [search, setSearch] = useState("");
     const [modalUser, setModalUser] = useState(null);
     const [reactivateModalUser, setReactivateModalUser] = useState(null);
     const [userList, setUserList] = useState(users);
+    
+    // Filter and Sort states
+    const [filter, setFilter] = useState('all'); // 'all', 'active', 'inactive'
+    const [sort, setSort] = useState('default'); // 'default', 'role_asc', 'role_desc', 'date_asc', 'date_desc', 'name_asc', 'name_desc'
+    const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+    const [showSortDropdown, setShowSortDropdown] = useState(false);
+    
+    // Refs for dropdown management
+    const filterRef = useRef(null);
+    const sortRef = useRef(null);
+
+    // Close dropdowns when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (filterRef.current && !filterRef.current.contains(event.target)) {
+                setShowFilterDropdown(false);
+            }
+            if (sortRef.current && !sortRef.current.contains(event.target)) {
+                setShowSortDropdown(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
 
     // Debounce input to avoid updating on every keystroke
     const debouncedSearch = debounce((value) => {
@@ -23,29 +50,101 @@ export default function Index({ auth, users }) {
         debouncedSearch(e.target.value);
     };
 
-    // Filter users by full name, email, or role
-    const filteredUsers = useMemo(() => {
-        if (!search) return userList;
+    // Get role priority for sorting (higher number = higher role)
+    const getRolePriority = (role) => {
+        const priorities = {
+            'Manager': 2,
+            'Employee': 1
+        };
+        return priorities[role] || 0;
+    };
 
-        return userList.filter((user) => {
-            const name = user.name.toLowerCase();
-            const email = user.email?.toLowerCase() || '';
-            const role = user.role?.toLowerCase() || '';
+    // Filter, sort, and search users
+    const processedUsers = useMemo(() => {
+        let result = [...userList];
 
-            return (
-                name.includes(search.toLowerCase()) ||
-                email.includes(search.toLowerCase()) ||
-                role.includes(search.toLowerCase())
-            );
-        });
-    }, [userList, search]);
+        // 1. Always put current user at the top
+        const currentUserIndex = result.findIndex(user => user.id === auth.user.id);
+        let currentUser = null;
+        
+        if (currentUserIndex !== -1) {
+            currentUser = result.splice(currentUserIndex, 1)[0];
+        }
+
+        // 2. Apply search filter
+        if (search) {
+            result = result.filter((user) => {
+                const name = user.name.toLowerCase();
+                const email = user.email?.toLowerCase() || '';
+                const role = user.role?.toLowerCase() || '';
+
+                return (
+                    name.includes(search.toLowerCase()) ||
+                    email.includes(search.toLowerCase()) ||
+                    role.includes(search.toLowerCase())
+                );
+            });
+
+            // Also filter current user if search is applied
+            if (currentUser) {
+                const name = currentUser.name.toLowerCase();
+                const email = currentUser.email?.toLowerCase() || '';
+                const role = currentUser.role?.toLowerCase() || '';
+
+                if (!(name.includes(search.toLowerCase()) ||
+                      email.includes(search.toLowerCase()) ||
+                      role.includes(search.toLowerCase()))) {
+                    currentUser = null;
+                }
+            }
+        }
+
+        // 3. Apply status filter
+        if (filter !== 'all') {
+            result = result.filter(user => user.status === filter);
+            
+            // Also filter current user
+            if (currentUser && currentUser.status !== filter) {
+                currentUser = null;
+            }
+        }
+
+        // 4. Apply sorting
+        if (sort !== 'default') {
+            switch (sort) {
+                case 'role_asc':
+                    result.sort((a, b) => getRolePriority(a.role) - getRolePriority(b.role));
+                    break;
+                case 'role_desc':
+                    result.sort((a, b) => getRolePriority(b.role) - getRolePriority(a.role));
+                    break;
+                case 'date_asc':
+                    result.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+                    break;
+                case 'date_desc':
+                    result.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                    break;
+                case 'name_asc':
+                    result.sort((a, b) => a.name.localeCompare(b.name));
+                    break;
+                case 'name_desc':
+                    result.sort((a, b) => b.name.localeCompare(a.name));
+                    break;
+            }
+        }
+
+        // 5. Put current user back at the top
+        if (currentUser) {
+            result.unshift(currentUser);
+        }
+
+        return result;
+    }, [userList, search, filter, sort, auth.user.id]);
 
     const handleDeactivate = (id) => {
-        // Use router.post with preserveState to keep the current data and just refresh
         router.post(route('users.deactivate', id), {}, {
             preserveScroll: true,
             onSuccess: () => {
-                // Update local state after successful response
                 setUserList(prev => prev.map(u =>
                     u.id === id ? { ...u, status: 'inactive' } : u
                 ));
@@ -53,17 +152,15 @@ export default function Index({ auth, users }) {
             },
             onError: (errors) => {
                 console.error('Deactivation failed:', errors);
-                setModalUser(null); // Close modal even on error
+                setModalUser(null);
             }
         });
     };
 
     const handleReactivate = (id) => {
-        // Use router.post for reactivation
         router.post(route('users.reactivate', id), {}, {
             preserveScroll: true,
             onSuccess: () => {
-                // Update local state after successful response
                 setUserList(prev => prev.map(u =>
                     u.id === id ? { ...u, status: 'active' } : u
                 ));
@@ -71,9 +168,40 @@ export default function Index({ auth, users }) {
             },
             onError: (errors) => {
                 console.error('Reactivation failed:', errors);
-                setReactivateModalUser(null); // Close modal even on error
+                setReactivateModalUser(null);
             }
         });
+    };
+
+    const getFilterLabel = () => {
+        switch (filter) {
+            case 'active': return 'Active Only';
+            case 'inactive': return 'Inactive Only';
+            default: return 'All Users';
+        }
+    };
+
+    const getSortLabel = () => {
+        switch (sort) {
+            case 'role_asc': return 'Role (Low to High)';
+            case 'role_desc': return 'Role (High to Low)';
+            case 'date_asc': return 'Date (Oldest First)';
+            case 'date_desc': return 'Date (Newest First)';
+            case 'name_asc': return 'Name (A to Z)';
+            case 'name_desc': return 'Name (Z to A)';
+            default: return 'Default';
+        }
+    };
+
+    const getRoleColor = (role) => {
+        switch (role) {
+            case 'Manager':
+                return 'bg-purple-600 text-white';
+            case 'Employee':
+                return 'bg-blue-600 text-white';
+            default:
+                return 'bg-gray-600 text-white';
+        }
     };
 
     return (
@@ -91,24 +219,156 @@ export default function Index({ auth, users }) {
             {/* Breadcrumb */}
             <div className="px-6 pt-6">
                 <nav className="text-sm text-gray-600">
-                    <a
+                    <Link
                         href="/dashboard"
                         className="text-[#37692F] hover:underline"
                     >
                         Home
-                    </a>{" "}
+                    </Link>{" "}
                     / <span>Users</span>
                 </nav>
             </div>
 
             <div className="p-6">
-                {/* Header Section with Search and Add Button */}
+                {/* Header Section with Search, Filter, Sort and Add Button */}
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-2xl font-semibold text-gray-800">
                         Employee Information
                     </h1>
 
-                    <div className="flex space-x-5">
+                    <div className="flex space-x-3">
+                        {/* Filter Dropdown */}
+                        <div className="relative" ref={filterRef}>
+                            <button
+                                onClick={() => {
+                                    setShowFilterDropdown(!showFilterDropdown);
+                                    setShowSortDropdown(false);
+                                }}
+                                className="flex items-center px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-transparent bg-white"
+                            >
+                                <FunnelIcon className="w-4 h-4 mr-2 text-gray-500" />
+                                {getFilterLabel()}
+                                <ChevronDownIcon className="w-4 h-4 ml-2 text-gray-500" />
+                            </button>
+                            {showFilterDropdown && (
+                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-10">
+                                    <div className="py-1">
+                                        <button
+                                            onClick={() => {
+                                                setFilter('all');
+                                                setShowFilterDropdown(false);
+                                            }}
+                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${filter === 'all' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                        >
+                                            All Users
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setFilter('active');
+                                                setShowFilterDropdown(false);
+                                            }}
+                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${filter === 'active' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                        >
+                                            Active Only
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setFilter('inactive');
+                                                setShowFilterDropdown(false);
+                                            }}
+                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${filter === 'inactive' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                        >
+                                            Inactive Only
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Sort Dropdown */}
+                        <div className="relative" ref={sortRef}>
+                            <button
+                                onClick={() => {
+                                    setShowSortDropdown(!showSortDropdown);
+                                    setShowFilterDropdown(false);
+                                }}
+                                className="flex items-center px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-transparent bg-white"
+                            >
+                                <ArrowsUpDownIcon className="w-4 h-4 mr-2 text-gray-500" />
+                                {getSortLabel()}
+                                <ChevronDownIcon className="w-4 h-4 ml-2 text-gray-500" />
+                            </button>
+                            {showSortDropdown && (
+                                <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg border border-gray-200 z-10">
+                                    <div className="py-1">
+                                        <button
+                                            onClick={() => {
+                                                setSort('default');
+                                                setShowSortDropdown(false);
+                                            }}
+                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sort === 'default' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                        >
+                                            Default
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setSort('role_desc');
+                                                setShowSortDropdown(false);
+                                            }}
+                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sort === 'role_desc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                        >
+                                            Role (High to Low)
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setSort('role_asc');
+                                                setShowSortDropdown(false);
+                                            }}
+                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sort === 'role_asc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                        >
+                                            Role (Low to High)
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setSort('date_desc');
+                                                setShowSortDropdown(false);
+                                            }}
+                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sort === 'date_desc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                        >
+                                            Date (Newest First)
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setSort('date_asc');
+                                                setShowSortDropdown(false);
+                                            }}
+                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sort === 'date_asc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                        >
+                                            Date (Oldest First)
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setSort('name_asc');
+                                                setShowSortDropdown(false);
+                                            }}
+                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sort === 'name_asc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                        >
+                                            Name (A to Z)
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setSort('name_desc');
+                                                setShowSortDropdown(false);
+                                            }}
+                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sort === 'name_desc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                        >
+                                            Name (Z to A)
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
                         {/* Search Input */}
                         <div className="relative">
                             <input
@@ -171,20 +431,25 @@ export default function Index({ auth, users }) {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
-                            {filteredUsers.map((user) => (
-                                <tr key={user.id} className="hover:bg-gray-50">
+                            {processedUsers.map((user) => (
+                                <tr key={user.id} className={`hover:bg-gray-50 ${user.id === auth.user.id ? 'bg-blue-50' : ''}`}>
                                     <td className="px-6 py-4">
                                         {user.avatar ? (
                                             <img
                                                 src={user.avatar}
-                                                alt={`${user.first_name || user.email}'s avatar`}
+                                                alt={`${user.name}'s avatar`}
                                                 className="h-10 w-10 rounded-full object-cover"
+                                                onError={(e) => {
+                                                    e.target.style.display = 'none';
+                                                    e.target.nextSibling.style.display = 'flex';
+                                                }}
                                             />
-                                        ) : (
-                                            <div className="h-10 w-10 rounded-full bg-[#37692F] flex items-center justify-center text-white text-sm font-bold">
-                                                {(user.first_name?.[0] || user.email[0]).toUpperCase()}
-                                            </div>
-                                        )}
+                                        ) : null}
+                                        <div 
+                                            className={`h-10 w-10 rounded-full bg-[#37692F] flex items-center justify-center text-white text-sm font-bold ${user.avatar ? 'hidden' : ''}`}
+                                        >
+                                            {user.name[0].toUpperCase()}
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4 font-poppins font-normal text-[13px] text-gray-900">
                                         <div className="flex items-center">
@@ -200,7 +465,7 @@ export default function Index({ auth, users }) {
                                         {user.email}
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className="bg-blue-800 text-white px-3 py-1 rounded-full text-xs font-poppins font-medium shadow-md">
+                                        <span className={`px-3 py-1 rounded-full text-xs font-poppins font-medium shadow-sm ${getRoleColor(user.role)}`}>
                                             {user.role}
                                         </span>
                                     </td>
@@ -216,7 +481,7 @@ export default function Index({ auth, users }) {
                                         </span>
                                     </td>
 
-                                    <td className="px-6 py-4 font-poppins font-normal text-[13px] text-gray-60">
+                                    <td className="px-6 py-4 font-poppins font-normal text-[13px] text-gray-600">
                                         {new Date(user.created_at).toLocaleDateString('en-US', {
                                             month: 'short',
                                             day: 'numeric',
@@ -226,16 +491,31 @@ export default function Index({ auth, users }) {
                                     {/* EDIT AND DEACTIVATE BUTTONS */}
                                     <td className="px-6 py-4">
                                         <div className="flex space-x-2">
-                                            {/* Edit */}
-                                            <button className="text-blue-600 hover:text-blue-800 transition-colors">
-                                                <svg className="w-8 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                </svg>
-                                            </button>
+                                            {/* Edit Button */}
+                                            {user.status === 'active' ? (
+                                                <Link
+                                                    href={route('users.edit', user.id)}
+                                                    className="text-blue-600 hover:text-blue-800 transition-colors"
+                                                    title="Edit User"
+                                                >
+                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                    </svg>
+                                                </Link>
+                                            ) : (
+                                                <button
+                                                    className="text-gray-400 cursor-not-allowed"
+                                                    disabled
+                                                    title="Cannot edit deactivated accounts"
+                                                >
+                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                    </svg>
+                                                </button>
+                                            )}
 
                                             {/* Deactivate/Reactivate Button */}
                                             {user.id === auth.user.id ? (
-                                                // Show disabled button for current user
                                                 <button
                                                     className="text-gray-400 cursor-not-allowed"
                                                     disabled
