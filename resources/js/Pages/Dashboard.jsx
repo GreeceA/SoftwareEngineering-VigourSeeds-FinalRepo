@@ -19,7 +19,7 @@ export default function Dashboard() {
                 <div className="mx-auto max-w-7xl sm:px-6 lg:px-8">
                     {/* Dashboard Overview Cards */}
                     <div className="mb-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                        <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg">
+                        <div className="overflow-hidden bg-white shadow-lg hover:shadow-xl transition-shadow duration-300 sm:rounded-lg border border-gray-100">
                             <div className="p-6">
                                 <div className="flex items-center">
                                     <div className="flex-shrink-0">
@@ -37,7 +37,7 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg">
+                        <div className="overflow-hidden bg-white shadow-lg hover:shadow-xl transition-shadow duration-300 sm:rounded-lg border border-gray-100">
                             <div className="p-6">
                                 <div className="flex items-center">
                                     <div className="flex-shrink-0">
@@ -55,7 +55,7 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg">
+                        <div className="overflow-hidden bg-white shadow-lg hover:shadow-xl transition-shadow duration-300 sm:rounded-lg border border-gray-100">
                             <div className="p-6">
                                 <div className="flex items-center">
                                     <div className="flex-shrink-0">
@@ -73,7 +73,7 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg">
+                        <div className="overflow-hidden bg-white shadow-lg hover:shadow-xl transition-shadow duration-300 sm:rounded-lg border border-gray-100">
                             <div className="p-6">
                                 <div className="flex items-center">
                                     <div className="flex-shrink-0">
@@ -94,7 +94,7 @@ export default function Dashboard() {
 
                     {/* Main Dashboard Content */}
                     <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                        <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg">
+                        <div className="overflow-hidden bg-white shadow-lg hover:shadow-xl transition-shadow duration-300 sm:rounded-lg border border-gray-100">
                             <div className="p-6">
                                 <h3 className="text-lg font-medium text-gray-900 mb-4">Recent Activity</h3>
                                 <div className="space-y-4">
@@ -117,7 +117,7 @@ export default function Dashboard() {
                             </div>
                         </div>
 
-                        <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg">
+                        <div className="overflow-hidden bg-white shadow-lg hover:shadow-xl transition-shadow duration-300 sm:rounded-lg border border-gray-100">
                             <div className="p-6">
                                 <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
                                 <div className="grid grid-cols-2 gap-4">

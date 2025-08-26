@@ -133,13 +133,13 @@ export default function Welcome({ auth }) {
                             </h1>
                             
                             <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
-                                [Placeholder: Your premium destination for high-quality seeds and agricultural solutions. 
-                                Discover our extensive collection of seeds that bring your garden dreams to life.]
+                                Welcome to the Vigour Seeds Employee Management System. Access your dashboard to manage operations, 
+                                track inventory, and contribute to our mission of providing premium agricultural solutions across the Philippines.
                             </p>
                             
                             <p className="text-lg text-gray-500 mb-12 max-w-2xl mx-auto">
-                                [Placeholder: Join thousands of satisfied gardeners who trust Vigour Seeds for their 
-                                growing needs. From vegetables to flowers, we have everything you need to cultivate success.]
+                                Located at Sampaguita Street, Biao Guianga, Tugbok District, Davao City. 
+                                Led by Ms. Joanne Good, COO, we're dedicated to excellence in agricultural retail and distribution.
                             </p>
 
                             {/* Call to Action Buttons */}
@@ -151,14 +151,7 @@ export default function Welcome({ auth }) {
                                         onMouseEnter={() => playSound('hover')}
                                         onClick={() => playSound('click')}
                                     >
-                                        Start Growing Today
-                                    </Link>
-                                    <Link
-                                        href={route('login')}
-                                        className="border-2 border-[#37692F] text-[#37692F] px-8 py-4 rounded-lg text-lg font-semibold hover:bg-[#37692F] hover:text-white transition-all duration-300 transform hover:scale-105"
-                                        onMouseEnter={() => playSound('hover')}
-                                    >
-                                        Sign In
+                                        Join Our Team
                                     </Link>
                                 </div>
                             )}
@@ -174,10 +167,10 @@ export default function Welcome({ auth }) {
                                     </svg>
                                 </div>
                                 <h3 className="text-2xl font-bold text-gray-800 mb-4" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                                    Premium Quality
+                                    Inventory Management
                                 </h3>
                                 <p className="text-gray-600">
-                                    [Placeholder: High-quality seeds with guaranteed germination rates and superior genetic traits for optimal growing success.]
+                                    Comprehensive system for tracking seed inventory, managing stock levels, and monitoring product quality across our agricultural retail operations.
                                 </p>
                             </div>
 
@@ -189,10 +182,10 @@ export default function Welcome({ auth }) {
                                     </svg>
                                 </div>
                                 <h3 className="text-2xl font-bold text-gray-800 mb-4" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                                    Wide Variety
+                                    Operations Dashboard
                                 </h3>
                                 <p className="text-gray-600">
-                                    [Placeholder: Extensive collection of seeds from vegetables and herbs to flowers and trees, perfect for any garden size.]
+                                    Centralized platform for managing daily operations, tracking sales, and coordinating agricultural distribution across the Davao City region.
                                 </p>
                             </div>
 
@@ -204,10 +197,10 @@ export default function Welcome({ auth }) {
                                     </svg>
                                 </div>
                                 <h3 className="text-2xl font-bold text-gray-800 mb-4" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                                    Expert Support
+                                    Team Collaboration
                                 </h3>
                                 <p className="text-gray-600">
-                                    [Placeholder: Professional guidance and growing tips from our team of agricultural experts and experienced gardeners.]
+                                    Integrated team management tools for coordinating with agricultural specialists, managing roles, and ensuring efficient service delivery.
                                 </p>
                             </div>
                         </div>
@@ -216,20 +209,20 @@ export default function Welcome({ auth }) {
                         <div className={`mt-20 transition-all duration-1000 delay-900 ${animateStats ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
                                 <div className="text-center">
-                                    <div className="text-4xl font-bold text-[#37692F] mb-2 animate-counter">10,000+</div>
-                                    <div className="text-gray-600">Seeds Available</div>
+                                    <div className="text-4xl font-bold text-[#37692F] mb-2 animate-counter">5000+</div>
+                                    <div className="text-gray-600">Products Managed</div>
                                 </div>
                                 <div className="text-center">
-                                    <div className="text-4xl font-bold text-[#37692F] mb-2 animate-counter">500+</div>
-                                    <div className="text-gray-600">Happy Gardeners</div>
+                                    <div className="text-4xl font-bold text-[#37692F] mb-2 animate-counter">1000+</div>
+                                    <div className="text-gray-600">Satisfied Customers</div>
                                 </div>
                                 <div className="text-center">
-                                    <div className="text-4xl font-bold text-[#37692F] mb-2 animate-counter">50+</div>
-                                    <div className="text-gray-600">Varieties</div>
+                                    <div className="text-4xl font-bold text-[#37692F] mb-2 animate-counter">15+</div>
+                                    <div className="text-gray-600">Team Members</div>
                                 </div>
                                 <div className="text-center">
-                                    <div className="text-4xl font-bold text-[#37692F] mb-2 animate-counter">24/7</div>
-                                    <div className="text-gray-600">Support</div>
+                                    <div className="text-4xl font-bold text-[#37692F] mb-2 animate-counter">10+</div>
+                                    <div className="text-gray-600">Years Experience</div>
                                 </div>
                             </div>
                         </div>
@@ -246,7 +239,7 @@ export default function Welcome({ auth }) {
                             </span>
                         </div>
                         <p className="text-gray-400 mb-4">
-                            [Placeholder: Growing excellence with premium quality seeds for passionate gardeners worldwide.]
+                            Leading agricultural retail company based in Davao City, Philippines. Providing premium seeds and agricultural solutions under the leadership of Ms. Joanne Good, COO.
                         </p>
                         <p className="text-gray-500">
                             © 2025 Vigour Seeds. All rights reserved.

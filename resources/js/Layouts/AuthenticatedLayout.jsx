@@ -326,7 +326,7 @@ export default function AuthenticatedLayout({ header, children }) {
 
             <main>
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <img src= {DashLogo}    alt="Background Logo"   className="w-[400px] h-auto"/>
+                    <img src= {DashLogo}    alt="Background Logo"   className="w-[400px] h-auto opacity-10"/>
                 </div>
                 {children}
             </main>

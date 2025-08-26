@@ -51,6 +51,7 @@ class UserController extends Controller
             'role'       => $request->role,
             'email'      => $request->email,
             'password'   => Hash::make($request->password),
+            'status'     => 'active', // Set default status to active
         ]);
 
         return redirect()->route('users.index')->with('success', 'User created successfully.');
