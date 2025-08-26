@@ -145,7 +145,7 @@ export default function Create() {
                                 value={data.password}
                                 className="mt-1 block w-full pr-10 border-[#666666] text-[#111111] border-opacity-35"
                                 autoComplete="new-password"
-                                onChange={(e) => setData('password', e.target.value)}
+                                onChange={(e) => setData('a', e.target.value)}
                                 required
                             />
                             <button

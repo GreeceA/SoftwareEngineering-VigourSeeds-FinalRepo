@@ -1,14 +1,17 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link } from '@inertiajs/react';
+import { router } from '@inertiajs/react'; // Import router instead of Inertia
 import { useState, useMemo } from 'react';
-import { debounce } from 'lodash'; // for debounced search
+import { debounce } from 'lodash';
 import '../../../css/fonts.css';
 import { UserMinusIcon } from '@heroicons/react/24/outline'; 
-import DeactivateModal from './DeactivateModal'; 
+import DeactivateModal from './DeactivateModal';
+import ReactivateModal from './ReactivateModal'; 
 
 export default function Index({ auth, users }) {
     const [search, setSearch] = useState("");
     const [modalUser, setModalUser] = useState(null);
+    const [reactivateModalUser, setReactivateModalUser] = useState(null);
     const [userList, setUserList] = useState(users);
 
     // Debounce input to avoid updating on every keystroke
@@ -22,7 +25,7 @@ export default function Index({ auth, users }) {
 
     // Filter users by full name, email, or role
     const filteredUsers = useMemo(() => {
-        if (!search) return userList; // <- use updated userList
+        if (!search) return userList;
 
         return userList.filter((user) => {
             const name = user.name.toLowerCase();
@@ -35,21 +38,40 @@ export default function Index({ auth, users }) {
                 role.includes(search.toLowerCase())
             );
         });
-    }, [userList, search]); // <- depends on userList
-
+    }, [userList, search]);
 
     const handleDeactivate = (id) => {
-    // Send request to backend to update user status
-        Inertia.post(route('users.deactivate', id), {}, {
+        // Use router.post with preserveState to keep the current data and just refresh
+        router.post(route('users.deactivate', id), {}, {
+            preserveScroll: true,
             onSuccess: () => {
                 // Update local state after successful response
                 setUserList(prev => prev.map(u =>
-                    u.id === id ? { ...u, status: u.status === 'active' ? 'inactive' : 'active' } : u
+                    u.id === id ? { ...u, status: 'inactive' } : u
                 ));
                 setModalUser(null);
             },
             onError: (errors) => {
-                console.error(errors);
+                console.error('Deactivation failed:', errors);
+                setModalUser(null); // Close modal even on error
+            }
+        });
+    };
+
+    const handleReactivate = (id) => {
+        // Use router.post for reactivation
+        router.post(route('users.reactivate', id), {}, {
+            preserveScroll: true,
+            onSuccess: () => {
+                // Update local state after successful response
+                setUserList(prev => prev.map(u =>
+                    u.id === id ? { ...u, status: 'active' } : u
+                ));
+                setReactivateModalUser(null);
+            },
+            onError: (errors) => {
+                console.error('Reactivation failed:', errors);
+                setReactivateModalUser(null); // Close modal even on error
             }
         });
     };
@@ -165,7 +187,14 @@ export default function Index({ auth, users }) {
                                         )}
                                     </td>
                                     <td className="px-6 py-4 font-poppins font-normal text-[13px] text-gray-900">
-                                        {user.name}
+                                        <div className="flex items-center">
+                                            {user.name}
+                                            {user.id === auth.user.id && (
+                                                <span className="ml-2 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
+                                                    You
+                                                </span>
+                                            )}
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4 font-poppins font-normal text-[13px] text-gray-900">
                                         {user.email}
@@ -179,13 +208,14 @@ export default function Index({ auth, users }) {
                                         <span
                                             className={`px-3 py-1 rounded-full text-xs font-poppins font-normal ${
                                                 user.status === "active"
-                                                    ? "bg-red-100 text-red-700"
-                                                    : "bg-green-100 text-green-700"
+                                                    ? "bg-green-100 text-green-700"
+                                                    : "bg-red-100 text-red-700"
                                             }`}
                                         >
-                                            {user.status === "active" ? "Inactive" : "Active"}
+                                            {user.status === "active" ? "Active" : "Inactive"}
                                         </span>
                                     </td>
+
                                     <td className="px-6 py-4 font-poppins font-normal text-[13px] text-gray-60">
                                         {new Date(user.created_at).toLocaleDateString('en-US', {
                                             month: 'short',
@@ -203,28 +233,61 @@ export default function Index({ auth, users }) {
                                                 </svg>
                                             </button>
 
-                                            {/* Deactivate */}
-                                            <button
-                                                className="text-red-600 hover:text-red-800 transition-colors"
-                                                onClick={() => setModalUser(user)} // fix here
-                                            >
-                                                <UserMinusIcon className="w-5 h-5" />
-                                            </button>
+                                            {/* Deactivate/Reactivate Button */}
+                                            {user.id === auth.user.id ? (
+                                                // Show disabled button for current user
+                                                <button
+                                                    className="text-gray-400 cursor-not-allowed"
+                                                    disabled
+                                                    title="You cannot modify your own account status"
+                                                >
+                                                    {user.status === 'active' ? (
+                                                        <UserMinusIcon className="w-5 h-5" />
+                                                    ) : (
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                                        </svg>
+                                                    )}
+                                                </button>
+                                            ) : user.status === 'active' ? (
+                                                <button
+                                                    className="text-red-600 hover:text-red-800 transition-colors"
+                                                    onClick={() => setModalUser(user)}
+                                                    title="Deactivate User"
+                                                >
+                                                    <UserMinusIcon className="w-5 h-5" />
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    className="text-green-600 hover:text-green-800 transition-colors"
+                                                    onClick={() => setReactivateModalUser(user)}
+                                                    title="Reactivate User"
+                                                >
+                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                                    </svg>
+                                                </button>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
                             ))}
                         </tbody>
                     </table>
-                    
                 </div>
             </div>
+            
             <DeactivateModal
                 user={modalUser}
                 onCancel={() => setModalUser(null)}
                 onConfirm={handleDeactivate}
             />
-
+            
+            <ReactivateModal
+                user={reactivateModalUser}
+                onCancel={() => setReactivateModalUser(null)}
+                onConfirm={handleReactivate}
+            />
         </AuthenticatedLayout>
     );
 }

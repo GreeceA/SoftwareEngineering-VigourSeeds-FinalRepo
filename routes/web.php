@@ -54,4 +54,4 @@ Route::middleware(['auth'])->group(function () {
 
 
 Route::post('/users/{user}/deactivate', [UserController::class, 'deactivate'])->name('users.deactivate');
-Route::post('/users/{user}/activate', [UserController::class, 'activate'])->name('users.activate');
+Route::post('/users/{user}/reactivate', [UserController::class, 'reactivate'])->name('users.reactivate');

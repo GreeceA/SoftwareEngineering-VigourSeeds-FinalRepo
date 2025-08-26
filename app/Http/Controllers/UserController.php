@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use Illuminate\Support\Facades\DB;
 use App\Models\User;
 use Inertia\Inertia;
@@ -13,7 +14,7 @@ class UserController extends Controller
 {
     public function index()
     {
-        $users = User::select('id', DB::raw("CONCAT(first_name, ' ', last_name) as name"), 'email', 'role', 'created_at')
+        $users = User::select('id', DB::raw("CONCAT(first_name, ' ', last_name) as name"), 'email', 'role', 'status', 'created_at')
             ->get();
 
         return Inertia::render('Users/Index', [
@@ -29,11 +30,11 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-        'first_name' => ['required', 'string', 'max:255'],
-        'last_name'  => ['required', 'string', 'max:255'],
-        'role'       => ['required', 'in:Employee,Manager'],
-        'email'      => ['required', 'string', 'email', 'max:255', 'unique:users'],
-        'password'   => ['required', 'confirmed', Rules\Password::defaults()],
+            'first_name' => ['required', 'string', 'max:255'],
+            'last_name'  => ['required', 'string', 'max:255'],
+            'role'       => ['required', 'in:Employee,Manager'],
+            'email'      => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'password'   => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
         $user = User::create([
@@ -59,17 +60,51 @@ class UserController extends Controller
 
     public function deactivate(User $user)
     {
-        $user->status = $user->status === 'active' ? 'inactive' : 'active';
-        $user->save();
+        try {
+            // Check if user is trying to deactivate their own account
+            if (Auth::id() === $user->id) {
+                return back()->with('error', 'You cannot deactivate your own account');
+            }
 
-        return redirect()->back()->with('success', 'User status updated successfully');
+            // Set user status to inactive
+            $user->status = 'inactive';
+            $user->save();
+
+            // Return back with success message
+            return back()->with('success', 'User deactivated successfully');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to deactivate user');
+        }
+    }
+
+    public function reactivate(User $user)
+    {
+        try {
+            // Check if user is trying to reactivate their own account
+            if (Auth::id() === $user->id) {
+                return back()->with('error', 'You cannot reactivate your own account');
+            }
+
+            // Set user status to active
+            $user->status = 'active';
+            $user->save();
+
+            // Return back with success message
+            return back()->with('success', 'User reactivated successfully');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to reactivate user');
+        }
     }
 
     public function activate(User $user)
     {
-        $user->status = $user->status === 'inactive' ? 'active' : 'inactive';
-        $user->save();
+        try {
+            $user->status = 'active';
+            $user->save();
 
-        return response()->json(['success' => true]);
+            return back()->with('success', 'User activated successfully');
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to activate user');
+        }
     }
 }
