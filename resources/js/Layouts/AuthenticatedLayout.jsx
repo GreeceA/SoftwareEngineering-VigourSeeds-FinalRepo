@@ -108,6 +108,24 @@ export default function AuthenticatedLayout({ header, children }) {
                             </div>
 
                             <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
+                                <NavLink
+                                    href={route('permissions.index')}
+                                    active={route().current('permissions.index')}
+                                >
+                                    Permissions
+                                </NavLink>
+                            </div>
+
+                            <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
+                                <NavLink
+                                    href={route('roles.index')}
+                                    active={route().current('roles.index')}
+                                >
+                                    Roles
+                                </NavLink>
+                            </div>
+
+                            <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
                                 {/* CONTRACTS */}
                                 <NavLink
                                     // href={route('dashboard')}
