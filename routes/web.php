@@ -80,7 +80,9 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/users/permissions', [UserController::class, 'permissions'])->name('users.permissions');
 });
 
-
+Route::get('/users', function () {
+    return Inertia::render('Users/Index');
+});
 
 // Add these routes to your existing user routes group
 Route::middleware('auth')->group(function () {

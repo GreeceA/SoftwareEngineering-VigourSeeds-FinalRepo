@@ -25,7 +25,7 @@ class UserController extends Controller
             ->latest()
             ->paginate(10);
             
-        return Inertia::render('Users/List', [
+        return Inertia::render('Users/Index', [
             'users' => $users
         ]);
     }
@@ -58,15 +58,20 @@ class UserController extends Controller
 
     public function edit(User $user)
     {
-        // Check if user is trying to edit a deactivated account
+        // Prevent editing deactivated accounts
         if ($user->status === 'inactive') {
             return redirect()->route('users.index')->with('error', 'Cannot edit deactivated accounts');
         }
 
+        $roles = Role::all();
+
         return Inertia::render('Users/Edit', [
-            'user' => $user->only(['id', 'first_name', 'last_name', 'email', 'role', 'status', 'created_at'])
+            'user' => $user->only(['id', 'first_name', 'last_name', 'email', 'role', 'status', 'created_at']),
+            'roles' => $roles,
+            'userRoles' => $user->roles->pluck('name')
         ]);
     }
+
 
     public function update(Request $request, User $user)
     {
@@ -105,46 +110,31 @@ class UserController extends Controller
     }
 
     /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        $user = User::with('roles')->findOrFail($id);
-        $roles = Role::all();
-        
-        return Inertia::render('Users/Edit', [
-            'user' => $user,
-            'roles' => $roles,
-            'userRoles' => $user->roles->pluck('name')
-        ]);
-    }
-
-    /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
-    {
-        $user = User::findOrFail($id);
+    // public function update(Request $request, string $id)
+    // {
+    //     $user = User::findOrFail($id);
         
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users,email,' . $user->id,
-            'roles' => 'array'
-        ]);
+    //     $validated = $request->validate([
+    //         'name' => 'required|string|max:255',
+    //         'email' => 'required|email|unique:users,email,' . $user->id,
+    //         'roles' => 'array'
+    //     ]);
 
-        $user->update([
-            'name' => $validated['name'],
-            'email' => $validated['email']
-        ]);
+    //     $user->update([
+    //         'name' => $validated['name'],
+    //         'email' => $validated['email']
+    //     ]);
 
-        if($request->has('roles')) {
-            $user->syncRoles($request->roles);
-        }
+    //     if($request->has('roles')) {
+    //         $user->syncRoles($request->roles);
+    //     }
         
-        return redirect()
-            ->route('users.index')
-            ->with('success', 'User updated successfully.');
-    }
+    //     return redirect()
+    //         ->route('users.index')
+    //         ->with('success', 'User updated successfully.');
+    // }
 
     /**
      * Remove the specified resource from storage.

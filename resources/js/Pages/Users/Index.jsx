@@ -12,7 +12,7 @@ export default function Index({ auth, users }) {
     const [search, setSearch] = useState("");
     const [modalUser, setModalUser] = useState(null);
     const [reactivateModalUser, setReactivateModalUser] = useState(null);
-    const [userList, setUserList] = useState(users);
+    const [userList, setUserList] = useState(users.data || []);
     
     // Filter and Sort states
     const [filter, setFilter] = useState('all'); // 'all', 'active', 'inactive'
