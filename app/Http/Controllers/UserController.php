@@ -21,10 +21,24 @@ class UserController extends Controller
     public function index()
     {
         $users = User::with('roles')
-            ->select('id', DB::raw("CONCAT(first_name, ' ', last_name) as name"), 'email', 'role', 'status', 'created_at')
+            ->select('id', DB::raw("CONCAT(first_name, ' ', last_name) as name"), 'email', 'role', 'status', 'created_at', 'avatar')
             ->latest()
             ->paginate(10);
             
+        $users->getCollection()->transform(function ($user) {
+        if ($user->avatar) {
+            if (filter_var($user->avatar, FILTER_VALIDATE_URL)) {
+                // Keep external URL as-is
+                $user->avatar = $user->avatar;
+            } else {
+                // Local file
+                $user->avatar = asset('storage/' . $user->avatar);
+            }
+        }
+    return $user;
+});
+
+
         return Inertia::render('Users/Index', [
             'users' => $users
         ]);
@@ -38,11 +52,12 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'first_name' => ['required', 'string', 'max:255'],
-            'last_name'  => ['required', 'string', 'max:255'],
+            'first_name' => ['required', 'string', 'max:50', 'regex:/^[A-Za-z\s\'\-]+$/'],
+            'last_name'  => ['required', 'string', 'max:50', 'regex:/^[A-Za-z\s\'\-]+$/'],
             'role'       => ['required', 'in:Employee,Manager'],
             'email'      => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password'   => ['required', 'confirmed', Rules\Password::defaults()],
+            'avatar'     => ['nullable', 'image', 'max:2048'],
         ]);
 
         $user = User::create([
@@ -52,6 +67,14 @@ class UserController extends Controller
             'email'      => $request->email,
             'password'   => Hash::make($request->password),
         ]);
+
+        if ($request->hasFile('avatar')) {
+            $avatarPath = $request->file('avatar')->store('avatars', 'public');
+            $user->avatar = $avatarPath;
+        }
+
+        $user->save();
+        $user->assignRole($request->role);
 
         return redirect()->route('users.index')->with('success', 'User created successfully.');
     }

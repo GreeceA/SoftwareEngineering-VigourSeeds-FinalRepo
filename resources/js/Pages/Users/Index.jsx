@@ -7,12 +7,16 @@ import '../../../css/fonts.css';
 import { UserMinusIcon, ChevronDownIcon, FunnelIcon, ArrowsUpDownIcon } from '@heroicons/react/24/outline';
 import DeactivateModal from './DeactivateModal';
 import ReactivateModal from './ReactivateModal';
+import UserInfoModal from './UserInfoModal';
+
 
 export default function Index({ auth, users }) {
     const [search, setSearch] = useState("");
     const [modalUser, setModalUser] = useState(null);
     const [reactivateModalUser, setReactivateModalUser] = useState(null);
     const [userList, setUserList] = useState(users.data || []);
+    const [modalUserInfo, setModalUserInfo] = useState(null);
+
     
     // Filter and Sort states
     const [filter, setFilter] = useState('all'); // 'all', 'active', 'inactive'
@@ -63,15 +67,7 @@ export default function Index({ auth, users }) {
     const processedUsers = useMemo(() => {
         let result = [...userList];
 
-        // 1. Always put current user at the top
-        const currentUserIndex = result.findIndex(user => user.id === auth.user.id);
-        let currentUser = null;
-        
-        if (currentUserIndex !== -1) {
-            currentUser = result.splice(currentUserIndex, 1)[0];
-        }
-
-        // 2. Apply search filter
+        // 1. Apply search filter
         if (search) {
             result = result.filter((user) => {
                 const name = user.name.toLowerCase();
@@ -84,32 +80,14 @@ export default function Index({ auth, users }) {
                     role.includes(search.toLowerCase())
                 );
             });
-
-            // Also filter current user if search is applied
-            if (currentUser) {
-                const name = currentUser.name.toLowerCase();
-                const email = currentUser.email?.toLowerCase() || '';
-                const role = currentUser.role?.toLowerCase() || '';
-
-                if (!(name.includes(search.toLowerCase()) ||
-                      email.includes(search.toLowerCase()) ||
-                      role.includes(search.toLowerCase()))) {
-                    currentUser = null;
-                }
-            }
         }
 
-        // 3. Apply status filter
+        // 2. Apply status filter
         if (filter !== 'all') {
             result = result.filter(user => user.status === filter);
-            
-            // Also filter current user
-            if (currentUser && currentUser.status !== filter) {
-                currentUser = null;
-            }
         }
 
-        // 4. Apply sorting
+        // 3. Apply sorting
         if (sort !== 'default') {
             switch (sort) {
                 case 'role_asc':
@@ -131,15 +109,18 @@ export default function Index({ auth, users }) {
                     result.sort((a, b) => b.name.localeCompare(a.name));
                     break;
             }
-        }
-
-        // 5. Put current user back at the top
-        if (currentUser) {
-            result.unshift(currentUser);
+        } else {
+            // Default sorting: logged-in user first
+            const currentUserIndex = result.findIndex(u => u.id === auth.user.id);
+            if (currentUserIndex !== -1) {
+                const currentUser = result.splice(currentUserIndex, 1)[0];
+                result.unshift(currentUser);
+            }
         }
 
         return result;
     }, [userList, search, filter, sort, auth.user.id]);
+
 
     const handleDeactivate = (id) => {
         router.post(route('users.deactivate', id), {}, {
@@ -220,7 +201,7 @@ export default function Index({ auth, users }) {
             <div className="px-6 pt-6">
                 <nav className="text-sm text-gray-600">
                     <Link
-                        href="/dashboard"
+                        href="http://localhost/dashboard/SoftwareEngineering-VigourSeeds-FinalRepo/public/dashboard"
                         className="text-[#37692F] hover:underline"
                     >
                         Home
@@ -451,7 +432,10 @@ export default function Index({ auth, users }) {
                                             {user.name[0].toUpperCase()}
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4 font-poppins font-normal text-[13px] text-gray-900">
+                                    <td 
+                                        className="px-6 py-4 font-poppins font-normal text-[13px] text-gray-900 cursor-pointer hover:text-[#37692F]"
+                                        onClick={() => setModalUserInfo(user)}
+                                    >
                                         <div className="flex items-center">
                                             {user.name}
                                             {user.id === auth.user.id && (
@@ -461,6 +445,7 @@ export default function Index({ auth, users }) {
                                             )}
                                         </div>
                                     </td>
+
                                     <td className="px-6 py-4 font-poppins font-normal text-[13px] text-gray-900">
                                         {user.email}
                                     </td>
@@ -568,6 +553,12 @@ export default function Index({ auth, users }) {
                 onCancel={() => setReactivateModalUser(null)}
                 onConfirm={handleReactivate}
             />
+
+            <UserInfoModal
+                user={modalUserInfo}
+                onClose={() => setModalUserInfo(null)}
+            />
+
         </AuthenticatedLayout>
     );
 }

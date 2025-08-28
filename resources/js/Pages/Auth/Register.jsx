@@ -58,7 +58,9 @@ export default function Register() {
                             className="mt-1 block w-full border-[#666666] text-[#111111] border-opacity-35"
                             autoComplete="given-name"
                             isFocused={true}
-                            onChange={(e) => setData('first_name', e.target.value)}
+                            onChange={(e) => {
+                                const validValue = e.target.value.replace(/[^a-zA-Z\s'-]/g, '');
+                                setData('first_name', validValue);}}
                             required
                         />
 
@@ -78,7 +80,9 @@ export default function Register() {
                             value={data.last_name}
                             className="mt-1 block w-full border-[#666666] text-[#111111] border-opacity-35"
                             autoComplete="family-name"
-                            onChange={(e) => setData('last_name', e.target.value)}
+                            onChange={(e) => {
+                                const validValue = e.target.value.replace(/[^a-zA-Z\s'-]/g, '');
+                                setData('first_name', validValue);}}
                             required
                         />
 

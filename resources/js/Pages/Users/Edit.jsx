@@ -2,6 +2,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, useForm } from '@inertiajs/react';
 import { useState } from 'react';
 import '../../../css/fonts.css';
+import { router } from '@inertiajs/react';
 
 export default function Edit({ auth, user }) {
     const { data, setData, put, processing, errors } = useForm({
@@ -11,9 +12,19 @@ export default function Edit({ auth, user }) {
     });
 
     const [showSuccessMessage, setShowSuccessMessage] = useState(false);
-
+    const nameRegex = /^[A-Za-z]+$/;
     const handleSubmit = (e) => {
         e.preventDefault();
+        
+        if (!nameRegex.test(data.first_name)) {
+            alert('First name can only contain letters');
+            return;
+        }
+
+        if (!nameRegex.test(data.last_name)) {
+            alert('Last name can only contain letters');
+            return;
+        }
         
         put(route('users.update', user.id), {
             onSuccess: () => {
@@ -21,9 +32,12 @@ export default function Edit({ auth, user }) {
                 setTimeout(() => {
                     setShowSuccessMessage(false);
                 }, 3000);
+                router.get(route('users.index'));
             },
         });
     };
+
+    
 
     return (
         <AuthenticatedLayout

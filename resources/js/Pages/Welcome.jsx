@@ -18,14 +18,12 @@ export default function Welcome({ auth }) {
             gainNode.connect(audioContext.destination);
             
             if (type === 'hover') {
-                // Gentle hover sound
                 oscillator.frequency.setValueAtTime(600, audioContext.currentTime);
                 gainNode.gain.setValueAtTime(0.05, audioContext.currentTime);
                 gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
                 oscillator.start(audioContext.currentTime);
                 oscillator.stop(audioContext.currentTime + 0.1);
             } else if (type === 'click') {
-                // Success click sound
                 oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
                 oscillator.frequency.setValueAtTime(1000, audioContext.currentTime + 0.05);
                 gainNode.gain.setValueAtTime(0.08, audioContext.currentTime);
@@ -33,9 +31,7 @@ export default function Welcome({ auth }) {
                 oscillator.start(audioContext.currentTime);
                 oscillator.stop(audioContext.currentTime + 0.15);
             }
-        } catch (error) {
-            // Silently handle browsers that don't support Web Audio
-        }
+        } catch (error) {}
     };
 
     useEffect(() => {
@@ -47,8 +43,7 @@ export default function Welcome({ auth }) {
     return (
         <>
             <Head title="Vigour Seeds - Welcome" />
-            
-            {/* Animated Background */}
+
             <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-emerald-50 relative overflow-hidden">
                 {/* Floating seed particles */}
                 <div className="absolute inset-0 pointer-events-none">
@@ -73,7 +68,6 @@ export default function Welcome({ auth }) {
                     <div className="bg-white/90 backdrop-blur-md shadow-lg border-b border-green-100">
                         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                             <div className="flex justify-between items-center py-4">
-                                {/* Logo Section */}
                                 <div className="flex items-center space-x-3">
                                     <img 
                                         src={VigourLogo} 
@@ -84,8 +78,7 @@ export default function Welcome({ auth }) {
                                         VIGOUR SEEDS
                                     </h1>
                                 </div>
-                                
-                                {/* Navigation Links */}
+
                                 <div className="flex items-center space-x-4">
                                     {auth.user ? (
                                         <Link
@@ -124,7 +117,6 @@ export default function Welcome({ auth }) {
                 {/* Hero Section */}
                 <main className="relative z-10">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-12">
-                        {/* Hero Content */}
                         <div className={`text-center transition-all duration-1200 delay-300 ${isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
                             <h1 className="text-5xl md:text-7xl font-[800] text-[#37692F] mb-6 animate-fade-in-up" style={{ fontFamily: "'Poppins', sans-serif" }}>
                                 Welcome to
@@ -133,16 +125,15 @@ export default function Welcome({ auth }) {
                             </h1>
                             
                             <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
-                                [Placeholder: Your premium destination for high-quality seeds and agricultural solutions. 
-                                Discover our extensive collection of seeds that bring your garden dreams to life.]
+                                Your premium destination for top-quality seeds and gardening solutions. 
+                                Explore our wide range of seeds carefully selected to help your garden thrive.
                             </p>
                             
                             <p className="text-lg text-gray-500 mb-12 max-w-2xl mx-auto">
-                                [Placeholder: Join thousands of satisfied gardeners who trust Vigour Seeds for their 
-                                growing needs. From vegetables to flowers, we have everything you need to cultivate success.]
+                                Join thousands of satisfied gardeners who trust Vigour Seeds for their planting needs. 
+                                From vegetables to flowers, we provide everything to cultivate a flourishing garden.
                             </p>
 
-                            {/* Call to Action Buttons */}
                             {!auth.user && (
                                 <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
                                     <Link
@@ -166,7 +157,6 @@ export default function Welcome({ auth }) {
 
                         {/* Features Grid */}
                         <div className={`grid grid-cols-1 md:grid-cols-3 gap-8 mt-20 transition-all duration-1000 delay-600 ${isLoaded ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
-                            {/* Feature 1 */}
                             <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 border border-green-100">
                                 <div className="w-16 h-16 bg-[#37692F] rounded-full flex items-center justify-center mx-auto mb-6">
                                     <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -177,11 +167,10 @@ export default function Welcome({ auth }) {
                                     Premium Quality
                                 </h3>
                                 <p className="text-gray-600">
-                                    [Placeholder: High-quality seeds with guaranteed germination rates and superior genetic traits for optimal growing success.]
+                                    High-quality seeds with guaranteed germination rates and superior genetics, ensuring your plants grow strong and healthy.
                                 </p>
                             </div>
 
-                            {/* Feature 2 */}
                             <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 border border-green-100">
                                 <div className="w-16 h-16 bg-[#37692F] rounded-full flex items-center justify-center mx-auto mb-6">
                                     <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -192,11 +181,10 @@ export default function Welcome({ auth }) {
                                     Wide Variety
                                 </h3>
                                 <p className="text-gray-600">
-                                    [Placeholder: Extensive collection of seeds from vegetables and herbs to flowers and trees, perfect for any garden size.]
+                                    Extensive selection of vegetable, herb, flower, and tree seeds, perfect for gardens of any size.
                                 </p>
                             </div>
 
-                            {/* Feature 3 */}
                             <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 border border-green-100">
                                 <div className="w-16 h-16 bg-[#37692F] rounded-full flex items-center justify-center mx-auto mb-6">
                                     <svg className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -207,7 +195,7 @@ export default function Welcome({ auth }) {
                                     Expert Support
                                 </h3>
                                 <p className="text-gray-600">
-                                    [Placeholder: Professional guidance and growing tips from our team of agricultural experts and experienced gardeners.]
+                                    Professional guidance and planting tips from our team of agricultural experts and experienced gardeners.
                                 </p>
                             </div>
                         </div>
@@ -216,20 +204,20 @@ export default function Welcome({ auth }) {
                         <div className={`mt-20 transition-all duration-1000 delay-900 ${animateStats ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
                                 <div className="text-center">
-                                    <div className="text-4xl font-bold text-[#37692F] mb-2 animate-counter">10,000+</div>
+                                    <div className="text-4xl font-bold text-[#37692F] mb-2 animate-counter">12,500+</div>
                                     <div className="text-gray-600">Seeds Available</div>
                                 </div>
                                 <div className="text-center">
-                                    <div className="text-4xl font-bold text-[#37692F] mb-2 animate-counter">500+</div>
+                                    <div className="text-4xl font-bold text-[#37692F] mb-2 animate-counter">1,250+</div>
                                     <div className="text-gray-600">Happy Gardeners</div>
                                 </div>
                                 <div className="text-center">
-                                    <div className="text-4xl font-bold text-[#37692F] mb-2 animate-counter">50+</div>
+                                    <div className="text-4xl font-bold text-[#37692F] mb-2 animate-counter">65+</div>
                                     <div className="text-gray-600">Varieties</div>
                                 </div>
                                 <div className="text-center">
                                     <div className="text-4xl font-bold text-[#37692F] mb-2 animate-counter">24/7</div>
-                                    <div className="text-gray-600">Support</div>
+                                    <div className="text-gray-600">Expert Support</div>
                                 </div>
                             </div>
                         </div>
@@ -246,7 +234,7 @@ export default function Welcome({ auth }) {
                             </span>
                         </div>
                         <p className="text-gray-400 mb-4">
-                            [Placeholder: Growing excellence with premium quality seeds for passionate gardeners worldwide.]
+                            Growing excellence with premium quality seeds for passionate gardeners worldwide.
                         </p>
                         <p className="text-gray-500">
                             © 2025 Vigour Seeds. All rights reserved.
@@ -255,7 +243,7 @@ export default function Welcome({ auth }) {
                 </footer>
             </div>
 
-            {/* Custom CSS for animations */}
+            {/* Animations CSS */}
             <style jsx>{`
                 @keyframes float {
                     0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.3; }
@@ -263,14 +251,8 @@ export default function Welcome({ auth }) {
                 }
                 
                 @keyframes fade-in-up {
-                    from {
-                        opacity: 0;
-                        transform: translateY(30px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateY(0);
-                    }
+                    from { opacity: 0; transform: translateY(30px); }
+                    to { opacity: 1; transform: translateY(0); }
                 }
                 
                 @keyframes counter {
@@ -278,17 +260,9 @@ export default function Welcome({ auth }) {
                     to { opacity: 1; transform: translateY(0); }
                 }
                 
-                .animate-float {
-                    animation: float 4s ease-in-out infinite;
-                }
-                
-                .animate-fade-in-up {
-                    animation: fade-in-up 1s ease-out;
-                }
-                
-                .animate-counter {
-                    animation: counter 0.8s ease-out;
-                }
+                .animate-float { animation: float 4s ease-in-out infinite; }
+                .animate-fade-in-up { animation: fade-in-up 1s ease-out; }
+                .animate-counter { animation: counter 0.8s ease-out; }
             `}</style>
         </>
     );

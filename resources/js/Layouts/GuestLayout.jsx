@@ -12,7 +12,7 @@ export default function GuestLayout({ children, title }) {
             <img 
                 src={Vlogo}
                 alt="Vigour Logo"
-                className="w-24 h-auto mb-4"
+                className="w-24 h-auto mb-4 opacity-50"
             />
 
             <div className="mt-6 w-full max-w-[650px] overflow-hidden bg-white px-10 py-12 shadow-md rounded-lg">

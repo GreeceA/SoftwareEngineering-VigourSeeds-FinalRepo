@@ -5,7 +5,7 @@ import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
 import { Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import Vlogo from '@/assets/vigour-logo.png';
-import DashLogo from '@/assets/dashboard-bg-logo.png';
+// import DashLogo from '@/assets/dashboard-bg-logo.png';
 
 export default function AuthenticatedLayout({ header, children }) {
     const user = usePage().props.auth.user;
@@ -91,7 +91,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                         >
                                             Add User
                                         </Link>
-                                        <Link
+                                        {/* <Link
                                             href={route("users.roles")}
                                             className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
                                         >
@@ -102,7 +102,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                             className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
                                         >
                                             User Permissions
-                                        </Link>
+                                        </Link> */}
                                     </div>
                                 )}
                             </div>
@@ -325,9 +325,9 @@ export default function AuthenticatedLayout({ header, children }) {
             )}
 
             <main>
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                {/* <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <img src= {DashLogo}    alt="Background Logo"   className="w-[400px] h-auto"/>
-                </div>
+                </div> */}
                 {children}
             </main>
         </div>

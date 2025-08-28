@@ -1,6 +1,7 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head } from '@inertiajs/react';
 import '../../css/fonts.css';
+import { Link } from '@inertiajs/react';
 
 export default function Dashboard() {
     return (
@@ -129,10 +130,13 @@ export default function Dashboard() {
                                         <div className="text-2xl mb-2">📋</div>
                                         <span className="text-sm font-medium text-gray-700">View Orders</span>
                                     </button>
-                                    <button className="p-4 text-center border-2 border-dashed border-gray-300 rounded-lg hover:border-[#37692F] hover:bg-green-50 transition-colors">
+                                    <Link
+                                        href={route('users.index')} // make sure you have this named route in web.php
+                                        className="p-4 text-center border-2 border-dashed border-gray-300 rounded-lg hover:border-[#37692F] hover:bg-green-50 transition-colors"
+                                    >
                                         <div className="text-2xl mb-2">👥</div>
                                         <span className="text-sm font-medium text-gray-700">Manage Users</span>
-                                    </button>
+                                    </Link>
                                     <button className="p-4 text-center border-2 border-dashed border-gray-300 rounded-lg hover:border-[#37692F] hover:bg-green-50 transition-colors">
                                         <div className="text-2xl mb-2">📊</div>
                                         <span className="text-sm font-medium text-gray-700">View Reports</span>
