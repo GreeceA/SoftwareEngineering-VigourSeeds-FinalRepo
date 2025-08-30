@@ -1,14 +1,21 @@
 <?php
 
-use App\Http\Controllers\RoleController;
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\UserController;
-use App\Http\Controllers\Auth\GoogleController;
-use App\Http\Controllers\PermissionController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
+
+// Controllers
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\RoleController;
+use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\Auth\GoogleController;
+use App\Http\Controllers\PartnerController;
+
+// -----------------
+// Public Routes
+// -----------------
 Route::get('/', function () {
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
@@ -18,88 +25,74 @@ Route::get('/', function () {
     ]);
 });
 
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth'])->name('dashboard');
-
-    Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    
-    //Permissions
-    Route::get('/permissions/create', [PermissionController::class, 'create'])->name('permissions.create');
-    Route::get('/permissions', [PermissionController::class, 'index'])->name('permissions.index');
-    Route::post('/permissions', [PermissionController::class, 'store'])->name('permissions.store');
-    Route::get('/permissions/{permission}/edit', [PermissionController::class, 'edit'])
-        ->name('permissions.edit');
-    Route::put('/permissions/{permission}', [PermissionController::class, 'update'])
-        ->name('permissions.update');
-    Route::delete('/permissions/{permission}', [PermissionController::class, 'destroy'])
-        ->name('permissions.destroy');
-
-    //Roles
-    Route::get('/roles', [RoleController::class, 'index'])->name('roles.index');
-    Route::get('/roles/create', [RoleController::class, 'create'])->name('roles.create');
-    Route::post('/roles', [RoleController::class, 'store'])->name('roles.store');
-    Route::get('/roles/{role}/edit', [RoleController::class, 'edit'])->name('roles.edit');
-    Route::put('/roles/{role}', [RoleController::class, 'update'])->name('roles.update');
-    Route::delete('/roles/{role}', [RoleController::class, 'destroy'])->name('roles.destroy');
-
-    //Users
-    Route::get('/users', [UserController::class, 'index'])->name('users.index');
-    Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
-    Route::post('/users', [UserController::class, 'store'])->name('users.store');
-    Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
-    Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
-    Route::delete('/users/{user}', [UserController::class, 'destroy'])->name('users.destroy');
-    Route::get('/users/roles', [UserController::class, 'roles'])->name('users.roles');
-    Route::get('/users/permissions', [UserController::class, 'permissions'])->name('users.permissions');
-    Route::post('/users/{user}/deactivate', [UserController::class, 'deactivate'])->name('users.deactivate');
-    Route::post('/users/{user}/reactivate', [UserController::class, 'reactivate'])->name('users.reactivate');
-});
-
-// Google OAuth Routes
-Route::get('/auth/google', [GoogleController::class, 'redirectToGoogle'])->name('google.redirect');
-Route::get('/auth/google/callback', [GoogleController::class, 'handleGoogleCallback'])->name('google.callback');
-Route::get('/auth/google/link', [GoogleController::class, 'redirectToGoogleForLinking'])->name('google.link')->middleware('auth');
-
-// Registration Google Connect Routes (no auth required during registration)
-Route::get('/register/google-connect', [App\Http\Controllers\Auth\RegisteredUserController::class, 'showGoogleConnect'])
-    ->name('register.google-connect');
-Route::post('/register/skip-google', [App\Http\Controllers\Auth\RegisteredUserController::class, 'skipGoogleConnect'])
-    ->name('register.skip-google');
-Route::get('/register/google', [GoogleController::class, 'redirectToGoogle'])->name('register.google.redirect');
-
-require __DIR__.'/auth.php';
-
-//User Management Routes
+// -----------------
+// Authenticated Routes
+// -----------------
 Route::middleware(['auth'])->group(function () {
+    // Dashboard
+    Route::get('/dashboard', fn () => Inertia::render('Dashboard'))
+        ->name('dashboard');
+
+    // Profile
+    Route::prefix('profile')->name('profile.')->group(function () {
+        Route::get('/', [ProfileController::class, 'edit'])->name('edit');
+        Route::patch('/', [ProfileController::class, 'update'])->name('update');
+        Route::delete('/', [ProfileController::class, 'destroy'])->name('destroy');
+    });
+
+    // Permissions
+    Route::resource('permissions', PermissionController::class)->except(['show']);
+
+    // Roles
+    Route::resource('roles', RoleController::class)->except(['show']);
+
+    // Users
+    Route::prefix('users')->name('users.')->group(function () {
+        Route::get('/', [UserController::class, 'index'])->name('index');
+        Route::get('/create', [UserController::class, 'create'])->name('create');
+        Route::post('/', [UserController::class, 'store'])->name('store');
+        Route::get('/{user}/edit', [UserController::class, 'edit'])->name('edit');
+        Route::put('/{user}', [UserController::class, 'update'])->name('update');
+        Route::delete('/{user}', [UserController::class, 'destroy'])->name('destroy');
+
+        // Roles & Permissions
+        Route::get('/roles', [UserController::class, 'roles'])->name('roles');
+        Route::get('/permissions', [UserController::class, 'permissions'])->name('permissions');
+
+        // Activation
+        Route::post('/{user}/deactivate', [UserController::class, 'deactivate'])->name('deactivate');
+        Route::post('/{user}/reactivate', [UserController::class, 'reactivate'])->name('reactivate');
+    });
+
+    // Partners
+    Route::resource('partners', PartnerController::class)->except(['show']);
     
-    Route::get('/users/roles', [UserController::class, 'roles'])->name('users.roles');
-    Route::get('/users/permissions', [UserController::class, 'permissions'])->name('users.permissions');
 });
 
-Route::get('/users', function () {
-    return Inertia::render('Users/Index');
+// -----------------
+// Google OAuth Routes
+// -----------------
+Route::prefix('auth/google')->name('google.')->group(function () {
+    Route::get('/', [GoogleController::class, 'redirectToGoogle'])->name('redirect');
+    Route::get('/callback', [GoogleController::class, 'handleGoogleCallback'])->name('callback');
+    Route::get('/link', [GoogleController::class, 'redirectToGoogleForLinking'])
+        ->middleware('auth')
+        ->name('link');
 });
 
-// Add these routes to your existing user routes group
-Route::middleware('auth')->group(function () {
-    // ... your existing routes
-
-    // User management routes
-    Route::get('/users', [UserController::class, 'index'])->name('users.index');
-    Route::get('/users/create', [UserController::class, 'create'])->name('users.create');
-    Route::post('/users', [UserController::class, 'store'])->name('users.store');
-    
-    // New edit routes
-    Route::get('/users/{user}/edit', [UserController::class, 'edit'])->name('users.edit');
-    Route::put('/users/{user}', [UserController::class, 'update'])->name('users.update');
-    
-    // Existing activation routes
-    Route::post('/users/{user}/deactivate', [UserController::class, 'deactivate'])->name('users.deactivate');
-    Route::post('/users/{user}/reactivate', [UserController::class, 'reactivate'])->name('users.reactivate');
-    
-    // ... other existing routes
+// -----------------
+// Registration + Google Connect (No Auth Required)
+// -----------------
+Route::prefix('register')->name('register.')->group(function () {
+    Route::get('/google-connect', [App\Http\Controllers\Auth\RegisteredUserController::class, 'showGoogleConnect'])
+        ->name('google-connect');
+    Route::post('/skip-google', [App\Http\Controllers\Auth\RegisteredUserController::class, 'skipGoogleConnect'])
+        ->name('skip-google');
+    Route::get('/google', [GoogleController::class, 'redirectToGoogle'])
+        ->name('google.redirect');
 });
+
+// -----------------
+// Auth Routes (Breeze/Fortify/etc.)
+// -----------------
+require __DIR__.'/auth.php';

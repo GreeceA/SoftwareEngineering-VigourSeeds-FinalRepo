@@ -5,6 +5,8 @@ import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
 import { Link, usePage } from '@inertiajs/react';
 import { useState } from 'react';
 import Vlogo from '@/assets/vigour-logo.png';
+import { route } from 'ziggy-js'; 
+
 // import DashLogo from '@/assets/dashboard-bg-logo.png';
 
 export default function AuthenticatedLayout({ header, children }) {
@@ -91,53 +93,35 @@ export default function AuthenticatedLayout({ header, children }) {
                                         >
                                             Add User
                                         </Link>
-                                        {/* <Link
-                                            href={route("users.roles")}
+                                        <Link
+                                            href={route("permissions.index")}
+                                            className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
+                                        >
+                                           User Permissions 
+                                        </Link>
+                                        <Link
+                                            href={route("roles.index")}
                                             className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
                                         >
                                             User Roles
                                         </Link>
-                                        <Link
-                                            href={route("users.permissions")}
-                                            className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
-                                        >
-                                            User Permissions
-                                        </Link> */}
                                     </div>
                                 )}
                             </div>
 
                             <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                                <NavLink
-                                    href={route('permissions.index')}
-                                    active={route().current('permissions.index')}
-                                >
-                                    Permissions
-                                </NavLink>
-                            </div>
-
-                            <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                                <NavLink
-                                    href={route('roles.index')}
-                                    active={route().current('roles.index')}
-                                >
-                                    Roles
-                                </NavLink>
-                            </div>
-
-                            <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
                                 {/* CONTRACTS */}
+                                <NavLink
+                                    href={route('partners.index')}
+                                    active={route().current('partners.index')}
+                                >
+                                    Partners
+                                </NavLink>
                                 <NavLink
                                     // href={route('dashboard')}
                                     // active={route().current('dashboard')}
                                 >
                                     Contracts
-                                </NavLink>
-                                <NavLink
-                                    // href={route('dashboard')}
-                                    // active={route().current('dashboard')}
-                                >
-                                    Partners
                                 </NavLink>
                                 <NavLink
                                     // href={route('dashboard')}
