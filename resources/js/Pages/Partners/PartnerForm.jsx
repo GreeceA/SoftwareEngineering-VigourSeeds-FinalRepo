@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useForm } from '@inertiajs/react';
+import { useForm, router } from '@inertiajs/react';
 import { Link } from '@inertiajs/react';
 
 export default function PartnerForm({ partner = null }) {
@@ -20,9 +20,13 @@ export default function PartnerForm({ partner = null }) {
         e.preventDefault();
 
         if (partner) {
-            put(route('partners.update', partner.id));
+            put(route('partners.update', partner.id), {
+                onSuccess: () => router.visit(route('partners.index'))
+            });
         } else {
-            post(route('partners.store'));
+            post(route('partners.store'), {
+                onSuccess: () => router.visit(route('partners.index'))
+            });
         }
     };
 

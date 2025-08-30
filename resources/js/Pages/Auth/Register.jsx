@@ -82,7 +82,7 @@ export default function Register() {
                             autoComplete="family-name"
                             onChange={(e) => {
                                 const validValue = e.target.value.replace(/[^a-zA-Z\s'-]/g, '');
-                                setData('first_name', validValue);}}
+                                setData('last_name', validValue);}}
                             required
                         />
 
