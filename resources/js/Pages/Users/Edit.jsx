@@ -4,11 +4,12 @@ import { useState } from 'react';
 import '../../../css/fonts.css';
 import { router } from '@inertiajs/react';
 
-export default function Edit({ auth, user }) {
+export default function Edit({ auth, user, roles = [], userRoles = [] }) {
+    // Use the first user role if available, fallback to user.role or empty string
     const { data, setData, put, processing, errors } = useForm({
         first_name: user.first_name || '',
         last_name: user.last_name || '',
-        role: user.role || '',
+        roles: userRoles.map(role => role.id) || [], // Store role IDs instead of names
     });
 
     const [showSuccessMessage, setShowSuccessMessage] = useState(false);
@@ -172,23 +173,30 @@ export default function Edit({ auth, user }) {
 
                         {/* Role */}
                         <div>
-                            <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-2">
-                                Role <span className="text-red-500">*</span>
+                            <label htmlFor="roles" className="block text-sm font-medium text-gray-700 mb-2">
+                                Roles <span className="text-red-500">*</span>
                             </label>
-                            <select
-                                id="role"
-                                value={data.role}
-                                onChange={(e) => setData('role', e.target.value)}
-                                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-transparent ${
-                                    errors.role ? 'border-red-500' : 'border-gray-300'
-                                }`}
-                            >
-                                <option value="">Select a role</option>
-                                <option value="Employee">Employee</option>
-                                <option value="Manager">Manager</option>
-                            </select>
-                            {errors.role && (
-                                <p className="mt-1 text-sm text-red-600">{errors.role}</p>
+                            <div className="space-y-2 border border-gray-300 rounded-md p-3">
+                                {roles.map((role) => (
+                                    <label key={role.id} className="flex items-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={data.roles.includes(role.id)}
+                                            onChange={(e) => {
+                                                const isChecked = e.target.checked;
+                                                setData('roles', isChecked
+                                                    ? [...data.roles, role.id]
+                                                    : data.roles.filter(r => r !== role.id)
+                                                );
+                                            }}
+                                            className="rounded border-gray-300 text-[#37692F] shadow-sm focus:border-[#37692F] focus:ring focus:ring-[#37692F] focus:ring-opacity-50"
+                                        />
+                                        <span className="ml-2 text-gray-700">{role.name}</span>
+                                    </label>
+                                ))}
+                            </div>
+                            {errors.roles && (
+                                <p className="mt-1 text-sm text-red-600">{errors.roles}</p>
                             )}
                         </div>
 

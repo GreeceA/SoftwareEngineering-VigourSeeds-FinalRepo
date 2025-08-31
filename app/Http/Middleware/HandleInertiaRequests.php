@@ -31,11 +31,15 @@ class HandleInertiaRequests extends Middleware
     {
         return array_merge(parent::share($request), [
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user() ? array_merge($request->user()->toArray(), [
+                    // Always fetch fresh permissions from database
+                    'can' => $request->user()->fresh()->getAllPermissions()->pluck('name')->toArray(),
+                ]) : null,
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
                 'error'   => fn () => $request->session()->get('error'),
+                'refresh_permissions' => fn () => $request->session()->get('refresh_permissions'),
             ],
         ]);
     }

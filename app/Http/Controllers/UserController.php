@@ -12,12 +12,21 @@ use Illuminate\Validation\Rules;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Traits\HasRoles;
 use Spatie\Permission\Models\Permission;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class UserController extends Controller
+class UserController extends Controller implements HasMiddleware
 {
-    /**
-     * Display a listing of the resource.
-     */
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:view users', only: ['index']),
+            new Middleware('permission:edit users', only: ['edit']),
+            new Middleware('permission:create users', only: ['create']),
+            new Middleware('permission:deactivate users', only: ['destroy', 'deactivate', 'reactivate']),
+        ];
+    }
+   
     public function index()
     {
         $users = User::with('roles')
@@ -46,7 +55,10 @@ class UserController extends Controller
 
     public function create()
     {
-        return Inertia::render('Users/Create');
+        $roles = Role::all();
+        return Inertia::render('Users/Create', [
+            'roles' => $roles->map(fn($role) => ['id' => $role->id, 'name' => $role->name])
+        ]);
     }
 
     public function store(Request $request)
@@ -54,7 +66,8 @@ class UserController extends Controller
         $request->validate([
             'first_name' => ['required', 'string', 'max:50', 'regex:/^[A-Za-z\s\'\-]+$/'],
             'last_name'  => ['required', 'string', 'max:50', 'regex:/^[A-Za-z\s\'\-]+$/'],
-            'role'       => ['required', 'in:Employee,Manager'],
+            'roles'      => ['required', 'array'],
+            'roles.*'    => ['exists:roles,name'],
             'email'      => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password'   => ['required', 'confirmed', Rules\Password::defaults()],
             'avatar'     => ['nullable', 'image', 'max:2048'],
@@ -63,18 +76,22 @@ class UserController extends Controller
         $user = User::create([
             'first_name' => $request->first_name,
             'last_name'  => $request->last_name,
-            'role'       => $request->role,
             'email'      => $request->email,
             'password'   => Hash::make($request->password),
+            'status'     => 'active',
         ]);
 
         if ($request->hasFile('avatar')) {
             $avatarPath = $request->file('avatar')->store('avatars', 'public');
             $user->avatar = $avatarPath;
+            $avatarPath = str_replace('public/', '', $avatarPath);
+            $user->avatar = $avatarPath;
         }
 
         $user->save();
-        $user->assignRole($request->role);
+        
+        // Assign roles using Spatie
+        $user->syncRoles($request->roles);
 
         return redirect()->route('users.index')->with('success', 'User created successfully.');
     }
@@ -90,8 +107,8 @@ class UserController extends Controller
 
         return Inertia::render('Users/Edit', [
             'user' => $user->only(['id', 'first_name', 'last_name', 'email', 'role', 'status', 'created_at']),
-            'roles' => $roles,
-            'userRoles' => $user->roles->pluck('name')
+            'roles' => $roles->map(fn($role) => ['id' => $role->id, 'name' => $role->name]),
+            'userRoles' => $user->roles->map(fn($role) => ['id' => $role->id, 'name' => $role->name])
         ]);
     }
 
@@ -106,17 +123,24 @@ class UserController extends Controller
         $request->validate([
             'first_name' => ['required', 'string', 'max:255'],
             'last_name'  => ['required', 'string', 'max:255'],
-            'role'       => ['required', 'in:Employee,Manager'],
+            'roles'      => ['required', 'array'],
+            'roles.*'    => ['exists:roles,id'],
         ]);
 
         try {
             $user->update([
                 'first_name' => $request->first_name,
                 'last_name'  => $request->last_name,
-                'role'       => $request->role,
             ]);
+            // Sync roles
+            $user->syncRoles($request->roles);
 
-            return back()->with('success', 'User updated successfully');
+            // Clear the permission cache to ensure fresh permissions are loaded
+            app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+
+            return redirect()->route('users.index')
+                ->with('success', 'User updated successfully')
+                ->with('refresh_permissions', true);
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to update user');
         }

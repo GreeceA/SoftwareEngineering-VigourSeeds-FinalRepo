@@ -3,7 +3,17 @@ import { Head, usePage, Link, router } from '@inertiajs/react';
 import dayjs from "dayjs";
 
 export default function List() {
-    const { flash, permissions } = usePage().props; 
+    const { flash, permissions, auth } = usePage().props;
+    
+    // Get user permissions (same way as in other components)
+    const userPermissions = auth?.user?.can || [];
+
+    // Core permissions that cannot be deleted or edited
+    const protectedPermissions = [
+        'view users', 'create users', 'edit users', 'deactivate users',
+        'view roles', 'create roles', 'edit roles', 'delete roles',
+        'view permissions', 'create permissions', 'edit permissions', 'delete permissions'
+    ];
 
     const handleDelete = (id) => {
         // Use the native confirm dialog
@@ -26,12 +36,15 @@ return (
                     <h2 className="text-xl font-semibold leading-tight text-gray-800">
                         Permissions
                     </h2>
-                    <Link
-                        href={route('permissions.create')}
-                        className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md shadow hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                    >
-                        Create
-                    </Link>
+                    {/* Create button - only show if user has 'create permissions' permission */}
+                    {userPermissions.includes('create permissions') && (
+                        <Link
+                            href={route('permissions.create')}
+                            className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md shadow hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                        >
+                            Create
+                        </Link>
+                    )}
                 </div>
             }
         >
@@ -70,20 +83,34 @@ return (
                                         {dayjs(permission.created_at).format("MMMM D, YYYY h:mm A")}
                                 </td>
                                 <td className="px-6 py-3 text-center">
-            
-                                    <Link
-                                        href={route('permissions.edit', permission.id)}
-                                        className="bg-slate-600 text-sm rounded-md text-white px-3 py-2 hover:bg-slate-700"
-                                    >
-                                        Edit
-                                    </Link>
-                                    {" "}
-                                    <button
-                                        onClick={() => handleDelete(permission.id)}
-                                        className="bg-red-600 text-sm rounded-md text-white px-3 py-2 hover:bg-red-700"
-                                    >
-                                        Delete
-                                    </button>
+                                    <div className="flex justify-center space-x-2">
+                                        {/* Edit button - only show if user has permission AND it's not a protected permission */}
+                                        {userPermissions.includes('edit permissions') && !protectedPermissions.includes(permission.name) && (
+                                            <Link
+                                                href={route('permissions.edit', permission.id)}
+                                                className="inline-flex items-center justify-center bg-slate-600 text-sm rounded-md text-white px-4 py-2 min-w-[70px] hover:bg-slate-700"
+                                            >
+                                                Edit
+                                            </Link>
+                                        )}
+                                        
+                                        {/* Delete button - only show if user has permission AND it's not a protected permission */}
+                                        {userPermissions.includes('delete permissions') && !protectedPermissions.includes(permission.name) && (
+                                            <button
+                                                onClick={() => handleDelete(permission.id)}
+                                                className="inline-flex items-center justify-center bg-red-600 text-sm rounded-md text-white px-4 py-2 min-w-[70px] hover:bg-red-700"
+                                            >
+                                                Delete
+                                            </button>
+                                        )}
+
+                                        {/* Show "Core" label for protected permissions */}
+                                        {protectedPermissions.includes(permission.name) && (
+                                            <span className="inline-flex items-center justify-center bg-blue-100 text-blue-800 text-sm rounded-md px-4 py-2 min-w-[70px] font-medium">
+                                                Core
+                                            </span>
+                                        )}
+                                    </div>
                                 </td>
                                 </tr>
                             ))
