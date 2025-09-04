@@ -12,7 +12,6 @@ class Partner extends Model
     protected $fillable = [
         'partner_type',
         'name',
-        'contact_person',
         'email',
         'phone',
         'address',
@@ -26,4 +25,9 @@ class Partner extends Model
         'partner_type' => 'string',
         'status' => 'string',
     ];
+
+    public function contacts()
+    {
+        return $this->hasMany(\App\Models\PartnerContact::class);
+    }
 }

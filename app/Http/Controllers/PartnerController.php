@@ -44,10 +44,19 @@ class PartnerController extends Controller
 
     public function store(PartnerRequest $request)
     {
-        Partner::create($request->validated());
+        $partner = Partner::create($request->validated());
 
-        return redirect()->route('partners.index')
-            ->with('success', 'Partner created successfully.');
+        if ($request->partner_type === 'organization' && $request->contact_persons) {
+            foreach ($request->contact_persons as $contact) {
+                $partner->contacts()->create([
+                    'name' => $contact['name'],
+                    'email' => $contact['email'] ?? null,
+                    'phone_number' => $contact['phone_number'] ?? null,
+                ]);
+            }
+        }
+
+        return redirect()->route('partners.index')->with('success', 'Partner created successfully.');
     }
 
     public function show(Partner $partner)
@@ -68,15 +77,48 @@ class PartnerController extends Controller
     {
         $partner->update($request->validated());
 
-        return redirect()->route('partners.index')
-            ->with('success', 'Partner updated successfully.');
-    }
+        // Remove old contacts
+        $partner->contacts()->delete();
 
+        if ($request->partner_type === 'organization' && $request->contact_persons) {
+            foreach ($request->contact_persons as $contact) {
+                $partner->contacts()->create([
+                    'name' => $contact['name'],
+                    'email' => $contact['email'] ?? null,
+                    'phone_number' => $contact['phone_number'] ?? null,
+                ]);
+            }
+        }
+
+        return redirect()->route('partners.index')->with('success', 'Partner updated successfully.');
+    }
+    
     public function destroy(Partner $partner)
     {
         $partner->delete();
 
         return redirect()->route('partners.index')
             ->with('success', 'Partner deleted successfully.');
+    }
+
+    public function deactivate(Partner $partner)
+    {
+        $partner->status = 'inactive';
+        $partner->save();
+
+        return redirect()->back()->with('success', 'Partner deactivated successfully.');
+    }
+
+    public function reactivate(Partner $partner)
+    {
+        $partner->status = 'active';
+        $partner->save();
+
+        return redirect()->back()->with('success', 'Partner reactivated successfully.');
+    }
+
+    public function contacts()
+    {
+        return $this->hasMany(PartnerContact::class);
     }
 }

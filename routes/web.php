@@ -66,6 +66,8 @@ Route::middleware(['auth'])->group(function () {
 
     // Partners
     Route::resource('partners', PartnerController::class)->except(['show']);
+    Route::post('partners/{partner}/deactivate', [PartnerController::class, 'deactivate'])->name('partners.deactivate');
+    Route::post('partners/{partner}/reactivate', [PartnerController::class, 'reactivate'])->name('partners.reactivate');
     
 });
 

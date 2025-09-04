@@ -19,7 +19,6 @@ class PartnerRequest extends FormRequest
         return [
             'partner_type' => ['required', 'in:individual,organization'],
             'name' => ['required', 'string', 'max:255'],
-            'contact_person' => ['nullable', 'string', 'max:255'],
             'email' => [
                 'required',
                 'email',
@@ -32,6 +31,29 @@ class PartnerRequest extends FormRequest
             'tax_id' => ['nullable', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
             'status' => ['required', 'in:active,inactive'],
+
+            // Add these for organization contacts
+            'contact_persons' => [
+                'nullable',
+                'array',
+                'max:3',
+                'required_if:partner_type,organization'
+            ],
+            'contact_persons.*.name' => [
+                'required_if:partner_type,organization',
+                'string',
+                'max:255'
+            ],
+            'contact_persons.*.email' => [
+                'nullable',
+                'email',
+                'max:255'
+            ],
+            'contact_persons.*.phone_number' => [
+                'nullable',
+                'string',
+                'max:20'
+            ],
         ];
     }
 

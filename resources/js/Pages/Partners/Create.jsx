@@ -5,19 +5,17 @@ import PartnerForm from './PartnerForm';
 
 export default function Create({ auth }) {
     return (
-        <AuthenticatedLayout user={auth.user}>
+        <AuthenticatedLayout
+            user={auth.user}
+            header={
+                <h2 className="text-[25px] font-[800]" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                    <span className="text-[#37692F] font-[800]">VIGOUR SEEDS</span>
+                    <span className="text-[#333333] font-[400]"> | Create Partner</span>
+                </h2>
+            }
+        >
             <Head title="Create Partner" />
-
-            <div className="py-12">
-                <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
-                    <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                        <div className="p-6 text-gray-900">
-                            <h1 className="text-2xl font-semibold mb-6">Create New Partner</h1>
-                            <PartnerForm />
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <PartnerForm auth={auth} />
         </AuthenticatedLayout>
     );
 }
