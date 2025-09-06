@@ -18,29 +18,38 @@ class UserController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $users = User::with('roles')
-            ->select('id', DB::raw("CONCAT(first_name, ' ', last_name) as name"), 'email', 'role', 'status', 'created_at', 'avatar')
-            ->latest()
-            ->paginate(10);
-            
-        $users->getCollection()->transform(function ($user) {
-        if ($user->avatar) {
-            if (filter_var($user->avatar, FILTER_VALIDATE_URL)) {
-                // Keep external URL as-is
-                $user->avatar = $user->avatar;
-            } else {
-                // Local file
-                $user->avatar = asset('storage/' . $user->avatar);
-            }
-        }
-    return $user;
-});
+        $sortBy = $request->input('sort_by', 'id');
+        $sortDir = $request->input('sort_dir', 'desc');
+        $perPage = $request->input('per_page', 10);
 
+        $query = User::with('roles')
+            ->select('id', DB::raw("CONCAT(first_name, ' ', last_name) as name"), 'email', 'role', 'status', 'created_at', 'avatar');
+
+        // Only allow sorting by allowed columns
+        if (in_array($sortBy, ['name', 'email', 'role', 'status', 'created_at'])) {
+            $query->orderBy($sortBy, $sortDir);
+        } else {
+            $query->orderBy('id', 'desc');
+        }
+
+        $users = $query->paginate($perPage)->withQueryString();
+
+        $users->getCollection()->transform(function ($user) {
+            if ($user->avatar) {
+                if (filter_var($user->avatar, FILTER_VALIDATE_URL)) {
+                    $user->avatar = $user->avatar;
+                } else {
+                    $user->avatar = asset('storage/' . $user->avatar);
+                }
+            }
+            return $user;
+        });
 
         return Inertia::render('Users/Index', [
-            'users' => $users
+            'users' => $users,
+            'filters' => $request->only(['sort_by', 'sort_dir', 'per_page']),
         ]);
     }
 

@@ -1,6 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router } from '@inertiajs/react';
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { debounce } from 'lodash';
 import '../../../css/fonts.css';
 import { UserMinusIcon, ChevronDownIcon, FunnelIcon, ArrowsUpDownIcon } from '@heroicons/react/24/outline';
@@ -9,10 +9,10 @@ import ReactivateModal from '@/Pages/Users/ReactivateModal';
 
 export default function Index({ auth, partners, filters }) {
     const [search, setSearch] = useState(filters.search || '');
-    const [partnerList, setPartnerList] = useState(partners.data || []);
     const [filter, setFilter] = useState(filters.status || 'all');
     const [partnerTypeFilter, setPartnerTypeFilter] = useState(filters.partner_type || 'all');
-    const [sort, setSort] = useState('default');
+    const [sortBy, setSortBy] = useState(filters.sort_by || 'id');
+    const [sortDir, setSortDir] = useState(filters.sort_dir || 'desc');
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
     const [showSortDropdown, setShowSortDropdown] = useState(false);
     const [showTypeDropdown, setShowTypeDropdown] = useState(false);
@@ -20,6 +20,7 @@ export default function Index({ auth, partners, filters }) {
     const [selectedPartner, setSelectedPartner] = useState(null);
     const [showReactivateModal, setShowReactivateModal] = useState(false);
     const [reactivateModalPartner, setReactivateModalPartner] = useState(null);
+    const [perPage, setPerPage] = useState(filters.per_page || 10);
 
     const filterRef = useRef(null);
     const sortRef = useRef(null);
@@ -35,54 +36,32 @@ export default function Index({ auth, partners, filters }) {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    const debouncedSearch = debounce((value) => {
-        setSearch(value);
+    // Always fetch from backend on search/filter/sort/perPage change
+    const fetchPartners = (params = {}) => {
         router.get(route('partners.index'), {
-            search: value,
+            search,
             status: filter !== 'all' ? filter : '',
             partner_type: partnerTypeFilter !== 'all' ? partnerTypeFilter : '',
+            sort_by: sortBy,
+            sort_dir: sortDir,
+            per_page: perPage,
+            ...params,
         }, { preserveState: true, replace: true });
+    };
+
+    const debouncedSearch = debounce((value) => {
+        setSearch(value);
+        fetchPartners({ search: value, page: 1 });
     }, 300);
 
     const handleSearchChange = (e) => debouncedSearch(e.target.value);
 
-    const processedPartners = useMemo(() => {
-        let result = [...partnerList];
-        if (search) {
-            result = result.filter((partner) => {
-                const name = partner.name?.toLowerCase() || '';
-                const email = partner.email?.toLowerCase() || '';
-                const phone = partner.phone?.toLowerCase() || '';
-                return (
-                    name.includes(search.toLowerCase()) ||
-                    email.includes(search.toLowerCase()) ||
-                    phone.includes(search.toLowerCase())
-                );
-            });
-        }
-        if (filter !== 'all') result = result.filter(partner => partner.status === filter);
-        if (partnerTypeFilter !== 'all') result = result.filter(partner => partner.partner_type === partnerTypeFilter);
-        if (sort !== 'default') {
-            switch (sort) {
-                case 'name_asc': result.sort((a, b) => (a.name || '').localeCompare(b.name || '')); break;
-                case 'name_desc': result.sort((a, b) => (b.name || '').localeCompare(a.name || '')); break;
-                case 'type_asc': result.sort((a, b) => (a.partner_type || '').localeCompare(b.partner_type || '')); break;
-                case 'type_desc': result.sort((a, b) => (b.partner_type || '').localeCompare(a.partner_type || '')); break;
-            }
-        }
-        return result;
-    }, [partnerList, search, filter, partnerTypeFilter, sort]);
-
     const getFilterLabel = () => filter === 'active' ? 'Active Only' : filter === 'inactive' ? 'Inactive Only' : 'All Partners';
     const getTypeLabel = () => partnerTypeFilter === 'individual' ? 'Individual' : partnerTypeFilter === 'organization' ? 'Organization' : 'All Types';
     const getSortLabel = () => {
-        switch (sort) {
-            case 'name_asc': return 'Name (A to Z)';
-            case 'name_desc': return 'Name (Z to A)';
-            case 'type_asc': return 'Type (A to Z)';
-            case 'type_desc': return 'Type (Z to A)';
-            default: return 'Default';
-        }
+        if (sortBy === 'name') return sortDir === 'asc' ? 'Name (A to Z)' : 'Name (Z to A)';
+        if (sortBy === 'email') return sortDir === 'asc' ? 'Email (A to Z)' : 'Email (Z to A)';
+        return 'Default';
     };
     const getStatusColor = (status) => status === 'active' ? "bg-green-100 text-green-700" : status === 'inactive' ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-700";
     const getTypeColor = (type) => type === 'organization' ? "bg-purple-600 text-white" : type === 'individual' ? "bg-blue-600 text-white" : "bg-gray-600 text-white";
@@ -91,9 +70,6 @@ export default function Index({ auth, partners, filters }) {
         router.post(route('partners.deactivate', id), {}, {
             preserveScroll: true,
             onSuccess: () => {
-                setPartnerList(prev =>
-                    prev.map(p => p.id === id ? { ...p, status: 'inactive' } : p)
-                );
                 setShowDeactivateModal(false);
                 setSelectedPartner(null);
             }
@@ -109,9 +85,6 @@ export default function Index({ auth, partners, filters }) {
         router.post(route('partners.reactivate', id), {}, {
             preserveScroll: true,
             onSuccess: () => {
-                setPartnerList(prev =>
-                    prev.map(p => p.id === id ? { ...p, status: 'active' } : p)
-                );
                 setShowReactivateModal(false);
                 setReactivateModalPartner(null);
             }
@@ -176,11 +149,7 @@ export default function Index({ auth, partners, filters }) {
                                                 onClick={() => {
                                                     setFilter(status);
                                                     setShowFilterDropdown(false);
-                                                    router.get(route('partners.index'), {
-                                                        search,
-                                                        status: status !== 'all' ? status : '',
-                                                        partner_type: partnerTypeFilter !== 'all' ? partnerTypeFilter : '',
-                                                    }, { preserveState: true, replace: true });
+                                                    fetchPartners({ status: status !== 'all' ? status : '', page: 1 });
                                                 }}
                                                 className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${filter === status ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
                                             >
@@ -215,11 +184,7 @@ export default function Index({ auth, partners, filters }) {
                                                 onClick={() => {
                                                     setPartnerTypeFilter(type);
                                                     setShowTypeDropdown(false);
-                                                    router.get(route('partners.index'), {
-                                                        search,
-                                                        status: filter !== 'all' ? filter : '',
-                                                        partner_type: type !== 'all' ? type : '',
-                                                    }, { preserveState: true, replace: true });
+                                                    fetchPartners({ partner_type: type !== 'all' ? type : '', page: 1 });
                                                 }}
                                                 className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${partnerTypeFilter === type ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
                                             >
@@ -248,24 +213,61 @@ export default function Index({ auth, partners, filters }) {
                             {showSortDropdown && (
                                 <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg border border-gray-200 z-10">
                                     <div className="py-1">
-                                        {[
-                                            { value: 'default', label: 'Default' },
-                                            { value: 'name_asc', label: 'Name (A to Z)' },
-                                            { value: 'name_desc', label: 'Name (Z to A)' },
-                                            { value: 'type_asc', label: 'Type (A to Z)' },
-                                            { value: 'type_desc', label: 'Type (Z to A)' }
-                                        ].map(opt => (
-                                            <button
-                                                key={opt.value}
-                                                onClick={() => {
-                                                    setSort(opt.value);
-                                                    setShowSortDropdown(false);
-                                                }}
-                                                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sort === opt.value ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
-                                            >
-                                                {opt.label}
-                                            </button>
-                                        ))}
+                                        <button
+                                            onClick={() => {
+                                                setSortBy('id');
+                                                setSortDir('desc');
+                                                setShowSortDropdown(false);
+                                                fetchPartners({ sort_by: 'id', sort_dir: 'desc', page: 1 });
+                                            }}
+                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'id' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                        >
+                                            Default
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setSortBy('name');
+                                                setSortDir('asc');
+                                                setShowSortDropdown(false);
+                                                fetchPartners({ sort_by: 'name', sort_dir: 'asc', page: 1 });
+                                            }}
+                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'name' && sortDir === 'asc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                        >
+                                            Name (A to Z)
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setSortBy('name');
+                                                setSortDir('desc');
+                                                setShowSortDropdown(false);
+                                                fetchPartners({ sort_by: 'name', sort_dir: 'desc', page: 1 });
+                                            }}
+                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'name' && sortDir === 'desc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                        >
+                                            Name (Z to A)
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setSortBy('email');
+                                                setSortDir('asc');
+                                                setShowSortDropdown(false);
+                                                fetchPartners({ sort_by: 'email', sort_dir: 'asc', page: 1 });
+                                            }}
+                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'email' && sortDir === 'asc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                        >
+                                            Email (A to Z)
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setSortBy('email');
+                                                setSortDir('desc');
+                                                setShowSortDropdown(false);
+                                                fetchPartners({ sort_by: 'email', sort_dir: 'desc', page: 1 });
+                                            }}
+                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'email' && sortDir === 'desc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                        >
+                                            Email (Z to A)
+                                        </button>
                                     </div>
                                 </div>
                             )}
@@ -334,11 +336,17 @@ export default function Index({ auth, partners, filters }) {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
-                            {processedPartners.length > 0 ? (
-                                processedPartners.map((partner) => (
+                            {partners.data.length > 0 ? (
+                                partners.data.map((partner) => (
                                     <tr key={partner.id} className="hover:bg-gray-50">
                                         <td className="px-6 py-4 font-poppins font-normal text-[13px] text-gray-900">
-                                            {partner.name}
+                                            <Link
+                                                href={route('partners.show', partner.id)}
+                                                className="transition-colors duration-200 hover:text-[#37692F]"
+                                                title="View Partner Details"
+                                            >
+                                                {partner.name}
+                                            </Link>
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`px-3 py-1 rounded-full text-xs font-poppins font-medium shadow-sm ${getTypeColor(partner.partner_type)}`}>
@@ -407,6 +415,54 @@ export default function Index({ auth, partners, filters }) {
                             )}
                         </tbody>
                     </table>
+                </div>
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between mt-6 gap-4">
+                    {/* Per Page Selector */}
+                    <div className="flex items-center space-x-2 relative">
+                        <span className="text-sm text-gray-700">Show</span>
+                        <div className="relative">
+                            <select
+                                className="appearance-none border border-gray-300 rounded px-2 py-1 pr-6 text-sm focus:ring-[#37692F] focus:border-[#37692F]"
+                                value={perPage}
+                                onChange={e => {
+                                    setPerPage(Number(e.target.value));
+                                    fetchPartners({ per_page: e.target.value, page: 1 });
+                                }}
+                            >
+                                {[10, 25, 50, 100].map(size => (
+                                    <option key={size} value={size}>{size}</option>
+                                ))}
+                            </select>
+                        </div>
+                        <span className="text-sm text-gray-700">entries</span>
+                    </div>
+
+                    {/* Pagination Controls */}
+                    {partners && partners.links && partners.links.length > 1 && (
+                        <div className="flex justify-center w-full md:w-auto">
+                            <nav className="inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                                {partners.links.map((link, idx) => {
+                                    const href = link.url ? link.url.replace(/&amp;/g, '&') : null;
+                                    return (
+                                        <Link
+                                            key={idx}
+                                            href={href || ''}
+                                            preserveScroll
+                                            preserveState
+                                            className={
+                                                `px-3 py-2 border text-sm font-medium ${
+                                                    link.active
+                                                        ? 'z-10 bg-[#37692F] border-[#37692F] text-white'
+                                                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                                                } ${!link.url ? 'pointer-events-none opacity-50' : ''}`
+                                            }
+                                            dangerouslySetInnerHTML={{ __html: link.label }}
+                                        />
+                                    );
+                                })}
+                            </nav>
+                        </div>
+                    )}
                 </div>
             </div>
 

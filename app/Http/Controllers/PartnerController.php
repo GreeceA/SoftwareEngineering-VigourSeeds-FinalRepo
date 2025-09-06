@@ -12,25 +12,35 @@ class PartnerController extends Controller
 {
     public function index(Request $request)
     {
-        $partners = Partner::query()
+        $perPage = $request->input('per_page', 10);
+
+        // Only allow sorting by these columns
+        $allowedSorts = ['id', 'name', 'email', 'status', 'partner_type'];
+        $sortBy = in_array($request->input('sort_by'), $allowedSorts) ? $request->input('sort_by') : 'id';
+        $sortDir = $request->input('sort_dir') === 'asc' ? 'asc' : 'desc';
+
+        $query = Partner::query()
             ->when($request->search, function ($query, $search) {
-                $query->where('name', 'like', "%{$search}%")
-                      ->orWhere('email', 'like', "%{$search}%")
-                      ->orWhere('phone', 'like', "%{$search}%");
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('phone', 'like', "%{$search}%");
+                });
             })
-            ->when($request->status, function ($query, $status) {
-                $query->where('status', $status);
+            ->when($request->status && in_array($request->status, ['active', 'inactive']), function ($query) use ($request) {
+                $query->where('status', $request->status);
             })
-            ->when($request->partner_type, function ($query, $type) {
-                $query->where('partner_type', $type);
-            })
-            ->orderBy('created_at', 'desc')
-            ->paginate(10)
-            ->withQueryString();
+            ->when($request->partner_type && in_array($request->partner_type, ['individual', 'organization']), function ($query) use ($request) {
+                $query->where('partner_type', $request->partner_type);
+            });
+
+        $query->orderBy($sortBy, $sortDir);
+
+        $partners = $query->paginate($perPage)->withQueryString();
 
         return Inertia::render('Partners/Index', [
             'partners' => $partners,
-            'filters' => $request->only(['search', 'status', 'partner_type']),
+            'filters' => $request->only(['search', 'status', 'partner_type', 'per_page', 'sort_by', 'sort_dir']),
             'auth' => [
                 'user' => $request->user(),
             ],
@@ -61,15 +71,44 @@ class PartnerController extends Controller
 
     public function show(Partner $partner)
     {
+        // Make sure the relation name matches your model
+        $partner->load('contactPersons');
+
         return Inertia::render('Partners/Show', [
-            'partner' => $partner,
+            'partner' => [
+                ...$partner->toArray(),
+                'contact_persons' => $partner->contactPersons->map(function ($c) {
+                    return [
+                        'name' => $c->name,
+                        'email' => $c->email,
+                        'phone_number' => $c->phone_number,
+                    ];
+                }),
+            ],
+            'auth' => [
+                'user' => auth()->user(),
+            ],
         ]);
     }
 
     public function edit(Partner $partner)
     {
+        $partner->load('contactPersons'); // Eloquent relation: contactPersons
+
         return Inertia::render('Partners/Edit', [
-            'partner' => $partner,
+            'partner' => [
+                ...$partner->toArray(),
+                'contact_persons' => $partner->contactPersons->map(function ($c) {
+                    return [
+                        'name' => $c->name,
+                        'email' => $c->email,
+                        'phone_number' => $c->phone_number,
+                    ];
+                }),
+            ],
+            'auth' => [
+                'user' => auth()->user(),
+            ],
         ]);
     }
 
@@ -121,4 +160,6 @@ class PartnerController extends Controller
     {
         return $this->hasMany(PartnerContact::class);
     }
+    
 }
+

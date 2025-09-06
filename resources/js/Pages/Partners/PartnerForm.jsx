@@ -8,12 +8,15 @@ export default function PartnerForm({ partner = null }) {
     const [localErrors, setLocalErrors] = useState({});
     const [contactWarning, setContactWarning] = useState('');
 
-    const { data, setData, post, put, processing, errors } = useForm({
+   const { data, setData, post, put, processing, errors } = useForm({
         partner_type: partner?.partner_type || 'individual',
         name: partner?.name || '',
-        contact_persons: partner?.contact_persons?.length
-            ? partner.contact_persons
-            : [{ name: '', email: '', phone_number: '' }],
+        contact_persons:
+            partner?.partner_type === 'organization'
+                ? (partner?.contact_persons?.length
+                    ? partner.contact_persons
+                    : [{ name: '', email: '', phone_number: '' }])
+                : [],
         email: partner?.email || '',
         phone: partner?.phone || '',
         address: partner?.address || '',
@@ -115,6 +118,7 @@ export default function PartnerForm({ partner = null }) {
         if (phoneRaw.length !== 11) {
             newErrors.phone = 'Phone number must be exactly 11 digits.';
         }
+        // Always require TIN and registration number for both types
         if (tinRaw.length !== 12) {
             newErrors.tax_id = 'TIN must be exactly 12 digits.';
         }
@@ -122,14 +126,13 @@ export default function PartnerForm({ partner = null }) {
             newErrors.registration_number = 'DTI Registration must be exactly 11 digits.';
         }
 
-        // Contact Persons validation
+        // Contact Persons validation only for organizations
         if (fields.partner_type === 'organization') {
             const contactErrors = validateContactPersons(fields.contact_persons);
             newErrors.contact_persons = contactErrors;
         }
 
         setLocalErrors(newErrors);
-        // Check if any errors in contact persons
         const hasContactErrors = newErrors.contact_persons?.some(e => Object.keys(e).length > 0);
         return Object.keys(newErrors).filter(k => k !== 'contact_persons').length === 0 && !hasContactErrors;
     };
@@ -146,14 +149,26 @@ export default function PartnerForm({ partner = null }) {
 
         const regRaw = data.registration_number.replace(/\D/g, '');
         const regNum = regRaw ? `BN-${regRaw}REG` : '';
-        setData('registration_number', regNum);
+
+        // Prepare payload
+        const payload = {
+            ...data,
+            registration_number: regNum,
+        };
+
+        // Only send contact_persons for organizations
+        if (data.partner_type !== 'organization') {
+            delete payload.contact_persons;
+        }
 
         if (partner) {
             put(route('partners.update', partner.id), {
+                ...payload,
                 onSuccess: () => router.visit(route('partners.index'))
             });
         } else {
             post(route('partners.store'), {
+                ...payload,
                 onSuccess: () => router.visit(route('partners.index'))
             });
         }
@@ -224,7 +239,15 @@ export default function PartnerForm({ partner = null }) {
                         <select
                             id="partner_type"
                             value={data.partner_type}
-                            onChange={(e) => setData('partner_type', e.target.value)}
+                            disabled={!!partner} // Disable if editing
+                            onChange={(e) => {
+                                setData('partner_type', e.target.value);
+                                if (e.target.value === 'organization') {
+                                    setData('contact_persons', [{ name: '', email: '', phone_number: '' }]);
+                                } else {
+                                    setData('contact_persons', []);
+                                }
+                            }}
                             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                             required
                         >

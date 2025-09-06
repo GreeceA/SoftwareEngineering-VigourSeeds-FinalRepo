@@ -27,12 +27,12 @@ class PartnerRequest extends FormRequest
             ],
             'phone' => ['required', 'string', 'max:255'],
             'address' => ['required', 'string'],
-            'registration_number' => ['nullable', 'string', 'max:255'],
-            'tax_id' => ['nullable', 'string', 'max:255'],
+            'registration_number' => ['required', 'string', 'max:255'],
+            'tax_id' => ['required', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
             'status' => ['required', 'in:active,inactive'],
 
-            // Add these for organization contacts
+            // Organization contacts
             'contact_persons' => [
                 'nullable',
                 'array',

@@ -30,4 +30,9 @@ class Partner extends Model
     {
         return $this->hasMany(\App\Models\PartnerContact::class);
     }
+
+    public function contactPersons() 
+    {
+    return $this->hasMany(PartnerContact::class);
+    }
 }
