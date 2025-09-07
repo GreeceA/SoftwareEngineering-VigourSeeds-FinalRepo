@@ -12,6 +12,8 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\PartnerController;
+use App\Http\Controllers\ContractController;
+use App\Http\Controllers\SeedController;
 
 // -----------------
 // Public Routes
@@ -69,7 +71,16 @@ Route::middleware(['auth'])->group(function () {
     Route::post('partners/{partner}/deactivate', [PartnerController::class, 'deactivate'])->name('partners.deactivate');
     Route::post('partners/{partner}/reactivate', [PartnerController::class, 'reactivate'])->name('partners.reactivate');
     Route::get('partners/{partner}', [PartnerController::class, 'show'])->name('partners.show');
-    
+
+    // Contracts
+    Route::resource('contracts', ContractController::class);
+    Route::post('contracts/{contract}/archive', [ContractController::class, 'archive'])->name('contracts.archive');
+
+    // Seeds
+    Route::resource('seeds', SeedController::class);
+    Route::patch('seeds/{seed}/archive', [SeedController::class, 'archive'])->name('seeds.archive');
+    Route::patch('seeds/{seed}/restore', [SeedController::class, 'restore'])->name('seeds.restore');
+    Route::delete('seeds/{seed}', [SeedController::class, 'destroy'])->name('seeds.destroy');
 });
 
 // -----------------

@@ -1,48 +1,44 @@
+// ...existing imports...
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState, useRef, useEffect } from 'react';
 import { debounce } from 'lodash';
 import '../../../css/fonts.css';
-import { ArchiveBoxIcon, ChevronDownIcon, FunnelIcon, ArrowsUpDownIcon } from '@heroicons/react/24/outline';
-import ArchivePartnerModal from '@/Pages/Partners/ArchivePartnerModal';
-import ReactivatePartnerModal from '@/Pages/Partners/ReactivatePartnerModal';
+import { ArchiveBoxIcon, ChevronDownIcon, FunnelIcon, ArrowsUpDownIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
+// import ArchiveModal from '@/Pages/Seeds/ArchiveModal';
+// import RestoreModal from '@/Pages/Seeds/RestoreModal';
+// import DeleteModal from '@/Pages/Seeds/DeleteModal';
 
-
-export default function Index({ auth, partners, filters }) {
+export default function Index({ auth, seeds, filters }) {
     const [search, setSearch] = useState(filters.search || '');
     const [filter, setFilter] = useState(filters.status || 'all');
-    const [partnerTypeFilter, setPartnerTypeFilter] = useState(filters.partner_type || 'all');
     const [sortBy, setSortBy] = useState(filters.sort_by || 'id');
     const [sortDir, setSortDir] = useState(filters.sort_dir || 'desc');
     const [showFilterDropdown, setShowFilterDropdown] = useState(false);
     const [showSortDropdown, setShowSortDropdown] = useState(false);
-    const [showTypeDropdown, setShowTypeDropdown] = useState(false);
-    const [showDeactivateModal, setShowDeactivateModal] = useState(false);
-    const [selectedPartner, setSelectedPartner] = useState(null);
-    const [showReactivateModal, setShowReactivateModal] = useState(false);
-    const [reactivateModalPartner, setReactivateModalPartner] = useState(null);
+    const [showArchiveModal, setShowArchiveModal] = useState(false);
+    const [showRestoreModal, setShowRestoreModal] = useState(false);
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [selectedSeed, setSelectedSeed] = useState(null);
     const [perPage, setPerPage] = useState(filters.per_page || 10);
 
     const filterRef = useRef(null);
     const sortRef = useRef(null);
-    const typeRef = useRef(null);
 
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (filterRef.current && !filterRef.current.contains(event.target)) setShowFilterDropdown(false);
             if (sortRef.current && !sortRef.current.contains(event.target)) setShowSortDropdown(false);
-            if (typeRef.current && !typeRef.current.contains(event.target)) setShowTypeDropdown(false);
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
     // Always fetch from backend on search/filter/sort/perPage change
-    const fetchPartners = (params = {}) => {
-        router.get(route('partners.index'), {
+    const fetchSeeds = (params = {}) => {
+        router.get(route('seeds.index'), {
             search,
             status: filter !== 'all' ? filter : '',
-            partner_type: partnerTypeFilter !== 'all' ? partnerTypeFilter : '',
             sort_by: sortBy,
             sort_dir: sortDir,
             per_page: perPage,
@@ -52,49 +48,71 @@ export default function Index({ auth, partners, filters }) {
 
     const debouncedSearch = debounce((value) => {
         setSearch(value);
-        fetchPartners({ search: value, page: 1 });
+        fetchSeeds({ search: value, page: 1 });
     }, 300);
 
     const handleSearchChange = (e) => debouncedSearch(e.target.value);
 
-    const getFilterLabel = () => filter === 'active' ? 'Active Only' : filter === 'inactive' ? 'Inactive Only' : 'All Partners';
-    const getTypeLabel = () => partnerTypeFilter === 'individual' ? 'Individual' : partnerTypeFilter === 'organization' ? 'Organization' : 'All Types';
+    const getFilterLabel = () => {
+        switch(filter) {
+            case 'active': return 'Active Only';
+            case 'archived': return 'Archived Only';
+            default: return 'All Seeds';
+        }
+    };
+
     const getSortLabel = () => {
-        if (sortBy === 'name') return sortDir === 'asc' ? 'Name (A to Z)' : 'Name (Z to A)';
-        if (sortBy === 'email') return sortDir === 'asc' ? 'Email (A to Z)' : 'Email (Z to A)';
+        if (sortBy === 'seed_variety') return sortDir === 'asc' ? 'Variety (A to Z)' : 'Variety (Z to A)';
+        if (sortBy === 'price_per_unit') return sortDir === 'asc' ? 'Price (Low to High)' : 'Price (High to Low)';
         return 'Default';
     };
-    const getStatusColor = (status) => status === 'active' ? "bg-green-100 text-green-700" : status === 'inactive' ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-700";
-    const getTypeColor = (type) => type === 'organization' ? "bg-purple-600 text-white" : type === 'individual' ? "bg-blue-600 text-white" : "bg-gray-600 text-white";
 
-    const handleDeactivateConfirm = (id) => {
-        router.post(route('partners.deactivate', id), {}, {
+    const getStatusColor = (status) => 
+        status === 'active' ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700";
+
+    const handleArchiveConfirm = (id) => {
+        router.patch(route('seeds.archive', id), {}, {
             preserveScroll: true,
             onSuccess: () => {
-                setShowDeactivateModal(false);
-                setSelectedPartner(null);
+                setShowArchiveModal(false);
+                setSelectedSeed(null);
             }
         });
     };
 
-    const handleDeactivateCancel = () => {
-        setShowDeactivateModal(false);
-        setSelectedPartner(null);
-    };
-
-    const handleReactivateConfirm = (id) => {
-        router.post(route('partners.reactivate', id), {}, {
+    const handleRestoreConfirm = (id) => {
+        router.patch(route('seeds.restore', id), {}, {
             preserveScroll: true,
             onSuccess: () => {
-                setShowReactivateModal(false);
-                setReactivateModalPartner(null);
+                setShowRestoreModal(false);
+                setSelectedSeed(null);
             }
         });
     };
-    
-    const handleReactivateCancel = () => {
-        setShowReactivateModal(false);
-        setReactivateModalPartner(null);
+
+    const handleDeleteConfirm = (id) => {
+        router.delete(route('seeds.destroy', id), {}, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setShowDeleteModal(false);
+                setSelectedSeed(null);
+            }
+        });
+    };
+
+    const handleArchiveCancel = () => {
+        setShowArchiveModal(false);
+        setSelectedSeed(null);
+    };
+
+    const handleRestoreCancel = () => {
+        setShowRestoreModal(false);
+        setSelectedSeed(null);
+    };
+
+    const handleDeleteCancel = () => {
+        setShowDeleteModal(false);
+        setSelectedSeed(null);
     };
 
     return (
@@ -103,11 +121,11 @@ export default function Index({ auth, partners, filters }) {
             header={
                 <h2 className="text-[25px] font-[800]" style={{ fontFamily: "'Poppins', sans-serif" }}>
                     <span className="text-[#37692F] font-[800]">VIGOUR SEEDS</span>
-                    <span className="text-[#333333] font-[400]"> | Partners</span>
+                    <span className="text-[#333333] font-[400]"> | Seed Management</span>
                 </h2>
             }
         >
-            <Head title="Partners" />
+            <Head title="Seed Management" />
 
             {/* Breadcrumb */}
             <div className="px-6 pt-6">
@@ -118,14 +136,14 @@ export default function Index({ auth, partners, filters }) {
                     >
                         Home
                     </Link>{" "}
-                    / <span>Partners</span>
+                    / <span>Seed Management</span>
                 </nav>
             </div>
 
             <div className="p-6">
                 {/* Header Section */}
                 <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-2xl font-semibold text-gray-800">Partners</h1>
+                    <h1 className="text-2xl font-semibold text-gray-800">Seed Management System</h1>
                     <div className="flex space-x-3">
                         {/* Status Filter Dropdown */}
                         <div className="relative" ref={filterRef}>
@@ -133,7 +151,6 @@ export default function Index({ auth, partners, filters }) {
                                 onClick={() => {
                                     setShowFilterDropdown(!showFilterDropdown);
                                     setShowSortDropdown(false);
-                                    setShowTypeDropdown(false);
                                 }}
                                 className="flex items-center px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#37692F] bg-white"
                             >
@@ -144,52 +161,17 @@ export default function Index({ auth, partners, filters }) {
                             {showFilterDropdown && (
                                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-10">
                                     <div className="py-1">
-                                        {['all', 'active', 'inactive'].map((status) => (
+                                        {['all', 'active', 'archived'].map((status) => (
                                             <button
                                                 key={status}
                                                 onClick={() => {
                                                     setFilter(status);
                                                     setShowFilterDropdown(false);
-                                                    fetchPartners({ status: status !== 'all' ? status : '', page: 1 });
+                                                    fetchSeeds({ status: status !== 'all' ? status : '', page: 1 });
                                                 }}
                                                 className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${filter === status ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
                                             >
-                                                {status === 'all' ? 'All Partners' : status.charAt(0).toUpperCase() + status.slice(1) + ' Only'}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Type Filter Dropdown */}
-                        <div className="relative" ref={typeRef}>
-                            <button
-                                onClick={() => {
-                                    setShowTypeDropdown(!showTypeDropdown);
-                                    setShowSortDropdown(false);
-                                    setShowFilterDropdown(false);
-                                }}
-                                className="flex items-center px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#37692F] bg-white"
-                            >
-                                <FunnelIcon className="w-4 h-4 mr-2 text-gray-500" />
-                                {getTypeLabel()}
-                                <ChevronDownIcon className="w-4 h-4 ml-2 text-gray-500" />
-                            </button>
-                            {showTypeDropdown && (
-                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-10">
-                                    <div className="py-1">
-                                        {['all', 'individual', 'organization'].map((type) => (
-                                            <button
-                                                key={type}
-                                                onClick={() => {
-                                                    setPartnerTypeFilter(type);
-                                                    setShowTypeDropdown(false);
-                                                    fetchPartners({ partner_type: type !== 'all' ? type : '', page: 1 });
-                                                }}
-                                                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${partnerTypeFilter === type ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
-                                            >
-                                                {type === 'all' ? 'All Types' : type.charAt(0).toUpperCase() + type.slice(1)}
+                                                {status === 'all' ? 'All Seeds' : status.charAt(0).toUpperCase() + status.slice(1) + ' Only'}
                                             </button>
                                         ))}
                                     </div>
@@ -203,7 +185,6 @@ export default function Index({ auth, partners, filters }) {
                                 onClick={() => {
                                     setShowSortDropdown(!showSortDropdown);
                                     setShowFilterDropdown(false);
-                                    setShowTypeDropdown(false);
                                 }}
                                 className="flex items-center px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#37692F] bg-white"
                             >
@@ -219,7 +200,7 @@ export default function Index({ auth, partners, filters }) {
                                                 setSortBy('id');
                                                 setSortDir('desc');
                                                 setShowSortDropdown(false);
-                                                fetchPartners({ sort_by: 'id', sort_dir: 'desc', page: 1 });
+                                                fetchSeeds({ sort_by: 'id', sort_dir: 'desc', page: 1 });
                                             }}
                                             className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'id' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
                                         >
@@ -227,47 +208,47 @@ export default function Index({ auth, partners, filters }) {
                                         </button>
                                         <button
                                             onClick={() => {
-                                                setSortBy('name');
+                                                setSortBy('seed_variety');
                                                 setSortDir('asc');
                                                 setShowSortDropdown(false);
-                                                fetchPartners({ sort_by: 'name', sort_dir: 'asc', page: 1 });
+                                                fetchSeeds({ sort_by: 'seed_variety', sort_dir: 'asc', page: 1 });
                                             }}
-                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'name' && sortDir === 'asc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'seed_variety' && sortDir === 'asc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
                                         >
-                                            Name (A to Z)
+                                            Variety (A to Z)
                                         </button>
                                         <button
                                             onClick={() => {
-                                                setSortBy('name');
+                                                setSortBy('seed_variety');
                                                 setSortDir('desc');
                                                 setShowSortDropdown(false);
-                                                fetchPartners({ sort_by: 'name', sort_dir: 'desc', page: 1 });
+                                                fetchSeeds({ sort_by: 'seed_variety', sort_dir: 'desc', page: 1 });
                                             }}
-                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'name' && sortDir === 'desc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'seed_variety' && sortDir === 'desc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
                                         >
-                                            Name (Z to A)
+                                            Variety (Z to A)
                                         </button>
                                         <button
                                             onClick={() => {
-                                                setSortBy('email');
+                                                setSortBy('price_per_unit');
                                                 setSortDir('asc');
                                                 setShowSortDropdown(false);
-                                                fetchPartners({ sort_by: 'email', sort_dir: 'asc', page: 1 });
+                                                fetchSeeds({ sort_by: 'price_per_unit', sort_dir: 'asc', page: 1 });
                                             }}
-                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'email' && sortDir === 'asc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'price_per_unit' && sortDir === 'asc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
                                         >
-                                            Email (A to Z)
+                                            Price (Low to High)
                                         </button>
                                         <button
                                             onClick={() => {
-                                                setSortBy('email');
+                                                setSortBy('price_per_unit');
                                                 setSortDir('desc');
                                                 setShowSortDropdown(false);
-                                                fetchPartners({ sort_by: 'email', sort_dir: 'desc', page: 1 });
+                                                fetchSeeds({ sort_by: 'price_per_unit', sort_dir: 'desc', page: 1 });
                                             }}
-                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'email' && sortDir === 'desc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'price_per_unit' && sortDir === 'desc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
                                         >
-                                            Email (Z to A)
+                                            Price (High to Low)
                                         </button>
                                     </div>
                                 </div>
@@ -278,7 +259,7 @@ export default function Index({ auth, partners, filters }) {
                         <div className="relative">
                             <input
                                 type="text"
-                                placeholder="Search by name, email, or phone..."
+                                placeholder="Search by variety or soil type..."
                                 defaultValue={search}
                                 onChange={handleSearchChange}
                                 className="w-[400px] pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#37692F]"
@@ -298,9 +279,9 @@ export default function Index({ auth, partners, filters }) {
                             </svg>
                         </div>
 
-                        {/* Add Partner Button */}
+                        {/* Add Seed Button */}
                         <Link
-                            href={route('partners.create')}
+                            href={route('seeds.create')}
                             className="bg-[#37692F] text-white px-4 py-2 rounded-md hover:bg-[#2a5624] flex items-center"
                         >
                             <svg
@@ -316,17 +297,17 @@ export default function Index({ auth, partners, filters }) {
                                     d="M12 6v6m0 0v6m0-6h6m-6 0H6"
                                 />
                             </svg>
-                            Add Partner
+                            Add Seed
                         </Link>
                     </div>
                 </div>
 
-                {/* Partners Table */}
+                {/* Seeds Table */}
                 <div className="overflow-x-auto bg-white shadow-lg rounded-lg">
                     <table className="w-full text-sm text-left">
                         <thead className="bg-[#37692F] text-gray-600 uppercase text-xs">
                             <tr>
-                                {['NAME', 'TYPE', 'EMAIL', 'PHONE', 'STATUS', 'ACTIONS'].map((header) => (
+                                {['SEED VARIETY', 'PRICE', 'GROWTH INFO', 'STATUS', 'ACTIONS'].map((header) => (
                                     <th
                                         key={header}
                                         className="px-6 py-4 font-poppins font-medium text-[14px] text-white"
@@ -337,86 +318,103 @@ export default function Index({ auth, partners, filters }) {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
-                            {partners.data.length > 0 ? (
-                                partners.data.map((partner) => (
-                                    <tr key={partner.id} className="hover:bg-gray-50">
-                                        <td className="px-6 py-4 font-poppins font-normal text-[13px] text-gray-900">
-                                            <Link
-                                                href={route('partners.show', partner.id)}
-                                                className="transition-colors duration-200 hover:text-[#37692F]"
-                                                title="View Partner Details"
-                                            >
-                                                {partner.name}
-                                            </Link>
+                            {seeds.data.length > 0 ? (
+                                seeds.data.map((seed) => (
+                                    <tr key={seed.id} className="hover:bg-gray-50">
+                                        <td className="px-6 py-4">
+                                            <div>
+                                                <div className="font-poppins font-medium text-[13px] text-gray-900">
+                                                    {seed.seed_variety}
+                                                </div>
+                                                <div className="font-poppins font-normal text-[12px] text-gray-500">
+                                                    Soil: {seed.soil_type_preference}
+                                                </div>
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className={`px-3 py-1 rounded-full text-xs font-poppins font-medium shadow-sm ${getTypeColor(partner.partner_type)}`}>
-                                                {partner.partner_type}
-                                            </span>
+                                            <div className="font-poppins font-medium text-[13px] text-gray-900">
+                                                ${seed.price_per_unit}
+                                            </div>
+                                            <div className="font-poppins font-normal text-[12px] text-gray-500">
+                                                per unit
+                                            </div>
                                         </td>
-                                        <td className="px-6 py-4 font-poppins font-normal text-[13px] text-gray-900">
-                                            {partner.email}
-                                        </td>
-                                        <td className="px-6 py-4 font-poppins font-normal text-[13px] text-gray-900">
-                                            {partner.phone}
+                                        <td className="px-6 py-4">
+                                            <div className="font-poppins font-normal text-[13px] text-gray-900">
+                                                {seed.growth_cycle}
+                                            </div>
+                                            <div className="font-poppins font-normal text-[12px] text-gray-500">
+                                                {seed.storage_requirements}
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <span
-                                                className={`px-3 py-1 rounded-full text-xs font-poppins font-normal ${getStatusColor(partner.status)}`}
+                                                className={`px-3 py-1 rounded-full text-xs font-poppins font-normal ${getStatusColor(seed.status)}`}
                                             >
-                                                {partner.status}
+                                                {seed.status}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex space-x-2">
                                                 <Link
-                                                    href={route('partners.edit', partner.id)}
+                                                    href={route('seeds.edit', seed.id)}
                                                     className="text-blue-600 hover:text-blue-800"
-                                                    title="Edit Partner"
+                                                    title="Edit Seed"
                                                 >
                                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                                     </svg>
                                                 </Link>
-                                                {partner.status === 'active' ? (
+                                                {seed.status === 'active' ? (
                                                     <button
-                                                        className="text-yellow-600 hover:text-yellow-800"
+                                                        className="text-orange-600 hover:text-orange-800"
                                                         onClick={() => {
-                                                            setSelectedPartner(partner);
-                                                            setShowDeactivateModal(true);
+                                                            setSelectedSeed(seed);
+                                                            setShowArchiveModal(true);
                                                         }}
-                                                        title="Archive Partner"
+                                                        title="Archive Seed"
                                                     >
-                                                        <ArchiveBoxIcon className="w-5 h-5" /> {/* Use the solid icon here */}
+                                                        <ArchiveBoxIcon className="w-5 h-5" />
                                                     </button>
                                                 ) : (
                                                     <button
                                                         className="text-green-600 hover:text-green-800"
                                                         onClick={() => {
-                                                            setReactivateModalPartner(partner);
-                                                            setShowReactivateModal(true);
+                                                            setSelectedSeed(seed);
+                                                            setShowRestoreModal(true);
                                                         }}
-                                                        title="Reactivate Partner"
+                                                        title="Restore Seed"
                                                     >
-                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                                        </svg>
+                                                        <ArrowPathIcon className="w-5 h-5" />
                                                     </button>
                                                 )}
+                                                <button
+                                                    className="text-red-600 hover:text-red-800"
+                                                    onClick={() => {
+                                                        setSelectedSeed(seed);
+                                                        setShowDeleteModal(true);
+                                                    }}
+                                                    title="Delete Seed"
+                                                >
+                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                    </svg>
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
-                                        No partners found.
+                                    <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
+                                        No seeds found.
                                     </td>
                                 </tr>
                             )}
                         </tbody>
                     </table>
                 </div>
+                
                 <div className="flex flex-col md:flex-row md:items-center md:justify-between mt-6 gap-4">
                     {/* Per Page Selector */}
                     <div className="flex items-center space-x-2 relative">
@@ -427,7 +425,7 @@ export default function Index({ auth, partners, filters }) {
                                 value={perPage}
                                 onChange={e => {
                                     setPerPage(Number(e.target.value));
-                                    fetchPartners({ per_page: e.target.value, page: 1 });
+                                    fetchSeeds({ per_page: e.target.value, page: 1 });
                                 }}
                             >
                                 {[10, 25, 50, 100].map(size => (
@@ -439,15 +437,15 @@ export default function Index({ auth, partners, filters }) {
                     </div>
 
                     {/* Pagination Controls */}
-                    {partners && partners.links && partners.links.length > 1 && (
+                    {seeds && seeds.links && seeds.links.length > 1 && (
                         <div className="flex justify-center w-full md:w-auto">
                             <nav className="inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
-                                {partners.links.map((link, idx) => {
+                                {seeds.links.map((link, idx) => {
                                     const href = link.url ? link.url.replace(/&amp;/g, '&') : null;
-                                    return (
+                                    return href ? (
                                         <Link
                                             key={idx}
-                                            href={href || ''}
+                                            href={href}
                                             preserveScroll
                                             preserveState
                                             className={
@@ -455,8 +453,14 @@ export default function Index({ auth, partners, filters }) {
                                                     link.active
                                                         ? 'z-10 bg-[#37692F] border-[#37692F] text-white'
                                                         : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                                                } ${!link.url ? 'pointer-events-none opacity-50' : ''}`
+                                                }`
                                             }
+                                            dangerouslySetInnerHTML={{ __html: link.label }}
+                                        />
+                                    ) : (
+                                        <span
+                                            key={idx}
+                                            className="px-3 py-2 border text-sm font-medium bg-gray-100 text-gray-400 cursor-not-allowed"
                                             dangerouslySetInnerHTML={{ __html: link.label }}
                                         />
                                     );
@@ -467,19 +471,28 @@ export default function Index({ auth, partners, filters }) {
                 </div>
             </div>
 
-            {showDeactivateModal && (
-                <ArchivePartnerModal
-                    partner={selectedPartner}
-                    onCancel={handleDeactivateCancel}
-                    onConfirm={handleDeactivateConfirm}
+            {/* Modals */}
+            {showArchiveModal && (
+                <ArchiveModal
+                    seed={selectedSeed}
+                    onCancel={handleArchiveCancel}
+                    onConfirm={handleArchiveConfirm}
                 />
             )}
 
-            {showReactivateModal && (
-                <ReactivatePartnerModal
-                    partner={reactivateModalPartner}
-                    onCancel={handleReactivateCancel}
-                    onConfirm={handleReactivateConfirm}
+            {showRestoreModal && (
+                <RestoreModal
+                    seed={selectedSeed}
+                    onCancel={handleRestoreCancel}
+                    onConfirm={handleRestoreConfirm}
+                />
+            )}
+
+            {showDeleteModal && (
+                <DeleteModal
+                    seed={selectedSeed}
+                    onCancel={handleDeleteCancel}
+                    onConfirm={handleDeleteConfirm}
                 />
             )}
         </AuthenticatedLayout>

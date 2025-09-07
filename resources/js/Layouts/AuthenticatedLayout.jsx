@@ -110,18 +110,26 @@ export default function AuthenticatedLayout({ header, children }) {
                             </div>
 
                             <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                                {/* CONTRACTS */}
+                                {/* PARTNERS */}
                                 <NavLink
                                     href={route('partners.index')}
                                     active={route().current('partners.index')}
                                 >
                                     Partners
                                 </NavLink>
+                                {/* CONTRACTS */}
                                 <NavLink
-                                    // href={route('dashboard')}
-                                    // active={route().current('dashboard')}
+                                    href={route('contracts.index')}
+                                    active={route().current('contracts.index')}
                                 >
                                     Contracts
+                                </NavLink>
+                                {/* SEEDS */}
+                                <NavLink
+                                    href={route('seeds.index')}
+                                    active={route().current('seeds.index')}
+                                >
+                                    Seeds
                                 </NavLink>
                                 <NavLink
                                     // href={route('dashboard')}
