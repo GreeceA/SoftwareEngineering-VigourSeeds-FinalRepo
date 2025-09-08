@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('seed_variety');
             $table->enum('status', ['active', 'archived'])->default('active');
             $table->decimal('price_per_unit', 10, 2);
-            $table->string('growth_cycle');
+            $table->integer('growth_cycle');
             $table->string('storage_requirements');
             $table->string('soil_type_preference');
             $table->text('notes')->nullable();

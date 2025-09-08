@@ -1,7 +1,7 @@
 import { ArrowPathIcon } from '@heroicons/react/24/solid';
 
-export default function ReactivatePartnerModal({ partner, onCancel, onConfirm }) {
-  if (!partner) return null;
+export default function ReactivateSeedsModal({ seed, onCancel, onConfirm }) {
+  if (!seed) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[9999]">
@@ -13,25 +13,25 @@ export default function ReactivatePartnerModal({ partner, onCancel, onConfirm })
 
         {/* Title */}
         <h2 className="text-xl font-poppins font-semibold text-center text-gray-800 mb-2">
-          Reactivate Partner Account
+          Reactivate Seed
         </h2>
 
         {/* Description */}
         <p className="text-gray-600 text-center mb-4 font-poppins text-sm">
           Are you sure you want to reactivate{' '}
           <span className="text-[#37692F] font-bold">
-            {partner.name}
+            {seed.seed_variety}
           </span>
           ?
         </p>
 
         <p className="text-sm text-gray-500 text-center mb-2">
-          This {partner.partner_type === 'organization' ? 'organization' : 'individual'} partner will be reactivated and available for new contracts.
+          This seed will be reactivated and available for new contracts.
         </p>
         
         <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-6">
           <p className="text-xs text-green-800 text-center font-medium">
-            ✅ This partner will be restored to active status immediately.
+            ✅ This seed will be restored to active status immediately.
           </p>
         </div>
 
@@ -39,9 +39,9 @@ export default function ReactivatePartnerModal({ partner, onCancel, onConfirm })
         <div className="flex justify-center space-x-4 mt-8">
           <button
             className="flex-1 px-5 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-poppins text-sm font-medium"
-            onClick={() => onConfirm(partner.id)}
+            onClick={() => onConfirm(seed.id)}
           >
-            Reactivate Partner
+            Reactivate Seed
           </button>
 
           <button

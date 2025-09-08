@@ -1,68 +1,64 @@
 <?php
-// app/Models/Contract.php
 
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Contract extends Model
 {
     use HasFactory;
 
     protected $fillable = [
-        'contract_title',
         'partner_id',
+        'title',
         'contract_file',
         'contract_date',
         'effective_date',
         'expiration_date',
-        'seed',
-        'seed_quantity',
-        'unit_of_measurement',
-        'expected_harvest_date',
         'notes',
-        'status'
+        'status',
     ];
 
     protected $casts = [
         'contract_date' => 'date',
         'effective_date' => 'date',
         'expiration_date' => 'date',
-        'expected_harvest_date' => 'date'
     ];
 
-    // Relationship to Partner (assuming you have a Partner model)
-    public function partner()
+    public function partner(): BelongsTo
     {
         return $this->belongsTo(Partner::class);
     }
 
-    // Placeholder relationship for future MonitoringLog model
-    public function monitoringLogs()
+    public function contractSeedItems(): HasMany
     {
-        return $this->hasMany(MonitoringLog::class);
+        return $this->hasMany(ContractSeedItem::class);
     }
 
-    // Define seed options for forms
-    public static function getSeedOptions()
+    public function canTransitionTo(string $newStatus): bool
     {
-        return [
-            'MAIZE D30',
-            'MAISWERTE',
-            'MAIS-TISA',
-            'KK168',
-            'TEOSINTE 200'
+        $transitions = [
+            'draft' => ['active', 'cancelled'],
+            'active' => ['suspended', 'terminated', 'archived'],
+            'suspended' => ['active', 'terminated'],
+            'terminated' => [],
+            'cancelled' => [],
+            'archived' => [],
         ];
+
+        return in_array($newStatus, $transitions[$this->status] ?? []);
     }
 
-    // Define status options
-    public static function getStatusOptions()
+    public function canBeEdited(): bool
     {
-        return [
-            'draft' => 'Draft',
-            'active' => 'Active',
-            'archived' => 'Archived'
-        ];
+        return in_array($this->status, ['draft']);
+    }
+
+    public function canBePartiallyEdited(): bool
+    {
+        return in_array($this->status, ['active', 'suspended']);
     }
 }

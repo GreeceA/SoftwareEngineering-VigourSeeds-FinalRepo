@@ -37,8 +37,10 @@ class Seed extends Model
     {
         return $query->where(function ($q) use ($search) {
             $q->where('seed_variety', 'like', '%' . $search . '%')
-              ->orWhere('growth_cycle', 'like', '%' . $search . '%')
+              ->orWhere('growth_cycle', $search)
               ->orWhere('soil_type_preference', 'like', '%' . $search . '%');
         });
     }
+
+    
 }

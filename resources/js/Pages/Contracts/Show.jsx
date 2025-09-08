@@ -1,42 +1,43 @@
-import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import React, { useState } from 'react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 
 export default function Show({ auth, contract }) {
-    const getStatusBadge = (status) => {
-        const statusColors = {
+    const [showStatusModal, setShowStatusModal] = useState(false);
+    const [selectedStatus, setSelectedStatus] = useState('');
+
+    const { post, processing } = useForm();
+
+    const getStatusColor = (status) => {
+        const colors = {
             draft: 'bg-gray-100 text-gray-800',
             active: 'bg-green-100 text-green-800',
-            archived: 'bg-red-100 text-red-800'
+            suspended: 'bg-yellow-100 text-yellow-800',
+            terminated: 'bg-red-100 text-red-800',
+            cancelled: 'bg-red-100 text-red-800',
+            archived: 'bg-gray-100 text-gray-500',
         };
-        
-        return (
-            <span className={`px-3 py-1 inline-flex text-sm font-semibold rounded-full ${statusColors[status]}`}>
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-            </span>
-        );
+        return colors[status] || 'bg-gray-100 text-gray-800';
     };
 
-    const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
-    };
-
-    const downloadContract = () => {
-        if (contract.contract_file) {
-            window.open(`/storage/${contract.contract_file}`, '_blank');
+    const handleStatusChange = () => {
+        if (selectedStatus) {
+            post(route('contracts.change-status', contract.id), {
+                data: { status: selectedStatus },
+                onSuccess: () => {
+                    setShowStatusModal(false);
+                    setSelectedStatus('');
+                }
+            });
         }
     };
 
-    const calculateDaysUntilHarvest = () => {
-        const harvestDate = new Date(contract.expected_harvest_date);
-        const today = new Date();
-        const diffTime = harvestDate - today;
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays;
+    const handleDelete = () => {
+        if (confirm('Are you sure you want to archive this contract?')) {
+            post(route('contracts.destroy', contract.id), {
+                method: 'delete',
+            });
+        }
     };
 
     return (
@@ -45,205 +46,214 @@ export default function Show({ auth, contract }) {
             header={
                 <div className="flex justify-between items-center">
                     <h2 className="font-semibold text-xl text-gray-800 leading-tight">
-                        Contract Details: {contract.contract_title}
+                        Contract: {contract.title}
                     </h2>
-                    <div className="flex space-x-2">
-                        <Link
-                            href={route('contracts.edit', contract.id)}
-                            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-                        >
-                            Edit Contract
-                        </Link>
+                    <div className="flex space-x-3">
                         <Link
                             href={route('contracts.index')}
-                            className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded"
+                            className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition duration-150"
                         >
                             Back to Contracts
                         </Link>
+                        {(contract.can_be_edited || contract.can_be_partially_edited) && (
+                            <Link
+                                href={route('contracts.edit', contract.id)}
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition duration-150"
+                            >
+                                Edit Contract
+                            </Link>
+                        )}
                     </div>
                 </div>
             }
         >
-            <Head title={`Contract: ${contract.contract_title}`} />
+            <Head title={`Contract: ${contract.title}`} />
 
             <div className="py-12">
-                <div className="max-w-6xl mx-auto sm:px-6 lg:px-8 space-y-6">
-                    {/* Contract Overview */}
+                <div className="max-w-4xl mx-auto sm:px-6 lg:px-8">
                     <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                         <div className="p-6">
+                            {/* Contract Header */}
                             <div className="flex justify-between items-start mb-6">
                                 <div>
-                                    <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                                        {contract.contract_title}
-                                    </h3>
-                                    <p className="text-gray-600">
-                                        Partner: <span className="font-semibold">{contract.partner?.name || 'N/A'}</span>
-                                    </p>
+                                    <h1 className="text-2xl font-bold text-gray-900">{contract.title}</h1>
+                                    <p className="text-gray-600 mt-1">Contract ID: #{contract.id}</p>
                                 </div>
-                                <div className="text-right">
-                                    {getStatusBadge(contract.status)}
-                                    <p className="text-sm text-gray-500 mt-2">
-                                        Created: {formatDate(contract.created_at)}
-                                    </p>
-                                </div>
+                                <span className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${getStatusColor(contract.status)}`}>
+                                    {contract.status}
+                                </span>
                             </div>
 
-                            {/* Contract Details Grid */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                <div className="bg-gray-50 p-4 rounded-lg">
-                                    <h4 className="font-semibold text-gray-700 mb-2">Contract Information</h4>
-                                    <div className="space-y-2 text-sm">
-                                        <p><span className="font-medium">Contract Date:</span> {formatDate(contract.contract_date)}</p>
-                                        <p><span className="font-medium">Effective Date:</span> {formatDate(contract.effective_date)}</p>
-                                        <p><span className="font-medium">Expiration Date:</span> {formatDate(contract.expiration_date)}</p>
-                                    </div>
+                            {/* Basic Information */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                                <div>
+                                    <h3 className="text-lg font-medium text-gray-900 mb-4">Contract Details</h3>
+                                    <dl className="space-y-3">
+                                        <div>
+                                            <dt className="text-sm font-medium text-gray-500">Partner</dt>
+                                            <dd className="text-sm text-gray-900">{contract.partner.name}</dd>
+                                        </div>
+                                        <div>
+                                            <dt className="text-sm font-medium text-gray-500">Contract Date</dt>
+                                            <dd className="text-sm text-gray-900">{contract.contract_date}</dd>
+                                        </div>
+                                        <div>
+                                            <dt className="text-sm font-medium text-gray-500">Effective Date</dt>
+                                            <dd className="text-sm text-gray-900">{contract.effective_date || 'Not set'}</dd>
+                                        </div>
+                                        <div>
+                                            <dt className="text-sm font-medium text-gray-500">Expiration Date</dt>
+                                            <dd className="text-sm text-gray-900">{contract.expiration_date || 'Not set'}</dd>
+                                        </div>
+                                        <div>
+                                            <dt className="text-sm font-medium text-gray-500">Contract File</dt>
+                                            <dd className="text-sm text-gray-900">
+                                                {contract.contract_file ? (
+                                                    <a
+                                                        href={`/storage/${contract.contract_file}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-blue-600 hover:text-blue-800 underline"
+                                                    >
+                                                        Download File
+                                                    </a>
+                                                ) : (
+                                                    'No file uploaded'
+                                                )}
+                                            </dd>
+                                        </div>
+                                    </dl>
                                 </div>
 
-                                <div className="bg-gray-50 p-4 rounded-lg">
-                                    <h4 className="font-semibold text-gray-700 mb-2">Seed Details</h4>
-                                    <div className="space-y-2 text-sm">
-                                        <p><span className="font-medium">Seed Type:</span> {contract.seed}</p>
-                                        <p><span className="font-medium">Quantity:</span> {contract.seed_quantity?.toLocaleString() || 0}</p>
-                                        <p><span className="font-medium">Unit:</span> {contract.unit_of_measurement}</p>
-                                    </div>
-                                </div>
-
-                                <div className="bg-gray-50 p-4 rounded-lg">
-                                    <h4 className="font-semibold text-gray-700 mb-2">Harvest Information</h4>
-                                    <div className="space-y-2 text-sm">
-                                        <p><span className="font-medium">Expected Harvest:</span> {formatDate(contract.expected_harvest_date)}</p>
-                                        <p><span className="font-medium">Days Until Harvest:</span> {calculateDaysUntilHarvest()} days</p>
+                                <div>
+                                    <h3 className="text-lg font-medium text-gray-900 mb-4">Actions</h3>
+                                    <div className="space-y-3">
+                                        {contract.available_transitions.length > 0 && (
+                                            <button
+                                                onClick={() => setShowStatusModal(true)}
+                                                className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-lg transition duration-150"
+                                            >
+                                                Change Status
+                                            </button>
+                                        )}
+                                        
+                                        {contract.status !== 'archived' && (
+                                            <button
+                                                onClick={handleDelete}
+                                                className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-lg transition duration-150"
+                                            >
+                                                Archive Contract
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             </div>
-
-                            {/* Contract File */}
-                            {contract.contract_file && (
-                                <div className="mt-6 p-4 border border-gray-200 rounded-lg">
-                                    <h4 className="font-semibold text-gray-700 mb-2">Contract File</h4>
-                                    <div className="flex items-center space-x-4">
-                                        <span className="text-sm text-gray-600">
-                                            {contract.contract_file.split('/').pop()}
-                                        </span>
-                                        <button
-                                            onClick={downloadContract}
-                                            className="bg-indigo-500 hover:bg-indigo-700 text-white px-4 py-2 rounded text-sm"
-                                        >
-                                            Download Contract
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
 
                             {/* Notes */}
                             {contract.notes && (
-                                <div className="mt-6">
-                                    <h4 className="font-semibold text-gray-700 mb-2">Notes</h4>
-                                    <div className="bg-gray-50 p-4 rounded-lg">
-                                        <p className="text-gray-800 whitespace-pre-wrap">{contract.notes}</p>
+                                <div className="mb-8">
+                                    <h3 className="text-lg font-medium text-gray-900 mb-3">Notes</h3>
+                                    <div className="bg-gray-50 rounded-lg p-4">
+                                        <p className="text-gray-700 whitespace-pre-wrap">{contract.notes}</p>
                                     </div>
                                 </div>
                             )}
-                        </div>
-                    </div>
 
-                    {/* Monitoring Logs Section */}
-                    <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                        <div className="p-6">
-                            <div className="flex justify-between items-center mb-4">
-                                <h3 className="text-xl font-bold text-gray-900">Monitoring Logs</h3>
-                                <button className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-                                    Add Monitoring Log
-                                </button>
-                            </div>
-
-                            {/* Placeholder for monitoring logs */}
-                            {contract.monitoring_logs && contract.monitoring_logs.length > 0 ? (
+                            {/* Seed Items */}
+                            <div>
+                                <h3 className="text-lg font-medium text-gray-900 mb-4">Seed Varieties</h3>
                                 <div className="space-y-4">
-                                    {contract.monitoring_logs.map((log) => (
-                                        <div key={log.id} className="border border-gray-200 rounded-lg p-4">
-                                            <div className="flex justify-between items-start">
+                                    {contract.seed_items.map((item, index) => (
+                                        <div key={item.id} className="border border-gray-200 rounded-lg p-4">
+                                            <div className="flex justify-between items-start mb-3">
+                                                <h4 className="font-medium text-gray-900">{item.seed.seed_variety}</h4>
+                                                <span className="text-sm text-gray-500">#{index + 1}</span>
+                                            </div>
+                                            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                                                 <div>
-                                                    <h4 className="font-semibold">{log.title}</h4>
-                                                    <p className="text-gray-600 text-sm">{log.description}</p>
+                                                    <dt className="text-xs font-medium text-gray-500">Quantity</dt>
+                                                    <dd className="text-sm font-medium text-gray-900">{item.quantity} {item.unit}</dd>
                                                 </div>
-                                                <span className="text-xs text-gray-500">
-                                                    {formatDate(log.created_at)}
-                                                </span>
+                                                <div>
+                                                    <dt className="text-xs font-medium text-gray-500">Unit Price</dt>
+                                                    <dd className="text-sm font-medium text-gray-900">${item.seed.price_per_unit}</dd>
+                                                </div>
+                                                <div>
+                                                    <dt className="text-xs font-medium text-gray-500">Cycles</dt>
+                                                    <dd className="text-sm font-medium text-gray-900">{item.cycles}</dd>
+                                                </div>
+                                                <div>
+                                                    <dt className="text-xs font-medium text-gray-500">Expected Harvest</dt>
+                                                    <dd className="text-sm font-medium text-gray-900">{item.expected_harvest_date}</dd>
+                                                </div>
                                             </div>
                                         </div>
                                     ))}
-                                </div>
-                            ) : (
-                                <div className="text-center py-8 bg-gray-50 rounded-lg">
-                                    <p className="text-gray-500 mb-4">No monitoring logs found for this contract.</p>
-                                    <button className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded">
-                                        Create First Monitoring Log
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Contract Timeline */}
-                    <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                        <div className="p-6">
-                            <h3 className="text-xl font-bold text-gray-900 mb-4">Contract Timeline</h3>
-                            <div className="relative">
-                                <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200"></div>
-                                
-                                <div className="relative space-y-6">
-                                    <div className="flex items-center space-x-4">
-                                        <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
-                                            <span className="text-white text-xs font-bold">1</span>
-                                        </div>
-                                        <div>
-                                            <p className="font-semibold">Contract Signed</p>
-                                            <p className="text-sm text-gray-500">{formatDate(contract.contract_date)}</p>
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="flex items-center space-x-4">
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                                            new Date(contract.effective_date) <= new Date() ? 'bg-green-500' : 'bg-gray-300'
-                                        }`}>
-                                            <span className="text-white text-xs font-bold">2</span>
-                                        </div>
-                                        <div>
-                                            <p className="font-semibold">Contract Effective</p>
-                                            <p className="text-sm text-gray-500">{formatDate(contract.effective_date)}</p>
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="flex items-center space-x-4">
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                                            new Date(contract.expected_harvest_date) <= new Date() ? 'bg-green-500' : 'bg-gray-300'
-                                        }`}>
-                                            <span className="text-white text-xs font-bold">3</span>
-                                        </div>
-                                        <div>
-                                            <p className="font-semibold">Expected Harvest</p>
-                                            <p className="text-sm text-gray-500">{formatDate(contract.expected_harvest_date)}</p>
-                                        </div>
-                                    </div>
-                                    
-                                    <div className="flex items-center space-x-4">
-                                        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                                            new Date(contract.expiration_date) <= new Date() ? 'bg-red-500' : 'bg-gray-300'
-                                        }`}>
-                                            <span className="text-white text-xs font-bold">4</span>
-                                        </div>
-                                        <div>
-                                            <p className="font-semibold">Contract Expiration</p>
-                                            <p className="text-sm text-gray-500">{formatDate(contract.expiration_date)}</p>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+
+            {/* Status Change Modal */}
+            {showStatusModal && (
+                <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+                    <div className="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+                        <div className="mt-3">
+                            <h3 className="text-lg font-medium text-gray-900 mb-4">Change Contract Status</h3>
+                            <p className="text-sm text-gray-500 mb-4">
+                                Current status: <span className="font-medium">{contract.status}</span>
+                            </p>
+                            
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Select new status:
+                                </label>
+                                <select
+                                    value={selectedStatus}
+                                    onChange={(e) => setSelectedStatus(e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="">Choose status...</option>
+                                    {contract.available_transitions.map((status) => (
+                                        <option key={status} value={status}>
+                                            {status.charAt(0).toUpperCase() + status.slice(1)}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {selectedStatus === 'active' && !contract.contract_file && (
+                                <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                                    <p className="text-sm text-yellow-800">
+                                        A contract file is required to activate the contract. Please upload a file first.
+                                    </p>
+                                </div>
+                            )}
+
+                            <div className="flex justify-end space-x-3">
+                                <button
+                                    onClick={() => {
+                                        setShowStatusModal(false);
+                                        setSelectedStatus('');
+                                    }}
+                                    className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleStatusChange}
+                                    disabled={!selectedStatus || processing || (selectedStatus === 'active' && !contract.contract_file)}
+                                    className="px-4 py-2 bg-blue-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {processing ? 'Changing...' : 'Change Status'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </AuthenticatedLayout>
     );
 }

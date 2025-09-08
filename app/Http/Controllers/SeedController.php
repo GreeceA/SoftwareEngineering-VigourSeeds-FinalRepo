@@ -25,13 +25,19 @@ class SeedController extends Controller
                     $query->archived();
                 }
             })
-            ->orderBy('seed_variety')
-            ->paginate(10)
+            ->when($request->sort_by, function ($query) use ($request) {
+                $sortBy = in_array($request->sort_by, ['seed_variety', 'price_per_unit', 'growth_cycle', 'id']) ? $request->sort_by : 'id';
+                $sortDir = in_array($request->sort_dir, ['asc', 'desc']) ? $request->sort_dir : 'desc';
+                $query->orderBy($sortBy, $sortDir);
+            }, function ($query) {
+                $query->orderBy('id', 'desc'); // Default: newest first
+            })
+            ->paginate($request->per_page ?? 10)
             ->withQueryString();
 
         return Inertia::render('Seeds/Index', [
             'seeds' => $seeds,
-            'filters' => $request->only(['search', 'status'])
+            'filters' => $request->only(['search', 'status', 'sort_by', 'sort_dir', 'per_page'])
         ]);
     }
 
@@ -50,14 +56,14 @@ class SeedController extends Controller
     {
         $validated = $request->validate([
             'seed_variety' => 'required|string|max:255',
-            'status' => ['required', Rule::in(['active', 'archived'])],
             'price_per_unit' => 'required|numeric|min:0|max:99999999.99',
-            'growth_cycle' => 'required|string|max:255',
+            'growth_cycle' => 'required|integer|min:1|max:365',
             'storage_requirements' => 'required|string|max:255',
             'soil_type_preference' => 'required|string|max:255',
             'notes' => 'nullable|string'
         ]);
 
+        $validated['status'] = 'active'; 
         Seed::create($validated);
 
         return redirect()->route('seeds.index')->with('success', 'Seed created successfully!');
@@ -92,7 +98,7 @@ class SeedController extends Controller
             'seed_variety' => 'required|string|max:255',
             'status' => ['required', Rule::in(['active', 'archived'])],
             'price_per_unit' => 'required|numeric|min:0|max:99999999.99',
-            'growth_cycle' => 'required|string|max:255',
+            'growth_cycle' => 'required|integer|min:1|max:365',
             'storage_requirements' => 'required|string|max:255',
             'soil_type_preference' => 'required|string|max:255',
             'notes' => 'nullable|string'
@@ -109,7 +115,7 @@ class SeedController extends Controller
     public function archive(Seed $seed)
     {
         $seed->update(['status' => 'archived']);
-        
+
         return back()->with('success', 'Seed archived successfully!');
     }
 
@@ -119,17 +125,9 @@ class SeedController extends Controller
     public function restore(Seed $seed)
     {
         $seed->update(['status' => 'active']);
-        
+
         return back()->with('success', 'Seed restored successfully!');
     }
-
-    /**
-     * Remove the specified seed from storage.
-     */
-    public function destroy(Seed $seed)
-    {
-        $seed->delete();
-        
-        return back()->with('success', 'Seed deleted successfully!');
-    }
+    
+    
 }

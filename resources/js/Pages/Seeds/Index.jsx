@@ -1,13 +1,11 @@
-// ...existing imports...
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router } from '@inertiajs/react';
 import { useState, useRef, useEffect } from 'react';
 import { debounce } from 'lodash';
 import '../../../css/fonts.css';
-import { ArchiveBoxIcon, ChevronDownIcon, FunnelIcon, ArrowsUpDownIcon, ArrowPathIcon } from '@heroicons/react/24/outline';
-// import ArchiveModal from '@/Pages/Seeds/ArchiveModal';
-// import RestoreModal from '@/Pages/Seeds/RestoreModal';
-// import DeleteModal from '@/Pages/Seeds/DeleteModal';
+import { ArchiveBoxIcon, ChevronDownIcon, FunnelIcon, ArrowsUpDownIcon } from '@heroicons/react/24/outline';
+import ArchiveModal from '@/Pages/Seeds/ArchiveSeedsModal';
+import RestoreModal from '@/Pages/Seeds/ReactivateSeedsModal';
 
 export default function Index({ auth, seeds, filters }) {
     const [search, setSearch] = useState(filters.search || '');
@@ -18,7 +16,6 @@ export default function Index({ auth, seeds, filters }) {
     const [showSortDropdown, setShowSortDropdown] = useState(false);
     const [showArchiveModal, setShowArchiveModal] = useState(false);
     const [showRestoreModal, setShowRestoreModal] = useState(false);
-    const [showDeleteModal, setShowDeleteModal] = useState(false);
     const [selectedSeed, setSelectedSeed] = useState(null);
     const [perPage, setPerPage] = useState(filters.per_page || 10);
 
@@ -64,6 +61,7 @@ export default function Index({ auth, seeds, filters }) {
     const getSortLabel = () => {
         if (sortBy === 'seed_variety') return sortDir === 'asc' ? 'Variety (A to Z)' : 'Variety (Z to A)';
         if (sortBy === 'price_per_unit') return sortDir === 'asc' ? 'Price (Low to High)' : 'Price (High to Low)';
+        if (sortBy === 'growth_cycle') return sortDir === 'asc' ? 'Growth Cycle (Shortest)' : 'Growth Cycle (Longest)';
         return 'Default';
     };
 
@@ -90,16 +88,6 @@ export default function Index({ auth, seeds, filters }) {
         });
     };
 
-    const handleDeleteConfirm = (id) => {
-        router.delete(route('seeds.destroy', id), {}, {
-            preserveScroll: true,
-            onSuccess: () => {
-                setShowDeleteModal(false);
-                setSelectedSeed(null);
-            }
-        });
-    };
-
     const handleArchiveCancel = () => {
         setShowArchiveModal(false);
         setSelectedSeed(null);
@@ -107,11 +95,6 @@ export default function Index({ auth, seeds, filters }) {
 
     const handleRestoreCancel = () => {
         setShowRestoreModal(false);
-        setSelectedSeed(null);
-    };
-
-    const handleDeleteCancel = () => {
-        setShowDeleteModal(false);
         setSelectedSeed(null);
     };
 
@@ -202,9 +185,9 @@ export default function Index({ auth, seeds, filters }) {
                                                 setShowSortDropdown(false);
                                                 fetchSeeds({ sort_by: 'id', sort_dir: 'desc', page: 1 });
                                             }}
-                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'id' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'id' && sortDir === 'desc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
                                         >
-                                            Default
+                                            Default (Newest)
                                         </button>
                                         <button
                                             onClick={() => {
@@ -249,6 +232,28 @@ export default function Index({ auth, seeds, filters }) {
                                             className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'price_per_unit' && sortDir === 'desc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
                                         >
                                             Price (High to Low)
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setSortBy('growth_cycle');
+                                                setSortDir('asc');
+                                                setShowSortDropdown(false);
+                                                fetchSeeds({ sort_by: 'growth_cycle', sort_dir: 'asc', page: 1 });
+                                            }}
+                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'growth_cycle' && sortDir === 'asc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                        >
+                                            Growth Cycle (Shortest)
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setSortBy('growth_cycle');
+                                                setSortDir('desc');
+                                                setShowSortDropdown(false);
+                                                fetchSeeds({ sort_by: 'growth_cycle', sort_dir: 'desc', page: 1 });
+                                            }}
+                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'growth_cycle' && sortDir === 'desc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                        >
+                                            Growth Cycle (Longest)
                                         </button>
                                     </div>
                                 </div>
@@ -323,9 +328,13 @@ export default function Index({ auth, seeds, filters }) {
                                     <tr key={seed.id} className="hover:bg-gray-50">
                                         <td className="px-6 py-4">
                                             <div>
-                                                <div className="font-poppins font-medium text-[13px] text-gray-900">
+                                                <Link
+                                                    href={route('seeds.show', seed.id)}
+                                                    className="font-poppins font-medium text-[13px] text-gray-900 hover:text-[#37692F] hover:no-underline cursor-pointer transition-colors"
+                                                    title={`View details for ${seed.seed_variety}`}
+                                                >
                                                     {seed.seed_variety}
-                                                </div>
+                                                </Link>
                                                 <div className="font-poppins font-normal text-[12px] text-gray-500">
                                                     Soil: {seed.soil_type_preference}
                                                 </div>
@@ -333,7 +342,7 @@ export default function Index({ auth, seeds, filters }) {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="font-poppins font-medium text-[13px] text-gray-900">
-                                                ${seed.price_per_unit}
+                                                ₱{seed.price_per_unit}
                                             </div>
                                             <div className="font-poppins font-normal text-[12px] text-gray-500">
                                                 per unit
@@ -341,10 +350,10 @@ export default function Index({ auth, seeds, filters }) {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="font-poppins font-normal text-[13px] text-gray-900">
-                                                {seed.growth_cycle}
+                                                {seed.growth_cycle} days
                                             </div>
                                             <div className="font-poppins font-normal text-[12px] text-gray-500">
-                                                {seed.storage_requirements}
+                                                Storage: {seed.storage_requirements}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
@@ -358,7 +367,7 @@ export default function Index({ auth, seeds, filters }) {
                                             <div className="flex space-x-2">
                                                 <Link
                                                     href={route('seeds.edit', seed.id)}
-                                                    className="text-blue-600 hover:text-blue-800"
+                                                    className="text-blue-600 hover:text-blue-800 transition-colors duration-200"
                                                     title="Edit Seed"
                                                 >
                                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -367,7 +376,7 @@ export default function Index({ auth, seeds, filters }) {
                                                 </Link>
                                                 {seed.status === 'active' ? (
                                                     <button
-                                                        className="text-orange-600 hover:text-orange-800"
+                                                        className="text-yellow-600 hover:text-yellow-800 transition-colors duration-200"
                                                         onClick={() => {
                                                             setSelectedSeed(seed);
                                                             setShowArchiveModal(true);
@@ -378,28 +387,18 @@ export default function Index({ auth, seeds, filters }) {
                                                     </button>
                                                 ) : (
                                                     <button
-                                                        className="text-green-600 hover:text-green-800"
+                                                        className="text-green-600 hover:text-green-800 transition-colors duration-200"
                                                         onClick={() => {
                                                             setSelectedSeed(seed);
                                                             setShowRestoreModal(true);
                                                         }}
-                                                        title="Restore Seed"
+                                                        title="Reactivate Seed"
                                                     >
-                                                        <ArrowPathIcon className="w-5 h-5" />
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                        </svg>
                                                     </button>
                                                 )}
-                                                <button
-                                                    className="text-red-600 hover:text-red-800"
-                                                    onClick={() => {
-                                                        setSelectedSeed(seed);
-                                                        setShowDeleteModal(true);
-                                                    }}
-                                                    title="Delete Seed"
-                                                >
-                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                    </svg>
-                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -442,10 +441,10 @@ export default function Index({ auth, seeds, filters }) {
                             <nav className="inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
                                 {seeds.links.map((link, idx) => {
                                     const href = link.url ? link.url.replace(/&amp;/g, '&') : null;
-                                    return href ? (
+                                    return (
                                         <Link
                                             key={idx}
-                                            href={href}
+                                            href={href || ''}
                                             preserveScroll
                                             preserveState
                                             className={
@@ -453,14 +452,8 @@ export default function Index({ auth, seeds, filters }) {
                                                     link.active
                                                         ? 'z-10 bg-[#37692F] border-[#37692F] text-white'
                                                         : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                                                }`
+                                                } ${!link.url ? 'pointer-events-none opacity-50' : ''}`
                                             }
-                                            dangerouslySetInnerHTML={{ __html: link.label }}
-                                        />
-                                    ) : (
-                                        <span
-                                            key={idx}
-                                            className="px-3 py-2 border text-sm font-medium bg-gray-100 text-gray-400 cursor-not-allowed"
                                             dangerouslySetInnerHTML={{ __html: link.label }}
                                         />
                                     );
@@ -485,14 +478,6 @@ export default function Index({ auth, seeds, filters }) {
                     seed={selectedSeed}
                     onCancel={handleRestoreCancel}
                     onConfirm={handleRestoreConfirm}
-                />
-            )}
-
-            {showDeleteModal && (
-                <DeleteModal
-                    seed={selectedSeed}
-                    onCancel={handleDeleteCancel}
-                    onConfirm={handleDeleteConfirm}
                 />
             )}
         </AuthenticatedLayout>

@@ -15,6 +15,7 @@ use App\Http\Controllers\PartnerController;
 use App\Http\Controllers\ContractController;
 use App\Http\Controllers\SeedController;
 
+
 // -----------------
 // Public Routes
 // -----------------
@@ -74,13 +75,18 @@ Route::middleware(['auth'])->group(function () {
 
     // Contracts
     Route::resource('contracts', ContractController::class);
-    Route::post('contracts/{contract}/archive', [ContractController::class, 'archive'])->name('contracts.archive');
+    Route::post('contracts/{contract}/change-status', [ContractController::class, 'changeStatus'])
+        ->name('contracts.change-status');
+    Route::get('partners/search', [ContractController::class, 'searchPartners'])
+        ->name('partners.search');
+    
 
     // Seeds
     Route::resource('seeds', SeedController::class);
     Route::patch('seeds/{seed}/archive', [SeedController::class, 'archive'])->name('seeds.archive');
     Route::patch('seeds/{seed}/restore', [SeedController::class, 'restore'])->name('seeds.restore');
     Route::delete('seeds/{seed}', [SeedController::class, 'destroy'])->name('seeds.destroy');
+    Route::get('/seeds/{seed}', [SeedController::class, 'show'])->name('seeds.show');
 });
 
 // -----------------

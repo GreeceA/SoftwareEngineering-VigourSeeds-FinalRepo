@@ -1,35 +1,18 @@
-
-// resources/js/Pages/Contracts/Index.jsx
 import React from 'react';
 import { Head, Link } from '@inertiajs/react';
-import { router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 
 export default function Index({ auth, contracts }) {
-    const handleArchive = (id) => {
-        if (confirm('Are you sure you want to archive this contract?')) {
-            router.post(route('contracts.archive', id));
-        }
-    };
-
-    const handleDelete = (id) => {
-        if (confirm('Are you sure you want to delete this contract permanently?')) {
-            router.delete(route('contracts.destroy', id));
-        }
-    };
-
-    const getStatusBadge = (status) => {
-        const statusColors = {
+    const getStatusColor = (status) => {
+        const colors = {
             draft: 'bg-gray-100 text-gray-800',
             active: 'bg-green-100 text-green-800',
-            archived: 'bg-red-100 text-red-800'
+            suspended: 'bg-yellow-100 text-yellow-800',
+            terminated: 'bg-red-100 text-red-800',
+            cancelled: 'bg-red-100 text-red-800',
+            archived: 'bg-gray-100 text-gray-500',
         };
-        
-        return (
-            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[status]}`}>
-                {status.charAt(0).toUpperCase() + status.slice(1)}
-            </span>
-        );
+        return colors[status] || 'bg-gray-100 text-gray-800';
     };
 
     return (
@@ -42,9 +25,9 @@ export default function Index({ auth, contracts }) {
                     </h2>
                     <Link
                         href={route('contracts.create')}
-                        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                        className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition duration-150"
                     >
-                        Add New Contract
+                        Create Contract
                     </Link>
                 </div>
             }
@@ -54,15 +37,15 @@ export default function Index({ auth, contracts }) {
             <div className="py-12">
                 <div className="max-w-7xl mx-auto sm:px-6 lg:px-8">
                     <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                        <div className="p-6 text-gray-900">
-                            {contracts.length === 0 ? (
+                        <div className="p-6">
+                            {contracts.data.length === 0 ? (
                                 <div className="text-center py-8">
-                                    <p className="text-gray-500">No contracts found.</p>
+                                    <p className="text-gray-500 mb-4">No contracts found</p>
                                     <Link
                                         href={route('contracts.create')}
-                                        className="mt-4 inline-block bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                                        className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition duration-150"
                                     >
-                                        Create First Contract
+                                        Create Your First Contract
                                     </Link>
                                 </div>
                             ) : (
@@ -71,16 +54,22 @@ export default function Index({ auth, contracts }) {
                                         <thead className="bg-gray-50">
                                             <tr>
                                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Contract Title
+                                                    Contract Name
                                                 </th>
                                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                     Partner
                                                 </th>
                                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Seed
+                                                    Contract Date
                                                 </th>
                                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                                    Contract Date
+                                                    Effective Date
+                                                </th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Expiration Date
+                                                </th>
+                                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                                    Seed Varieties
                                                 </th>
                                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                                     Status
@@ -91,30 +80,36 @@ export default function Index({ auth, contracts }) {
                                             </tr>
                                         </thead>
                                         <tbody className="bg-white divide-y divide-gray-200">
-                                            {contracts.map((contract) => (
+                                            {contracts.data.map((contract) => (
                                                 <tr key={contract.id} className="hover:bg-gray-50">
                                                     <td className="px-6 py-4 whitespace-nowrap">
-                                                        <div className="text-sm font-medium text-gray-900">
-                                                            {contract.contract_title}
+                                                        <div className="font-medium text-gray-900">
+                                                            {contract.title}
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap">
                                                         <div className="text-sm text-gray-900">
-                                                            {contract.partner?.name || 'N/A'}
+                                                            {contract.partner_name}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                        {contract.contract_date}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                        {contract.effective_date || '-'}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                        {contract.expiration_date || '-'}
+                                                    </td>
+                                                    <td className="px-6 py-4 whitespace-nowrap">
+                                                        <div className="text-sm text-gray-900 max-w-xs truncate">
+                                                            {contract.seed_varieties}
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap">
-                                                        <div className="text-sm text-gray-900">
-                                                            {contract.seed}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap">
-                                                        <div className="text-sm text-gray-900">
-                                                            {new Date(contract.contract_date).toLocaleDateString()}
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-6 py-4 whitespace-nowrap">
-                                                        {getStatusBadge(contract.status)}
+                                                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(contract.status)}`}>
+                                                            {contract.status}
+                                                        </span>
                                                     </td>
                                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                                                         <div className="flex space-x-2">
@@ -130,26 +125,39 @@ export default function Index({ auth, contracts }) {
                                                             >
                                                                 Edit
                                                             </Link>
-                                                            {contract.status !== 'archived' && (
-                                                                <button
-                                                                    onClick={() => handleArchive(contract.id)}
-                                                                    className="text-yellow-600 hover:text-yellow-900"
-                                                                >
-                                                                    Archive
-                                                                </button>
-                                                            )}
-                                                            <button
-                                                                onClick={() => handleDelete(contract.id)}
-                                                                className="text-red-600 hover:text-red-900"
-                                                            >
-                                                                Delete
-                                                            </button>
                                                         </div>
                                                     </td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     </table>
+                                    
+                                    {/* Pagination */}
+                                    {(contracts.prev_page_url || contracts.next_page_url) && (
+                                        <div className="mt-6 flex justify-between items-center">
+                                            <div className="text-sm text-gray-700">
+                                                Showing {contracts.from} to {contracts.to} of {contracts.total} results
+                                            </div>
+                                            <div className="flex space-x-2">
+                                                {contracts.prev_page_url && (
+                                                    <Link
+                                                        href={contracts.prev_page_url}
+                                                        className="px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-500 bg-white hover:bg-gray-50"
+                                                    >
+                                                        Previous
+                                                    </Link>
+                                                )}
+                                                {contracts.next_page_url && (
+                                                    <Link
+                                                        href={contracts.next_page_url}
+                                                        className="ml-3 px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-500 bg-white hover:bg-gray-50"
+                                                    >
+                                                        Next
+                                                    </Link>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>

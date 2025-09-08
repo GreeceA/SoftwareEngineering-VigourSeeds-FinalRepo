@@ -19,7 +19,7 @@ class SeedSeeder extends Seeder
                 'seed_variety' => 'Open-Pollinated Varieties (OPV)',
                 'status' => 'active',
                 'price_per_unit' => 1.50,
-                'growth_cycle' => '90-120 days',
+                'growth_cycle' => 105,
                 'storage_requirements' => 'Cool, dry place',
                 'soil_type_preference' => 'Loam or clay loam',
                 'notes' => 'Adaptable to local conditions; farmers can save seeds for future planting seasons.'
@@ -30,7 +30,7 @@ class SeedSeeder extends Seeder
                 'seed_variety' => 'KK168',
                 'status' => 'active',
                 'price_per_unit' => 2.80,
-                'growth_cycle' => '100-110 days',
+                'growth_cycle' => 110,
                 'storage_requirements' => 'Cool, dry place',
                 'soil_type_preference' => 'Loam',
                 'notes' => 'High-yielding hybrid variety recognized by the Department of Agriculture.'
@@ -39,7 +39,7 @@ class SeedSeeder extends Seeder
                 'seed_variety' => 'Teosinte 200',
                 'status' => 'active',
                 'price_per_unit' => 3.00,
-                'growth_cycle' => '100-115 days',
+                'growth_cycle' => 115,
                 'storage_requirements' => 'Cool, dry place',
                 'soil_type_preference' => 'Clay loam',
                 'notes' => 'Government-approved hybrid known for strong growth performance.'
@@ -50,7 +50,7 @@ class SeedSeeder extends Seeder
                 'seed_variety' => 'Maize D30',
                 'status' => 'active',
                 'price_per_unit' => 3.20,
-                'growth_cycle' => '95-105 days',
+                'growth_cycle' => 100,
                 'storage_requirements' => 'Cool, dry place',
                 'soil_type_preference' => 'Loam',
                 'notes' => 'Advanced breeding; improved resilience and higher yield.'
@@ -59,7 +59,7 @@ class SeedSeeder extends Seeder
                 'seed_variety' => 'Maiswerte',
                 'status' => 'active',
                 'price_per_unit' => 3.10,
-                'growth_cycle' => '100-110 days',
+                'growth_cycle' => 108,
                 'storage_requirements' => 'Cool, dry place',
                 'soil_type_preference' => 'Sandy loam',
                 'notes' => 'Better adaptability to varying environmental conditions.'
@@ -68,7 +68,7 @@ class SeedSeeder extends Seeder
                 'seed_variety' => 'Mais-tisa',
                 'status' => 'active',
                 'price_per_unit' => 3.15,
-                'growth_cycle' => '105-115 days',
+                'growth_cycle' => 112,
                 'storage_requirements' => 'Cool, dry place',
                 'soil_type_preference' => 'Loam',
                 'notes' => 'Unique hybrid aimed at optimizing productivity for local farmers.'
