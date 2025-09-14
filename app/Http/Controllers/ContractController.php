@@ -34,7 +34,9 @@ class ContractController extends Controller
             ]);
 
         return Inertia::render('Contracts/Index', [
+            'auth' => ['user' => auth()->user()],
             'contracts' => $contracts,
+            'filters' => request()->all(),
         ]);
     }
 
@@ -110,6 +112,8 @@ class ContractController extends Controller
                 'partner' => $contract->partner,
                 'contract_date' => $contract->contract_date->format('Y-m-d'),
                 'effective_date' => $contract->effective_date?->format('Y-m-d'),
+                'created_at' => $contract->created_at?->toISOString(),
+                'updated_at' => $contract->updated_at?->toISOString(),
                 'expiration_date' => $contract->expiration_date?->format('Y-m-d'),
                 'notes' => $contract->notes,
                 'status' => $contract->status,
@@ -134,28 +138,10 @@ class ContractController extends Controller
         $contract->load(['partner', 'contractSeedItems.seed']);
 
         return Inertia::render('Contracts/Edit', [
-            'contract' => [
-                'id' => $contract->id,
-                'title' => $contract->title,
-                'partner_id' => $contract->partner_id,
-                'contract_date' => $contract->contract_date->format('Y-m-d'),
-                'effective_date' => $contract->effective_date?->format('Y-m-d'),
-                'expiration_date' => $contract->expiration_date?->format('Y-m-d'),
-                'notes' => $contract->notes,
-                'status' => $contract->status,
-                'contract_file' => $contract->contract_file,
-                'seed_items' => $contract->contractSeedItems->map(fn ($item) => [
-                    'seed_id' => $item->seed_id,
-                    'quantity' => $item->quantity,
-                    'unit' => $item->unit,
-                    'expected_harvest_date' => $item->expected_harvest_date->format('Y-m-d'),
-                    'cycles' => $item->cycles,
-                ]),
-                'can_be_edited' => $contract->canBeEdited(),
-                'can_be_partially_edited' => $contract->canBePartiallyEdited(),
-            ],
-            'partners' => Partner::select('id', 'name')->get(),
-            'seeds' => Seed::select('id', 'seed_variety', 'price_per_unit', 'growth_cycle')->get(), // <-- add growth_cycle
+            'auth' => ['user' => auth()->user()],
+            'contract' => $contract,
+            'partners' => Partner::all(),
+            'seeds' => Seed::all(),
         ]);
     }
 

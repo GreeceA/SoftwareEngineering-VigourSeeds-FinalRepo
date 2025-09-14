@@ -8,6 +8,8 @@ export default function Create({ auth, partners, seeds }) {
     const [selectedSeeds, setSelectedSeeds] = useState([]);
     const [partnerSearch, setPartnerSearch] = useState('');
     const [showPartnerDropdown, setShowPartnerDropdown] = useState(false);
+    const [seedSearch, setSeedSearch] = useState('');
+    const [showSeedDropdown, setShowSeedDropdown] = useState(false);
 
     const { data, setData, post, processing, errors } = useForm({
         title: '',
@@ -70,6 +72,11 @@ export default function Create({ auth, partners, seeds }) {
         updateFormSeeds(updatedSeeds);
     };
 
+    const filteredSeeds = seeds.filter(seed =>
+        !selectedSeeds.find(s => s.id === seed.id) &&
+        seed.seed_variety.toLowerCase().includes(seedSearch.toLowerCase())
+    );
+
     // --- Seed Rules Logic ---
     // Earliest allowed harvest: effective_date + growth_cycle
     const getHarvestMin = (seed, display = false) => {
@@ -99,8 +106,6 @@ export default function Create({ auth, partners, seeds }) {
         ) return 1;
         const numOfDays = dayjs(seed.expected_harvest_date).diff(dayjs(data.effective_date), 'day');
         const maxCycles = Math.floor(numOfDays / growthCycle);
-            console.log('effective:', data.effective_date, 'harvest:', seed.expected_harvest_date, 'numOfDays:', numOfDays, 'growth:', growthCycle, 'maxCycles:', maxCycles);
-
         return maxCycles > 0 ? maxCycles : 1;
     };
 
@@ -177,206 +182,290 @@ export default function Create({ auth, partners, seeds }) {
         post(route('contracts.store'));
     };
 
+    // Date logic for contract fields
+    const today = dayjs().format('YYYY-MM-DD');
+    const oneWeekAgo = dayjs().subtract(7, 'day').format('YYYY-MM-DD');
+
+    // For Effective Date: must be today or after contract_date (whichever is later)
+    let effectiveMin = data.contract_date || '';
+
+    // For Expiration Date: only enabled if effective_date is set
+    let expirationMin = '';
+    if (data.effective_date) {
+        expirationMin = dayjs(data.effective_date).add(1, 'day').format('YYYY-MM-DD');
+    }
+
+    // Only allow adding seeds if all required upper fields are filled
+    const canAddSeeds =
+        data.title.trim() &&
+        data.partner_id &&
+        data.contract_date &&
+        data.effective_date &&
+        data.expiration_date &&
+        data.contract_file;
+
+
     return (
         <AuthenticatedLayout
             user={auth.user}
             header={
-                <div className="flex justify-between items-center">
-                    <h2 className="font-semibold text-xl text-gray-800 leading-tight">
-                        Create Contract
-                    </h2>
-                    <Link
-                        href={route('contracts.index')}
-                        className="bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition duration-150"
-                    >
-                        Back to Contracts
-                    </Link>
-                </div>
+                <h2 className="text-[25px] font-[800]" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                    <span className="text-[#37692F] font-[800]">VIGOUR SEEDS</span>
+                    <span className="text-[#333333] font-[400]"> | Create Contract</span>
+                </h2>
             }
         >
             <Head title="Create Contract" />
 
-            <div className="py-12">
-                <div className="max-w-4xl mx-auto sm:px-6 lg:px-8">
-                    <div className="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                        <form onSubmit={handleSubmit} className="p-6">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Title */}
-                                <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Contract Title *
-                                    </label>
+            {/* Breadcrumb */}
+            <div className="px-6 pt-6">
+                <nav className="text-sm text-gray-600">
+                    <Link
+                        href="http://localhost/dashboard/SoftwareEngineering-VigourSeeds-FinalRepo/public/dashboard"
+                        className="text-[#37692F] hover:underline"
+                    >
+                        Home
+                    </Link>{" "}
+                    / <Link href={route('contracts.index')} className="text-[#37692F] hover:underline">Contracts</Link> / <span>Create Contract</span>
+                </nav>
+            </div>
+
+            <div className="p-6">
+                <div className="bg-white shadow-lg rounded-lg p-6 mt-4">
+                    <h1 className="text-2xl font-semibold text-gray-800 mb-6">
+                        Create New Contract
+                    </h1>
+
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Title */}
+                            <div className="md:col-span-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Contract Title *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={data.title}
+                                    onChange={(e) => setData('title', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                                    required
+                                />
+                                {errors.title && <p className="mt-1 text-sm text-red-600">{errors.title}</p>}
+                            </div>
+
+                            {/* Partner */}
+                            <div className="relative">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Partner *
+                                </label>
+                                <div className="relative">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                        </svg>
+                                    </div>
                                     <input
                                         type="text"
-                                        value={data.title}
-                                        onChange={(e) => setData('title', e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        value={partnerSearch}
+                                        onChange={(e) => {
+                                            setPartnerSearch(e.target.value);
+                                            setShowPartnerDropdown(true);
+                                            if (!e.target.value) setData('partner_id', '');
+                                        }}
+                                        onFocus={() => setShowPartnerDropdown(true)}
+                                        className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                                        placeholder="Search by partner's name..."
                                         required
                                     />
-                                    {errors.title && <p className="text-red-500 text-xs mt-1">{errors.title}</p>}
                                 </div>
-
-                                {/* Partner */}
-                                <div className="relative">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Partner *
-                                    </label>
-                                    <div className="relative">
-                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                            <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                            </svg>
-                                        </div>
-                                        <input
-                                            type="text"
-                                            value={partnerSearch}
-                                            onChange={(e) => {
-                                                setPartnerSearch(e.target.value);
-                                                setShowPartnerDropdown(true);
-                                                if (!e.target.value) setData('partner_id', '');
-                                            }}
-                                            onFocus={() => setShowPartnerDropdown(true)}
-                                            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                            placeholder="Search by partner's name..."
-                                            required
-                                        />
+                                {showPartnerDropdown && filteredPartners.length > 0 && (
+                                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                                        {filteredPartners.map((partner) => (
+                                            <div
+                                                key={partner.id}
+                                                onClick={() => handlePartnerSelect(partner)}
+                                                className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                                            >
+                                                {partner.name}
+                                            </div>
+                                        ))}
                                     </div>
-                                    {showPartnerDropdown && filteredPartners.length > 0 && (
+                                )}
+                                {errors.partner_id && <p className="mt-1 text-sm text-red-600">{errors.partner_id}</p>}
+                            </div>
+
+                            {/* Contract Start Date */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Contract Start Date *
+                                </label>
+                                <input
+                                    type="date"
+                                    value={data.contract_date}
+                                    onChange={(e) => {
+                                        setData('contract_date', e.target.value);
+                                        setData('effective_date', '');
+                                        setData('expiration_date', '');
+                                    }}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                                    required
+                                    min={oneWeekAgo}
+                                />
+                                {errors.contract_date && <p className="mt-1 text-sm text-red-600">{errors.contract_date}</p>}
+                            </div>
+
+                            {/* Effective Date */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Effective Date *
+                                </label>
+                                <input
+                                    type="date"
+                                    value={data.effective_date}
+                                    onChange={(e) => {
+                                        setData('effective_date', e.target.value);
+                                        setData('expiration_date', '');
+                                    }}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                                    min={effectiveMin}
+                                    disabled={!data.contract_date}
+                                    required
+                                />
+                                {!data.contract_date && (
+                                    <span className="text-xs text-gray-500 block">
+                                        Please select the Contract Start Date first.
+                                    </span>
+                                )}
+                                {errors.effective_date && <p className="mt-1 text-sm text-red-600">{errors.effective_date}</p>}
+                            </div>
+
+                            {/* Expiration Date */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Expiration Date *
+                                </label>
+                                <input
+                                    type="date"
+                                    value={data.expiration_date}
+                                    onChange={(e) => setData('expiration_date', e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                                    min={expirationMin}
+                                    disabled={!data.effective_date}
+                                    required
+                                />
+                                {!data.effective_date && (
+                                    <span className="text-xs text-gray-500 block">
+                                        Please select the Effective Date first.
+                                    </span>
+                                )}
+                                {errors.expiration_date && <p className="mt-1 text-sm text-red-600">{errors.expiration_date}</p>}
+                            </div>
+
+                            {/* Contract File */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Contract File *
+                                </label>
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    onChange={(e) => setData('contract_file', e.target.files[0])}
+                                    accept=".pdf,.doc,.docx"
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                                    required
+                                />
+                                {errors.contract_file && <p className="mt-1 text-sm text-red-600">{errors.contract_file}</p>}
+                            </div>
+
+                            {/* Notes */}
+                            <div className="md:col-span-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Notes
+                                </label>
+                                <textarea
+                                    value={data.notes}
+                                    onChange={(e) => setData('notes', e.target.value)}
+                                    rows={3}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                                />
+                                {errors.notes && <p className="mt-1 text-sm text-red-600">{errors.notes}</p>}
+                            </div>
+                        </div>
+
+                        {/* Seeds Selection */}
+                        <div className="mt-8 pt-6 border-t border-gray-200">
+                            <h3 className="text-lg font-medium text-gray-900 mb-4">
+                                Seed Varieties (1-3 required)
+                            </h3>
+
+                            {/* Seed Selector */}
+                            <div className="mb-6 relative">
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Add Seed Variety
+                                </label>
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        value={seedSearch}
+                                        onChange={e => setSeedSearch(e.target.value)}
+                                        onFocus={() => setShowSeedDropdown(true)}
+                                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                                        placeholder="Search or select a seed variety..."
+                                        disabled={!canAddSeeds || selectedSeeds.length >= 3}
+                                    />
+                                    {showSeedDropdown && filteredSeeds.length > 0 && canAddSeeds && (
                                         <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-y-auto">
-                                            {filteredPartners.map((partner) => (
+                                            {filteredSeeds.map(seed => (
                                                 <div
-                                                    key={partner.id}
-                                                    onClick={() => handlePartnerSelect(partner)}
+                                                    key={seed.id}
+                                                    onClick={() => {
+                                                        handleSeedSelection(seed);
+                                                        setSeedSearch('');
+                                                        setShowSeedDropdown(false);
+                                                    }}
                                                     className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
                                                 >
-                                                    {partner.name}
+                                                    {seed.seed_variety} - ₱{seed.price_per_unit} (Growth: {seed.growth_cycle} days)
                                                 </div>
                                             ))}
                                         </div>
                                     )}
-                                    {errors.partner_id && <p className="text-red-500 text-xs mt-1">{errors.partner_id}</p>}
                                 </div>
-
-                                {/* Contract Date */}
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Contract Date *
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={data.contract_date}
-                                        onChange={(e) => setData('contract_date', e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        required
-                                        min={new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]} // today - 7 days
-                                        max={new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]} // today + 7 days
-                                    />
-                                    {errors.contract_date && <p className="text-red-500 text-xs mt-1">{errors.contract_date}</p>}
-                                </div>
-
-                                {/* Effective Date */}
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Effective Date
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={data.effective_date}
-                                        onChange={(e) => setData('effective_date', e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        min={data.contract_date || undefined}
-                                    />
-                                    {errors.effective_date && <p className="text-red-500 text-xs mt-1">{errors.effective_date}</p>}
-                                </div>
-
-                                {/* Expiration Date */}
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Expiration Date
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={data.expiration_date}
-                                        onChange={(e) => setData('expiration_date', e.target.value)}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        min={
-                                            [data.contract_date, data.effective_date]
-                                                .filter(Boolean)
-                                                .sort()
-                                                .reverse()[0] || undefined
-                                        }
-                                    />
-                                    {errors.expiration_date && <p className="text-red-500 text-xs mt-1">{errors.expiration_date}</p>}
-                                </div>
-
-                                {/* Contract File */}
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Contract File
-                                    </label>
-                                    <input
-                                        type="file"
-                                        ref={fileInputRef}
-                                        onChange={(e) => setData('contract_file', e.target.files[0])}
-                                        accept=".pdf,.doc,.docx"
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    />
-                                    {errors.contract_file && <p className="text-red-500 text-xs mt-1">{errors.contract_file}</p>}
-                                </div>
-
-                                {/* Notes */}
-                                <div className="md:col-span-2">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Notes
-                                    </label>
-                                    <textarea
-                                        value={data.notes}
-                                        onChange={(e) => setData('notes', e.target.value)}
-                                        rows={3}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    />
-                                    {errors.notes && <p className="text-red-500 text-xs mt-1">{errors.notes}</p>}
-                                </div>
+                                {!canAddSeeds && (
+                                    <p className="text-amber-600 text-sm mt-2">
+                                        Please complete all required contract details above before adding seeds.
+                                    </p>
+                                )}
+                                {selectedSeeds.length >= 3 && (
+                                    <p className="text-amber-600 text-sm mt-2">
+                                        Maximum of 3 seed varieties allowed.
+                                    </p>
+                                )}
                             </div>
 
-                            {/* Seeds Selection */}
-                            <div className="mt-8">
-                                <h3 className="text-lg font-medium text-gray-900 mb-4">Seed Varieties (1-3 required)</h3>
-                                
-                                {/* Seed Selector */}
-                                <div className="mb-6">
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Add Seed Variety
-                                    </label>
-                                    <select
-                                        onChange={(e) => {
-                                            if (e.target.value) {
-                                                const seed = seeds.find(s => s.id == e.target.value);
-                                                handleSeedSelection(seed);
-                                                e.target.value = '';
-                                            }
-                                        }}
-                                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                        disabled={selectedSeeds.length >= 3}
-                                    >
-                                        <option value="">Select a seed variety...</option>
-                                        {seeds.filter(seed => !selectedSeeds.find(s => s.id === seed.id)).map((seed) => (
-                                            <option key={seed.id} value={seed.id}>
-                                                {seed.seed_variety} - ₱{seed.price_per_unit} (Growth: {seed.growth_cycle} days)
-                                            </option>
-                                        ))}
-                                    </select>
-                                </div>
+                            {/* Selected Seeds */}
+                            <div className="space-y-4">
+                                {selectedSeeds.map((seed, index) => {
+                                    // Calculate min/max for expected harvest
+                                    const minHarvest = getHarvestMin(seed);
+                                    const maxHarvest = getHarvestMax();
+                                    const minHarvestDayjs = minHarvest ? dayjs(minHarvest) : null;
+                                    const maxHarvestDayjs = maxHarvest ? dayjs(maxHarvest) : null;
+                                    const impossible = minHarvest && maxHarvest && minHarvestDayjs.isAfter(maxHarvestDayjs);
 
-                                {/* Selected Seeds */}
-                                <div className="space-y-4">
-                                    {selectedSeeds.map((seed, index) => (
+                                    return (
                                         <div key={seed.id} className="border border-gray-200 rounded-lg p-4">
                                             <div className="flex justify-between items-start mb-3">
                                                 <div>
                                                     <h4 className="font-medium text-gray-900">{seed.seed_variety}</h4>
                                                     <p className="text-xs text-gray-500">
                                                         Growth cycle: {seed.growth_cycle ? `${seed.growth_cycle} days` : 'N/A'} | Price: ₱{seed.price_per_unit}
+                                                        {data.effective_date && (
+                                                            <span>
+                                                                {" | Min harvest for 1 cycle: "}
+                                                                {getHarvestMin(seed, true)}
+                                                            </span>
+                                                        )}
                                                         {data.effective_date && seed.expected_harvest_date && (
                                                             <span> | Max cycles: {getMaxCycles(seed)}</span>
                                                         )}
@@ -400,7 +489,7 @@ export default function Create({ auth, partners, seeds }) {
                                                         min="1"
                                                         value={seed.quantity}
                                                         onChange={(e) => updateSeedData(seed.id, 'quantity', parseInt(e.target.value) || 1)}
-                                                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-[#37692F]"
                                                         required
                                                     />
                                                 </div>
@@ -411,7 +500,7 @@ export default function Create({ auth, partners, seeds }) {
                                                     <select
                                                         value={seed.unit}
                                                         onChange={(e) => updateSeedData(seed.id, 'unit', e.target.value)}
-                                                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-[#37692F]"
                                                         required
                                                     >
                                                         <option value="kg">kg</option>
@@ -419,7 +508,8 @@ export default function Create({ auth, partners, seeds }) {
                                                         <option value="ton">ton</option>
                                                     </select>
                                                 </div>
-                                                <div>
+                                                {/* Expected Harvest Date only appears after seed is chosen */}
+                                                <div className="col-span-2 md:col-span-1">
                                                     <label className="block text-xs font-medium text-gray-700 mb-1">
                                                         Expected Harvest *
                                                         {data.effective_date && seed.growth_cycle && (
@@ -434,13 +524,22 @@ export default function Create({ auth, partners, seeds }) {
                                                         min={getHarvestMin(seed)}
                                                         max={getHarvestMax()}
                                                         onChange={(e) => updateSeedData(seed.id, 'expected_harvest_date', e.target.value)}
-                                                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-[#37692F]"
                                                         required
+                                                        disabled={impossible}
                                                     />
+                                                    {/* Show error if impossible */}
+                                                    {impossible && (
+                                                        <p className="text-red-500 text-xs mt-1">
+                                                            Change the expiration or choose another seed.
+                                                        </p>
+                                                    )}
+                                                    {/* Show validation errors */}
                                                     {validateSeed(seed).map((err, idx) => (
                                                         <p key={idx} className="text-red-500 text-xs mt-1">{err}</p>
                                                     ))}
                                                 </div>
+                                                {/* Cycles always appears, but no placeholder if no expected_harvest_date */}
                                                 <div>
                                                     <label className="block text-xs font-medium text-gray-700 mb-1">
                                                         Cycles *
@@ -454,12 +553,14 @@ export default function Create({ auth, partners, seeds }) {
                                                         type="number"
                                                         min="1"
                                                         max={getMaxCycles(seed)}
-                                                        value={seed.cycles}
+                                                        value={seed.expected_harvest_date ? seed.cycles : ''}
                                                         onChange={(e) => updateSeedData(seed.id, 'cycles', parseInt(e.target.value) || 1)}
-                                                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                                        className="w-full px-2 py-1 border border-gray-300 rounded text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-[#37692F]"
                                                         required
+                                                        placeholder={seed.expected_harvest_date ? undefined : ''}
+                                                        disabled={!seed.expected_harvest_date}
                                                     />
-                                                    {seed.cycles > getMaxCycles(seed) && (
+                                                    {seed.expected_harvest_date && seed.cycles > getMaxCycles(seed) && (
                                                         <p className="text-red-500 text-xs mt-1">
                                                             Cycles cannot exceed {getMaxCycles(seed)}.
                                                         </p>
@@ -467,36 +568,40 @@ export default function Create({ auth, partners, seeds }) {
                                                 </div>
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
-
-                                {errors.seeds && <p className="text-red-500 text-sm mt-2">{errors.seeds}</p>}
-                                {selectedSeeds.length === 0 && (
-                                    <p className="text-gray-500 text-sm mt-2">Please select at least one seed variety.</p>
-                                )}
-                                {selectedSeeds.length >= 3 && (
-                                    <p className="text-amber-600 text-sm mt-2">Maximum of 3 seed varieties allowed.</p>
-                                )}
+                                    );
+                                })}
                             </div>
 
-                            {/* Form Actions */}
-                            <div className="flex justify-end space-x-3 mt-8 pt-6 border-t border-gray-200">
-                                <Link
-                                    href={route('contracts.index')}
-                                    className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                                >
-                                    Cancel
-                                </Link>
-                                <button
-                                    type="submit"
-                                    disabled={processing || selectedSeeds.length === 0}
-                                    className="px-4 py-2 bg-blue-600 border border-transparent rounded-md text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {processing ? 'Creating...' : 'Create Contract'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
+                            {errors.seeds && <p className="text-red-600 text-sm mt-2">{errors.seeds}</p>}
+                            {selectedSeeds.length === 0 && (
+                                <p className="text-gray-500 text-sm mt-2">
+                                    Please select at least one seed variety.
+                                </p>
+                            )}
+                            {selectedSeeds.length >= 3 && (
+                                <p className="text-amber-600 text-sm mt-2">
+                                    Maximum of 3 seed varieties allowed.
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Form Actions */}
+                        <div className="flex justify-end space-x-2 pt-6 border-t border-gray-200">
+                            <Link
+                                href={route('contracts.index')}
+                                className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-md transition-colors"
+                            >
+                                Cancel
+                            </Link>
+                            <button
+                                type="submit"
+                                disabled={processing || selectedSeeds.length === 0}
+                                className="bg-[#37692F] hover:bg-[#2a5624] text-white font-medium py-2 px-4 rounded-md transition-colors disabled:opacity-50"
+                            >
+                                {processing ? 'Creating...' : 'Create Contract'}
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </AuthenticatedLayout>

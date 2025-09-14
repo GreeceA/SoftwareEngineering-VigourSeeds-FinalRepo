@@ -33,11 +33,12 @@ class Contract extends Model
         return $this->belongsTo(Partner::class);
     }
 
-    public function contractSeedItems(): HasMany
+    public function contractSeedItems()
     {
         return $this->hasMany(ContractSeedItem::class);
     }
 
+    
     public function canTransitionTo(string $newStatus): bool
     {
         $transitions = [
