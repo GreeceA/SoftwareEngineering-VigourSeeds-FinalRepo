@@ -6,11 +6,26 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\Models\Permission;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
 
-class RoleController extends Controller
+class RoleController extends Controller implements HasMiddleware
 {
-        public function index()
+    // Core roles that cannot be deleted
+    protected const PROTECTED_ROLES = ['admin', 'manager', 'employee'];
+
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:view roles', only: ['index']),
+            new Middleware('permission:edit roles', only: ['edit']),
+            new Middleware('permission:create roles', only: ['create']),
+            new Middleware('permission:delete roles', only: ['destroy']),
+        ];
+    }
+
+    public function index() 
         {
             $roles = Role::with('permissions')->orderBy('created_at', 'desc')->paginate(10);
             return Inertia::render('Roles/List', [
@@ -40,9 +55,13 @@ class RoleController extends Controller
                 $role->syncPermissions($request->permissions);
             }
 
+            // Clear the permission cache to ensure fresh permissions are loaded
+            app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+
             return redirect()
                 ->route('roles.index')
-                ->with('success', 'Role created successfully.');
+                ->with('success', 'Role created successfully.')
+                ->with('refresh_permissions', true);
         }
 
         public function edit(Role $role)
@@ -66,18 +85,34 @@ class RoleController extends Controller
                 $role->syncPermissions($request->permissions);
             }
 
+            // Clear the permission cache to ensure fresh permissions are loaded
+            app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+
             return redirect()
                 ->route('roles.index')
-                ->with('success', 'Role updated successfully.');
+                ->with('success', 'Role updated successfully.')
+                ->with('refresh_permissions', true);
         }
 
         public function destroy(Role $role)
         {
             try {
+                // Prevent deletion of protected roles
+                if (in_array($role->name, self::PROTECTED_ROLES)) {
+                    return redirect()
+                        ->route('roles.index')
+                        ->with('error', 'Cannot delete core system role: ' . $role->name);
+                }
+                
                 $role->delete();
+
+                // Clear the permission cache to ensure fresh permissions are loaded
+                app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+
                 return redirect()
                     ->route('roles.index')
-                    ->with('success', 'Role deleted successfully.');
+                    ->with('success', 'Role deleted successfully.')
+                    ->with('refresh_permissions', true);
             } catch (\Exception $e) {
                 return redirect()
                     ->route('roles.index')

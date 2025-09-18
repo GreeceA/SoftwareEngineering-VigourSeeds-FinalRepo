@@ -8,6 +8,12 @@ import DeactivateModal from './DeactivateModal';
 import ReactivateModal from './ReactivateModal';
 import UserInfoModal from './UserInfoModal';
 
+
+export default function Index({ auth, users }) {
+    // Get user permissions (same way as in other components)
+    const permissions = auth?.user?.can || [];
+    
+    const [search, setSearch] = useState("");
 export default function Index({ auth, users, filters }) {
     const [search, setSearch] = useState(filters?.search || '');
     const [filter, setFilter] = useState(filters?.status || 'all');
@@ -49,6 +55,78 @@ export default function Index({ auth, users, filters }) {
         setSearch(value);
         fetchUsers({ search: value, page: 1 });
     }, 300);
+
+    const handleSearchChange = (e) => {
+        debouncedSearch(e.target.value);
+    };
+
+    // Get role priority for sorting (higher number = higher role)
+    const getRolePriority = (role) => {
+        const priorities = {
+            'Manager': 2,
+            'Employee': 1
+        };
+        return priorities[role] || 0;
+    };
+
+    // Filter, sort, and search users
+    const processedUsers = useMemo(() => {
+        let result = [...userList];
+
+        // 1. Apply search filter
+        if (search) {
+            result = result.filter((user) => {
+                const name = user.name.toLowerCase();
+                const email = user.email?.toLowerCase() || '';
+                const roles = user.roles?.map(r => r.name.toLowerCase()).join(' ') || '';
+
+                const searchTerm = search.toLowerCase();
+                return (
+                    name.includes(searchTerm) ||
+                    email.includes(searchTerm) ||
+                    roles.includes(searchTerm)
+                );
+            });
+        }
+
+        // 2. Apply status filter
+        if (filter !== 'all') {
+            result = result.filter(user => user.status === filter);
+        }
+
+        // 3. Apply sorting
+        if (sort !== 'default') {
+            switch (sort) {
+                case 'role_asc':
+                    result.sort((a, b) => getRolePriority(a.role) - getRolePriority(b.role));
+                    break;
+                case 'role_desc':
+                    result.sort((a, b) => getRolePriority(b.role) - getRolePriority(a.role));
+                    break;
+                case 'date_asc':
+                    result.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+                    break;
+                case 'date_desc':
+                    result.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                    break;
+                case 'name_asc':
+                    result.sort((a, b) => a.name.localeCompare(b.name));
+                    break;
+                case 'name_desc':
+                    result.sort((a, b) => b.name.localeCompare(a.name));
+                    break;
+            }
+        } else {
+            // Default sorting: logged-in user first
+            const currentUserIndex = result.findIndex(u => u.id === auth.user.id);
+            if (currentUserIndex !== -1) {
+                const currentUser = result.splice(currentUserIndex, 1)[0];
+                result.unshift(currentUser);
+            }
+        }
+
+        return result;
+    }, [userList, search, filter, sort, auth.user.id]);
 
     const handleSearchChange = (e) => debouncedSearch(e.target.value);
 
@@ -252,9 +330,11 @@ export default function Index({ auth, users, filters }) {
                                         {user.email}
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className={`px-3 py-1 rounded-full text-xs font-poppins font-medium shadow-sm ${getRoleColor(user.role)}`}>
-                                            {user.role}
-                                        </span>
+                                        {user.roles && user.roles.map((role, index) => (
+                                            <span key={role.id || index} className={`px-3 py-1 rounded-full text-xs font-poppins font-medium shadow-sm ${getRoleColor(role.name)} ${index > 0 ? 'ml-2' : ''}`}>
+                                                {role.name}
+                                            </span>
+                                        ))}
                                     </td>
                                     <td className="px-6 py-4">
                                         <span
@@ -297,6 +377,42 @@ export default function Index({ auth, users, filters }) {
                                                     </svg>
                                                 </button>
                                             )}
+
+                                            {/* Deactivate/Reactivate Button - only show if user has 'deactivate users' permission */}
+                                            {permissions.includes('deactivate users') && (
+                                                user.id === auth.user.id ? (
+                                                    <button
+                                                        className="text-gray-400 cursor-not-allowed"
+                                                        disabled
+                                                        title="You cannot modify your own account status"
+                                                    >
+                                                        {user.status === 'active' ? (
+                                                            <UserMinusIcon className="w-5 h-5" />
+                                                        ) : (
+                                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                                            </svg>
+                                                        )}
+                                                    </button>
+                                                ) : user.status === 'active' ? (
+                                                    <button
+                                                        className="text-red-600 hover:text-red-800 transition-colors"
+                                                        onClick={() => setModalUser(user)}
+                                                        title="Deactivate User"
+                                                    >
+                                                        <UserMinusIcon className="w-5 h-5" />
+                                                    </button>
+                                                ) : (
+                                                    <button
+                                                        className="text-green-600 hover:text-green-800 transition-colors"
+                                                        onClick={() => setReactivateModalUser(user)}
+                                                        title="Reactivate User"
+                                                    >
+                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                                        </svg>
+                                                    </button>
+                                                )
                                             {user.id === auth.user.id ? (
                                                 <button
                                                     className="text-gray-400 cursor-not-allowed"

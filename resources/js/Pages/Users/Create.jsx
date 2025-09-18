@@ -7,11 +7,11 @@ import InputLabel from '@/Components/InputLabel';
 import TextInput from '@/Components/TextInput';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
-export default function Create() {
+export default function Create({ roles = [] }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         first_name: '',
         last_name: '',
-        role: '',
+        roles: [],
         email: '',
         password: '',
         password_confirmation: '',
@@ -135,25 +135,30 @@ export default function Create() {
 
                             <div>
                                 <InputLabel 
-                                    htmlFor="role" 
-                                    value="Role" 
-                                    className="text-[16px] text-[#666666] font-poppins font-medium" 
+                                    htmlFor="roles" 
+                                    value="Roles" 
+                                    className="text-[16px] text-[#666666] font-poppins font-medium mb-2" 
                                 />
-                                <select
-                                    id="role"
-                                    name="role"
-                                    value={data.role}
-                                    className={`mt-1 block w-full border border-gray-300 rounded-md py-2 px-3 focus:ring-[#37692F] focus:border-[#37692F] 
-                                    ${data.role === '' ? 'text-gray-400' : 'text-gray-800'}`}
-                                    onChange={(e) => setData('role', e.target.value)}
-                                    required
-                                >
-                                    <option value="" className="text-gray-400">Select role</option>
-                                    {['Employee', 'Manager'].map((role) => (
-                                        <option key={role} value={role} className="text-gray-800">{role}</option>
+                                <div className="space-y-2 border border-gray-300 rounded-md p-3">
+                                    {roles.map((role) => (
+                                        <label key={role.id} className="flex items-center">
+                                            <input
+                                                type="checkbox"
+                                                checked={data.roles.includes(role.name)}
+                                                onChange={(e) => {
+                                                    const isChecked = e.target.checked;
+                                                    setData('roles', isChecked
+                                                        ? [...data.roles, role.name]
+                                                        : data.roles.filter(r => r !== role.name)
+                                                    );
+                                                }}
+                                                className="rounded border-gray-300 text-[#37692F] shadow-sm focus:border-[#37692F] focus:ring focus:ring-[#37692F] focus:ring-opacity-50"
+                                            />
+                                            <span className="ml-2 text-gray-700">{role.name}</span>
+                                        </label>
                                     ))}
-                                </select>
-                                <InputError message={errors.role} className="mt-2" />
+                                </div>
+                                <InputError message={errors.roles} className="mt-2" />
                             </div>
 
                             <div>
