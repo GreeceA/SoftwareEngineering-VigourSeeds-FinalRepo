@@ -1,0 +1,132 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Item;
+use App\Http\Requests\ItemRequest;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+
+class ItemController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     */
+    public function index(Request $request)
+    {
+        $query = Item::query();
+
+        // Filter by status if provided
+        if ($request->has('status') && in_array($request->status, ['active', 'archived'])) {
+            $query->where('status', $request->status);
+        }
+
+        // Search functionality
+        if ($request->has('search') && $request->search) {
+            $query->where(function($q) use ($request) {
+                $q->where('name', 'like', '%' . $request->search . '%')
+                  ->orWhere('description', 'like', '%' . $request->search . '%');
+            });
+        }
+
+        $sortable = ['id', 'name', 'price_per_unit'];
+        $sortBy = in_array($request->get('sort_by'), $sortable) ? $request->get('sort_by') : 'id';
+        $sortDir = $request->get('sort_dir') === 'asc' ? 'asc' : 'desc';
+
+        $items = $query->orderBy($sortBy, $sortDir)->paginate($request->get('per_page', 15));
+
+        return Inertia::render('Items/Index', [
+            'items' => $items,
+            'filters' => $request->only(['search', 'status'])
+        ]);
+    }
+
+    /**
+     * Show the form for creating a new resource.
+     */
+    public function create()
+    {
+        return Inertia::render('Items/Create');
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(ItemRequest $request)
+    {
+        Item::create($request->validated());
+
+        return redirect()->route('items.index')
+            ->with('success', 'Item created successfully.');
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(Item $item)
+    {
+        return Inertia::render('Items/Show', [
+            'item' => $item,
+            'auth' => [
+                'user' => auth()->user(),
+            ],
+        ]);
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(Item $item)
+    {
+        return Inertia::render('Items/Edit', [
+            'item' => $item
+        ]);
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(ItemRequest $request, Item $item)
+    {
+        $item->update($request->validated());
+
+        return redirect()->route('items.index')
+            ->with('success', 'Item updated successfully.');
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     * This method archives the item instead of deleting it.
+     */
+    public function destroy(Item $item)
+    {
+        $item->archive();
+
+        return redirect()->route('items.index')
+            ->with('success', 'Item archived successfully.');
+    }
+
+    /**
+     * Archive the specified item.
+     */
+    public function archive(Item $item)
+    {
+        $item->archive();
+
+        return redirect()->back()
+            ->with('success', 'Item archived successfully.');
+    }
+
+    /**
+     * Activate the specified item.
+     */
+    public function activate(Item $item)
+    {
+        $item->activate();
+
+        return redirect()->back()
+            ->with('success', 'Item activated successfully.');
+    }
+
+    
+}

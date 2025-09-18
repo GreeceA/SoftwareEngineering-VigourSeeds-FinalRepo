@@ -131,6 +131,13 @@ export default function AuthenticatedLayout({ header, children }) {
                                 >
                                     Seeds
                                 </NavLink>
+                                {/* ITEMS */}
+                                <NavLink
+                                    href={route('items.index')}
+                                    active={route().current('items.index')}
+                                >
+                                    Items
+                                </NavLink>
                                 <NavLink
                                     // href={route('dashboard')}
                                     // active={route().current('dashboard')}

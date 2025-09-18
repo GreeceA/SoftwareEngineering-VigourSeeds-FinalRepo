@@ -14,6 +14,7 @@ use App\Http\Controllers\Auth\GoogleController;
 use App\Http\Controllers\PartnerController;
 use App\Http\Controllers\ContractController;
 use App\Http\Controllers\SeedController;
+use App\Http\Controllers\ItemController;
 
 
 
@@ -91,6 +92,13 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('seeds/{seed}/restore', [SeedController::class, 'restore'])->name('seeds.restore');
     Route::delete('seeds/{seed}', [SeedController::class, 'destroy'])->name('seeds.destroy');
     Route::get('/seeds/{seed}', [SeedController::class, 'show'])->name('seeds.show');
+
+    // Items
+    Route::resource('items', ItemController::class);
+    Route::patch('items/{item}/archive', [ItemController::class, 'archive'])->name('items.archive');
+    Route::patch('items/{item}/activate', [ItemController::class, 'activate'])->name('items.activate');
+    Route::get('/items/{item}', [ItemController::class, 'show'])->name('items.show');
+    
 });
 
 // -----------------

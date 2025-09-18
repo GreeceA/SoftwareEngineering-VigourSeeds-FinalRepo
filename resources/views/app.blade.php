@@ -9,6 +9,10 @@
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
+            <!-- Preload Poppins font -->
+            <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;800&display=swap" />
+            <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;800&display=swap" rel="stylesheet" />
+
 
         <!-- Scripts -->
         @routes
