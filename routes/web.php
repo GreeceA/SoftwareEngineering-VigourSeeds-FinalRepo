@@ -16,6 +16,7 @@ use App\Http\Controllers\ContractController;
 use App\Http\Controllers\SeedController;
 
 
+
 // -----------------
 // Public Routes
 // -----------------
@@ -79,7 +80,10 @@ Route::middleware(['auth'])->group(function () {
         ->name('contracts.change-status');
     Route::get('partners/search', [ContractController::class, 'searchPartners'])
         ->name('partners.search');
-    
+    Route::get('/contracts/preview-pdf/{filename}', [ContractController::class, 'previewDocxAsPdf']);
+        // Download routes - Contract files
+            Route::get('/contracts/download-pdf/{filename}', [ContractController::class, 'downloadAsPdf']);
+            Route::get('/contracts/download-docx/{filename}', [ContractController::class, 'downloadAsDocx']);
 
     // Seeds
     Route::resource('seeds', SeedController::class);

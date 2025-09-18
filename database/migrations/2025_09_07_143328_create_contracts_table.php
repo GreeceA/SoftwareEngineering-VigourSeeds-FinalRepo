@@ -13,6 +13,7 @@ return new class extends Migration
             $table->foreignId('partner_id')->constrained()->onDelete('cascade');
             $table->string('title');
             $table->string('contract_file')->nullable();
+            // $table->string('original_file_name')->nullable();
             $table->date('contract_date');
             $table->date('effective_date')->nullable();
             $table->date('expiration_date')->nullable();

@@ -11,6 +11,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Illuminate\Validation\Rule;
+use PhpOffice\PhpWord\IOFactory;
+use Dompdf\Dompdf;
+use Illuminate\Support\Facades\Response;
 
 class ContractController extends Controller
 {
@@ -71,8 +74,9 @@ class ContractController extends Controller
         try {
             // Handle file upload
             if ($request->hasFile('contract_file')) {
-                $validated['contract_file'] = $request->file('contract_file')
-                    ->store('contracts', 'public');
+                $file = $request->file('contract_file');
+                $validated['contract_file'] = $file->store('contracts', 'public');
+                $validated['original_file_name'] = $file->getClientOriginalName();
             }
 
             // Create contract
@@ -118,6 +122,7 @@ class ContractController extends Controller
                 'notes' => $contract->notes,
                 'status' => $contract->status,
                 'contract_file' => $contract->contract_file,
+                'original_file_name' => $contract->original_file_name,
                 'seed_items' => $contract->contractSeedItems->map(fn ($item) => [
                     'id' => $item->id,
                     'seed' => $item->seed,
@@ -139,9 +144,42 @@ class ContractController extends Controller
 
         return Inertia::render('Contracts/Edit', [
             'auth' => ['user' => auth()->user()],
-            'contract' => $contract,
-            'partners' => Partner::all(),
-            'seeds' => Seed::all(),
+            'contract' => [
+                'id' => $contract->id,
+                'title' => $contract->title,
+                'partner_id' => $contract->partner_id,
+                'partner' => $contract->partner,
+                'contract_date' => $contract->contract_date ? $contract->contract_date->format('Y-m-d') : null,
+                'effective_date' => $contract->effective_date ? $contract->effective_date->format('Y-m-d') : null,
+                'expiration_date' => $contract->expiration_date ? $contract->expiration_date->format('Y-m-d') : null,
+                'notes' => $contract->notes,
+                'status' => $contract->status,
+                'contract_file' => $contract->contract_file,
+                'original_file_name' => $contract->original_file_name,
+                'created_at' => $contract->created_at,
+                'updated_at' => $contract->updated_at,
+                'contractSeedItems' => $contract->contractSeedItems->map(function ($item) {
+                    return [
+                        'id' => $item->id,
+                        'seed_id' => $item->seed_id,
+                        'quantity' => $item->quantity,
+                        'unit' => $item->unit,
+                        'expected_harvest_date' => $item->expected_harvest_date ? $item->expected_harvest_date->format('Y-m-d') : null,
+                        'cycles' => $item->cycles,
+                        'created_at' => $item->created_at,
+                        'updated_at' => $item->updated_at,
+                        'seed' => [
+                            'id' => $item->seed->id,
+                            'seed_variety' => $item->seed->seed_variety,
+                            'growth_cycle' => $item->seed->growth_cycle,
+                            'price_per_unit' => $item->seed->price_per_unit,
+                            // add more fields if needed
+                        ],
+                    ];
+                })->values(),
+            ],
+            'partners' => Partner::select('id', 'name')->get(),
+            'seeds' => Seed::select('id', 'seed_variety', 'price_per_unit', 'growth_cycle')->get(),
         ]);
     }
 
@@ -184,6 +222,7 @@ class ContractController extends Controller
         }
 
         $validated = $request->validate($rules);
+        
 
         DB::beginTransaction();
 
@@ -194,8 +233,9 @@ class ContractController extends Controller
                 if ($contract->contract_file) {
                     Storage::disk('public')->delete($contract->contract_file);
                 }
-                $validated['contract_file'] = $request->file('contract_file')
-                    ->store('contracts', 'public');
+                $file = $request->file('contract_file');
+                $validated['contract_file'] = $file->store('contracts', 'public');
+                $validated['original_file_name'] = $file->getClientOriginalName();
             }
 
             // Update contract
@@ -282,17 +322,99 @@ class ContractController extends Controller
     }
 
     private function getAvailableTransitions($contract)
-{
-    // Example transitions, adjust as needed for your business logic
-    $transitions = [
-        'draft' => ['active', 'archived'],
-        'active' => ['suspended', 'terminated', 'cancelled', 'archived'],
-        'suspended' => ['active', 'terminated', 'archived'],
-        'terminated' => ['archived'],
-        'cancelled' => ['archived'],
-        'archived' => [],
-    ];
+    {
+        // Example transitions, adjust as needed for your business logic
+        $transitions = [
+            'draft' => ['active', 'archived'],
+            'active' => ['suspended', 'terminated', 'cancelled', 'archived'],
+            'suspended' => ['active', 'terminated', 'archived'],
+            'terminated' => ['archived'],
+            'cancelled' => ['archived'],
+            'archived' => [],
+        ];
 
-    return $transitions[$contract->status] ?? [];
-}
-}
+        return $transitions[$contract->status] ?? [];
+    }
+
+    public function previewDocxAsPdf($filename)
+    {
+        $docxPath = storage_path('app/public/contracts/' . $filename);
+
+        if (!file_exists($docxPath)) {
+            abort(404, 'File not found.');
+        }
+
+        // Load DOCX
+        $phpWord = IOFactory::load($docxPath, 'Word2007');
+
+        // Save as HTML (since PHPWord can't render PDF directly without extra setup)
+        $htmlWriter = IOFactory::createWriter($phpWord, 'HTML');
+        $htmlFile = storage_path('app/public/contracts/temp_' . uniqid() . '.html');
+        $htmlWriter->save($htmlFile);
+
+        // Convert HTML to PDF using DomPDF
+        $dompdf = new Dompdf();
+        $dompdf->loadHtml(file_get_contents($htmlFile));
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+
+        // Clean up temp HTML file
+        @unlink($htmlFile);
+
+        // Stream PDF to browser
+        return Response::make($dompdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'inline; filename="preview.pdf"'
+        ]);
+    }
+
+    public function downloadAsPdf($filename)
+    {
+        $contract = Contract::where('contract_file', 'like', "%$filename")->firstOrFail();
+        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+        $downloadName = $this->makeDownloadName($contract, 'pdf');
+
+        if ($ext === 'pdf') {
+            $pdfPath = storage_path('app/public/contracts/' . $filename);
+            if (!file_exists($pdfPath)) abort(404, 'File not found.');
+            return response()->download($pdfPath, $downloadName, [
+                'Content-Type' => 'application/pdf'
+            ]);
+        } elseif ($ext === 'docx') {
+            // ...your DOCX to PDF conversion logic...
+            // After conversion:
+            return response($dompdf->output(), 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="'.$downloadName.'"'
+            ]);
+        }
+        abort(400, 'Invalid file type.');
+    }
+
+    public function downloadAsDocx($filename)
+    {
+        $contract = Contract::where('contract_file', 'like', "%$filename")->firstOrFail();
+        $ext = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+        $downloadName = $this->makeDownloadName($contract, 'docx');
+
+        if ($ext === 'docx') {
+            $docxPath = storage_path('app/public/contracts/' . $filename);
+            if (!file_exists($docxPath)) abort(404, 'File not found.');
+            return response()->download($docxPath, $downloadName, [
+                'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            ]);
+        }
+        // ...handle PDF to DOCX if needed...
+        abort(400, 'Invalid file type.');
+    }
+
+    // Helper to build the filename
+    private function makeDownloadName($contract, $ext)
+    {
+        $title = preg_replace('/[^A-Za-z0-9]+/', '_', $contract->title);
+        $partner = preg_replace('/[^A-Za-z0-9]+/', '_', $contract->partner->name);
+        $date = $contract->contract_date ? date('Ymd', strtotime($contract->contract_date)) : 'nodate';
+        return "{$title}_{$partner}_{$date}_Contract.{$ext}";
+    }
+
+} //end clause

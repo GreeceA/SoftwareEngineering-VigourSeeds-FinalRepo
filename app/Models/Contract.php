@@ -15,6 +15,7 @@ class Contract extends Model
         'partner_id',
         'title',
         'contract_file',
+        'original_file_name',
         'contract_date',
         'effective_date',
         'expiration_date',

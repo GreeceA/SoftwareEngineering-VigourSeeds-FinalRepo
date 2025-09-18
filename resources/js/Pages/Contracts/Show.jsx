@@ -247,14 +247,33 @@ export default function Show({ auth, contract }) {
                                             </svg>
                                             View Contract File
                                         </button>
+                                        {contract.original_file_name && (
+                                            <div className="text-sm text-green-800 mt-1">
+                                                <span className="font-semibold"></span> {contract.original_file_name}
+                                            </div>
+                                        )}
                                         <div className="flex space-x-2 text-sm">
-                                            <button className="text-gray-600 hover:text-[#37692F] px-3 py-1.5 rounded border border-gray-300 hover:border-[#37692F] transition-colors">
+                                            {/* Download PDF */}
+                                            <a
+                                                href={`/dashboard/SoftwareEngineering-VigourSeeds-FinalRepo/public/contracts/download-pdf/${contract.contract_file.split('/').pop()}`}
+                                                className="text-gray-600 hover:text-[#37692F] px-3 py-1.5 rounded border border-gray-300 hover:border-[#37692F] transition-colors"
+                                                download
+                                            >
                                                 Download PDF
-                                            </button>
-                                            <button className="text-gray-600 hover:text-[#37692F] px-3 py-1.5 rounded border border-gray-300 hover:border-[#37692F] transition-colors">
-                                                Download Word
-                                            </button>
+                                            </a>
+                                            {/* Download Word */}
+                                            {contract.contract_file.toLowerCase().endsWith('.docx') && (
+                                                <a
+                                                    href={`/dashboard/SoftwareEngineering-VigourSeeds-FinalRepo/public/contracts/download-docx/${contract.contract_file.split('/').pop()}`}
+                                                    className="text-gray-600 hover:text-[#37692F] px-3 py-1.5 rounded border border-gray-300 hover:border-[#37692F] transition-colors"
+                                                    download
+                                                >
+                                                    Download Word
+                                                </a>
+                                            )}
                                         </div>
+                                        {/* Show original file name here */}
+                                        
                                     </div>
                                 ) : (
                                     <p className="text-sm text-gray-500 font-poppins">No file uploaded</p>

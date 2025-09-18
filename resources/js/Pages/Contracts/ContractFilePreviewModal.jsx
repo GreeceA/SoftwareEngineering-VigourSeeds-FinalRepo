@@ -3,6 +3,19 @@ import React from 'react';
 export default function ContractFilePreviewModal({ fileUrl, onClose }) {
     if (!fileUrl) return null;
 
+    // Get file extension
+    const extension = fileUrl.split('.').pop().toLowerCase();
+    const isPDF = extension === 'pdf';
+    const isDOCX = extension === 'docx';
+
+    // For DOCX, use the backend route to convert and preview as PDF
+    const base = '/dashboard/SoftwareEngineering-VigourSeeds-FinalRepo/public';
+    let previewUrl = fileUrl;
+    if (isDOCX) {
+        const filename = fileUrl.split('/').pop();
+        previewUrl = `${base}/contracts/preview-pdf/${filename}`;
+    }
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60">
             <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 relative overflow-hidden">
@@ -27,13 +40,31 @@ export default function ContractFilePreviewModal({ fileUrl, onClose }) {
 
                 {/* Preview content */}
                 <div className="p-6">
-                    <div className="w-full h-[60vh] border border-gray-300 rounded-md overflow-hidden">
-                        <iframe
-                            src={fileUrl}
-                            title="Contract File Preview"
-                            className="w-full h-full"
-                            frameBorder="0"
-                        />
+                    <div className="w-full h-[60vh] border border-gray-300 rounded-md overflow-hidden flex items-center justify-center bg-gray-50">
+                        {(isPDF || isDOCX) ? (
+                            <iframe
+                                src={previewUrl}
+                                title="Contract File Preview"
+                                className="w-full h-full"
+                                frameBorder="0"
+                            />
+                        ) : (
+                            <div className="text-center w-full">
+                                <p className="mb-4 text-gray-700">
+                                    Preview is only available for PDF and DOCX files.<br />
+                                    Click the button below to download and view this file.
+                                </p>
+                                <a
+                                    href={fileUrl}
+                                    download
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="bg-[#37692F] text-white px-4 py-2 rounded-md hover:bg-[#2a5624] focus:outline-none focus:ring-2 focus:ring-[#37692F]"
+                                >
+                                    Download File
+                                </a>
+                            </div>
+                        )}
                     </div>
                     
                     {/* Footer actions */}
@@ -44,15 +75,17 @@ export default function ContractFilePreviewModal({ fileUrl, onClose }) {
                         >
                             Close
                         </button>
-                        <a
-                            href={fileUrl}
-                            download
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="ml-3 bg-[#37692F] text-white px-4 py-2 rounded-md hover:bg-[#2a5624] focus:outline-none focus:ring-2 focus:ring-[#37692F]"
-                        >
-                            Download File
-                        </a>
+                        {(isPDF || isDOCX) && (
+                            <a
+                                href={fileUrl}
+                                download
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="ml-3 bg-[#37692F] text-white px-4 py-2 rounded-md hover:bg-[#2a5624] focus:outline-none focus:ring-2 focus:ring-[#37692F]"
+                            >
+                                Download File
+                            </a>
+                        )}
                     </div>
                 </div>
             </div>
