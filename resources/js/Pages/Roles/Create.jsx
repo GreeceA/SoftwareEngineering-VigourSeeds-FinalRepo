@@ -59,28 +59,270 @@ export default function Create({ permissions }) {
                                     )}
                                 </div>
 
-                                <div className="flex flex-wrap gap-4 mb-3">
-                                {permissions
-                                    ?.slice() 
-                                    .sort((a, b) => a.name.localeCompare(b.name))
-                                    .map((permission) => (
-                                        <div className="flex items-center" key={permission.id}>
-                                            <input
-                                                type="checkbox"
-                                                id={`permission-${permission.id}`}
-                                                className="rounded"
-                                                checked={data.permissions.includes(permission.name)}
-                                                onChange={() => handlePermissionChange(permission.name)}
-                                            />
-                                            <label
-                                                htmlFor={`permission-${permission.id}`}
-                                                className="ml-2 text-sm text-gray-700"
-                                            >
-                                                {permission.name}
-                                            </label>
-                                        </div>
-                                    ))}
-                            </div>
+                                {/* Permissions Table */}
+                                <div className="mb-6">
+                                    <label className="block mb-4 text-sm font-bold text-gray-700">
+                                        Permissions
+                                    </label>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full border-collapse border border-gray-300">
+                                            <thead>
+                                                <tr className="bg-gray-100">
+                                                    <th className="border border-gray-300 px-4 py-2 text-left font-semibold">Category</th>
+                                                    <th className="border border-gray-300 px-4 py-2 text-center font-semibold">View</th>
+                                                    <th className="border border-gray-300 px-4 py-2 text-center font-semibold">Create</th>
+                                                    <th className="border border-gray-300 px-4 py-2 text-center font-semibold">Edit</th>
+                                                    <th className="border border-gray-300 px-4 py-2 text-center font-semibold">Delete/Archive</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {/* Users Row */}
+                                                <tr>
+                                                    <td className="border border-gray-300 px-4 py-2 font-medium bg-blue-50">Users</td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="rounded"
+                                                            checked={data.permissions.includes('view users')}
+                                                            onChange={() => handlePermissionChange('view users')}
+                                                        />
+                                                    </td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="rounded"
+                                                            checked={data.permissions.includes('create users')}
+                                                            onChange={() => handlePermissionChange('create users')}
+                                                        />
+                                                    </td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="rounded"
+                                                            checked={data.permissions.includes('edit users')}
+                                                            onChange={() => handlePermissionChange('edit users')}
+                                                        />
+                                                    </td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="rounded"
+                                                            checked={data.permissions.includes('deactivate users')}
+                                                            onChange={() => handlePermissionChange('deactivate users')}
+                                                        />
+                                                    </td>
+                                                </tr>
+
+                                                {/* Partners Row */}
+                                                <tr>
+                                                    <td className="border border-gray-300 px-4 py-2 font-medium bg-green-50">Partners</td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="rounded"
+                                                            checked={data.permissions.includes('view partners')}
+                                                            onChange={() => handlePermissionChange('view partners')}
+                                                        />
+                                                    </td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="rounded"
+                                                            checked={data.permissions.includes('create partners')}
+                                                            onChange={() => handlePermissionChange('create partners')}
+                                                        />
+                                                    </td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="rounded"
+                                                            checked={data.permissions.includes('edit partners')}
+                                                            onChange={() => handlePermissionChange('edit partners')}
+                                                        />
+                                                    </td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="rounded"
+                                                            checked={data.permissions.includes('archive partners')}
+                                                            onChange={() => handlePermissionChange('archive partners')}
+                                                        />
+                                                    </td>
+                                                </tr>
+
+                                                {/* Seeds Row */}
+                                                <tr>
+                                                    <td className="border border-gray-300 px-4 py-2 font-medium bg-yellow-50">Seeds</td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="rounded"
+                                                            checked={data.permissions.includes('view seeds')}
+                                                            onChange={() => handlePermissionChange('view seeds')}
+                                                        />
+                                                    </td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="rounded"
+                                                            checked={data.permissions.includes('create seeds')}
+                                                            onChange={() => handlePermissionChange('create seeds')}
+                                                        />
+                                                    </td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="rounded"
+                                                            checked={data.permissions.includes('edit seeds')}
+                                                            onChange={() => handlePermissionChange('edit seeds')}
+                                                        />
+                                                    </td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="rounded"
+                                                            checked={data.permissions.includes('archive seeds')}
+                                                            onChange={() => handlePermissionChange('archive seeds')}
+                                                        />
+                                                    </td>
+                                                </tr>
+
+                                                {/* Items Row */}
+                                                <tr>
+                                                    <td className="border border-gray-300 px-4 py-2 font-medium bg-purple-50">Items</td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="rounded"
+                                                            checked={data.permissions.includes('view items')}
+                                                            onChange={() => handlePermissionChange('view items')}
+                                                        />
+                                                    </td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="rounded"
+                                                            checked={data.permissions.includes('create items')}
+                                                            onChange={() => handlePermissionChange('create items')}
+                                                        />
+                                                    </td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="rounded"
+                                                            checked={data.permissions.includes('edit items')}
+                                                            onChange={() => handlePermissionChange('edit items')}
+                                                        />
+                                                    </td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="rounded"
+                                                            checked={data.permissions.includes('archive items')}
+                                                            onChange={() => handlePermissionChange('archive items')}
+                                                        />
+                                                    </td>
+                                                </tr>
+
+                                                {/* Contracts Row */}
+                                                <tr>
+                                                    <td className="border border-gray-300 px-4 py-2 font-medium bg-orange-50">Contracts</td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="rounded"
+                                                            checked={data.permissions.includes('view contracts')}
+                                                            onChange={() => handlePermissionChange('view contracts')}
+                                                        />
+                                                    </td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="rounded"
+                                                            checked={data.permissions.includes('create contracts')}
+                                                            onChange={() => handlePermissionChange('create contracts')}
+                                                        />
+                                                    </td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="rounded"
+                                                            checked={data.permissions.includes('edit contracts')}
+                                                            onChange={() => handlePermissionChange('edit contracts')}
+                                                        />
+                                                    </td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="rounded"
+                                                            checked={data.permissions.includes('archive contracts')}
+                                                            onChange={() => handlePermissionChange('archive contracts')}
+                                                        />
+                                                    </td>
+                                                </tr>
+
+                                                {/* System Management Row */}
+                                                <tr>
+                                                    <td className="border border-gray-300 px-4 py-2 font-medium bg-gray-50">Roles</td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="rounded"
+                                                            checked={data.permissions.includes('view roles')}
+                                                            onChange={() => handlePermissionChange('view roles')}
+                                                        />
+                                                    </td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="rounded"
+                                                            checked={data.permissions.includes('create roles')}
+                                                            onChange={() => handlePermissionChange('create roles')}
+                                                        />
+                                                    </td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="rounded"
+                                                            checked={data.permissions.includes('edit roles')}
+                                                            onChange={() => handlePermissionChange('edit roles')}
+                                                        />
+                                                    </td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="rounded"
+                                                            checked={data.permissions.includes('delete roles')}
+                                                            onChange={() => handlePermissionChange('delete roles')}
+                                                        />
+                                                    </td>
+                                                </tr>
+
+                                                {/* Permissions Row */}
+                                                <tr>
+                                                    <td className="border border-gray-300 px-4 py-2 font-medium bg-gray-50">Permissions</td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center">
+                                                        <input
+                                                            type="checkbox"
+                                                            className="rounded"
+                                                            checked={data.permissions.includes('view permissions')}
+                                                            onChange={() => handlePermissionChange('view permissions')}
+                                                        />
+                                                    </td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center">
+                                                        <span className="text-gray-400">N/A</span>
+                                                    </td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center">
+                                                        <span className="text-gray-400">N/A</span>
+                                                    </td>
+                                                    <td className="border border-gray-300 px-4 py-2 text-center">
+                                                        <span className="text-gray-400">N/A</span>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
 
                                 <div className="flex items-center justify-end mt-4">
                                     <button

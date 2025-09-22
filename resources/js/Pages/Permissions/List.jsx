@@ -8,12 +8,35 @@ export default function List() {
     // Get user permissions (same way as in other components)
     const userPermissions = auth?.user?.can || [];
 
-    // Core permissions that cannot be deleted or edited
-    const protectedPermissions = [
-        'view users', 'create users', 'edit users', 'deactivate users',
-        'view roles', 'create roles', 'edit roles', 'delete roles',
-        'view permissions', 'create permissions', 'edit permissions', 'delete permissions'
-    ];
+    // Sort permissions by category order: partners, users, roles, permissions
+    const sortPermissions = (permissionsList) => {
+        return permissionsList.sort((a, b) => {
+            const nameA = a.name.toLowerCase();
+            const nameB = b.name.toLowerCase();
+            
+            // Define priority order
+            const getCategory = (name) => {
+                if (name.includes('partner')) return 1;
+                if (name.includes('user')) return 2;
+                if (name.includes('role')) return 3;
+                if (name.includes('permission')) return 4;
+                return 5;
+            };
+            
+            const categoryA = getCategory(nameA);
+            const categoryB = getCategory(nameB);
+            
+            // If same category, sort alphabetically
+            if (categoryA === categoryB) {
+                return a.name.localeCompare(b.name);
+            }
+            
+            // Otherwise sort by category priority
+            return categoryA - categoryB;
+        });
+    };
+
+    const sortedPermissions = permissions?.data ? sortPermissions([...permissions.data]) : [];
 
     const handleDelete = (id) => {
         // Use the native confirm dialog
@@ -64,65 +87,36 @@ return (
                     </div>
                 )}
 
-                <table className="w-full">
-                    <thead className="bg-gray-50">
-                        <tr className="border-b">
-                            <th className="px-6 py-3 text-left" width="60">#</th>
-                            <th className="px-6 py-3 text-left">Permission Name</th>
-                            <th className="px-6 py-3 text-left" width="240">Created At</th>
-                            <th className="px-6 py-3 text-center">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white">
-                        {permissions?.data?.length > 0 ? (
-                            permissions.data.map((permission) => (
-                                <tr key={permission.id} className="border-b">
-                                    <td className="px-6 py-3 text-left">{permission.id}</td>
-                                    <td className="px-6 py-3 text-left">{permission.name}</td>
-                                    <td className="px-6 py-3 text-left">
-                                        {dayjs(permission.created_at).format("MMMM D, YYYY h:mm A")}
-                                </td>
-                                <td className="px-6 py-3 text-center">
-                                    <div className="flex justify-center space-x-2">
-                                        {/* Edit button - only show if user has permission AND it's not a protected permission */}
-                                        {userPermissions.includes('edit permissions') && !protectedPermissions.includes(permission.name) && (
-                                            <Link
-                                                href={route('permissions.edit', permission.id)}
-                                                className="inline-flex items-center justify-center bg-slate-600 text-sm rounded-md text-white px-4 py-2 min-w-[70px] hover:bg-slate-700"
-                                            >
-                                                Edit
-                                            </Link>
-                                        )}
-                                        
-                                        {/* Delete button - only show if user has permission AND it's not a protected permission */}
-                                        {userPermissions.includes('delete permissions') && !protectedPermissions.includes(permission.name) && (
-                                            <button
-                                                onClick={() => handleDelete(permission.id)}
-                                                className="inline-flex items-center justify-center bg-red-600 text-sm rounded-md text-white px-4 py-2 min-w-[70px] hover:bg-red-700"
-                                            >
-                                                Delete
-                                            </button>
-                                        )}
-
-                                        {/* Show "Core" label for protected permissions */}
-                                        {protectedPermissions.includes(permission.name) && (
-                                            <span className="inline-flex items-center justify-center bg-blue-100 text-blue-800 text-sm rounded-md px-4 py-2 min-w-[70px] font-medium">
-                                                Core
-                                            </span>
-                                        )}
-                                    </div>
-                                </td>
-                                </tr>
-                            ))
-                        ) : (
-                            <tr>
-                                <td colSpan="4" className="px-6 py-3 text-center text-gray-500">
-                                    No permissions found.
-                                </td>
+                <div className="overflow-hidden bg-white shadow-sm sm:rounded-lg">
+                    <table className="w-full">
+                        <thead className="bg-gray-50">
+                            <tr className="border-b">
+                                <th className="px-6 py-3 text-left" width="60">#</th>
+                                <th className="px-6 py-3 text-left">Permission Name</th>
+                                <th className="px-6 py-3 text-left" width="240">Created At</th>
                             </tr>
-                        )}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody className="bg-white">
+                            {sortedPermissions.length > 0 ? (
+                                sortedPermissions.map((permission) => (
+                                    <tr key={permission.id} className="border-b">
+                                        <td className="px-6 py-3 text-left">{permission.id}</td>
+                                        <td className="px-6 py-3 text-left">{permission.name}</td>
+                                        <td className="px-6 py-3 text-left">
+                                            {dayjs(permission.created_at).format("MMMM D, YYYY h:mm A")}
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="3" className="px-6 py-8 text-center text-gray-500">
+                                        No permissions found.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
             {permissions.links && (
                 <div className="mt-4 flex items-center justify-between px-4">
                     {/* Left side - Current page info */}

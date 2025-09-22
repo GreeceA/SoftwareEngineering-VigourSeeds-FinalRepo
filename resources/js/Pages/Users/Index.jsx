@@ -65,6 +65,7 @@ export default function Index({ auth, users }) {
         };
         return priorities[role] || 0;
     };
+<<<<<<< Updated upstream
 
     // Filter, sort, and search users
     const processedUsers = useMemo(() => {
@@ -84,6 +85,13 @@ export default function Index({ auth, users }) {
                     roles.includes(searchTerm)
                 );
             });
+=======
+    const getRoleColor = (role) => {
+        switch (role) {
+            case 'Admin': return 'bg-red-600 text-white';
+            case 'Employee': return 'bg-blue-600 text-white';
+            default: return 'bg-gray-600 text-white';
+>>>>>>> Stashed changes
         }
 
         // 2. Apply status filter
@@ -191,7 +199,6 @@ export default function Index({ auth, users }) {
 
     return (
         <AuthenticatedLayout
-            user={auth.user}
             header={
                 <h2 className="text-[25px] font-[800]" style={{ fontFamily: "'Poppins', sans-serif" }}>
                     <span className="text-[#37692F] font-[800]">VIGOUR SEEDS</span>

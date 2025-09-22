@@ -40,8 +40,8 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/', [ProfileController::class, 'destroy'])->name('destroy');
     });
 
-    // Permissions
-    Route::resource('permissions', PermissionController::class)->except(['show']);
+    // Permissions (VIEW ONLY - create/edit/delete managed by developers)
+    Route::get('permissions', [PermissionController::class, 'index'])->name('permissions.index');
 
     // Roles
     Route::resource('roles', RoleController::class)->except(['show']);

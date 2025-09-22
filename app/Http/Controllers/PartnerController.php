@@ -6,10 +6,20 @@ use App\Http\Requests\PartnerRequest;
 use App\Models\Partner;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-
-class PartnerController extends Controller
+class PartnerController extends Controller implements HasMiddleware
 {
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:view partners', only: ['index', 'show']),
+            new Middleware('permission:create partners', only: ['create', 'store']),
+            new Middleware('permission:edit partners', only: ['edit', 'update']),
+            new Middleware('permission:archive partners', only: ['destroy', 'deactivate', 'reactivate']),
+        ];
+    }
     public function index(Request $request)
     {
         $partners = Partner::query()
@@ -30,10 +40,14 @@ class PartnerController extends Controller
 
         return Inertia::render('Partners/Index', [
             'partners' => $partners,
+<<<<<<< Updated upstream
             'filters' => $request->only(['search', 'status', 'partner_type']),
             'auth' => [
                 'user' => $request->user(),
             ],
+=======
+            'filters' => $request->only(['search', 'status', 'partner_type', 'per_page', 'sort_by', 'sort_dir']),
+>>>>>>> Stashed changes
         ]);
     }
 
@@ -53,14 +67,40 @@ class PartnerController extends Controller
     public function show(Partner $partner)
     {
         return Inertia::render('Partners/Show', [
+<<<<<<< Updated upstream
             'partner' => $partner,
+=======
+            'partner' => [
+                ...$partner->toArray(),
+                'contact_persons' => $partner->contactPersons->map(function ($c) {
+                    return [
+                        'name' => $c->name,
+                        'email' => $c->email,
+                        'phone_number' => $c->phone_number,
+                    ];
+                }),
+            ],
+>>>>>>> Stashed changes
         ]);
     }
 
     public function edit(Partner $partner)
     {
         return Inertia::render('Partners/Edit', [
+<<<<<<< Updated upstream
             'partner' => $partner,
+=======
+            'partner' => [
+                ...$partner->toArray(),
+                'contact_persons' => $partner->contactPersons->map(function ($c) {
+                    return [
+                        'name' => $c->name,
+                        'email' => $c->email,
+                        'phone_number' => $c->phone_number,
+                    ];
+                }),
+            ],
+>>>>>>> Stashed changes
         ]);
     }
 

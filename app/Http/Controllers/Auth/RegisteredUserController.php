@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Inertia\Inertia;
 use Inertia\Response;
+use Spatie\Permission\Models\Role;
 
 class RegisteredUserController extends Controller
 {
@@ -42,7 +43,15 @@ class RegisteredUserController extends Controller
             'last_name' => $request->last_name,
             'email' => $request->email,
             'password' => Hash::make($request->password),
+            'role' => 'employee', // Set default role to employee
+            'status' => 'active', // Set default status to active
         ]);
+
+        // Assign employee role to new user
+        $employeeRole = Role::where('name', 'employee')->first();
+        if ($employeeRole) {
+            $user->assignRole($employeeRole);
+        }
 
         event(new Registered($user));
 

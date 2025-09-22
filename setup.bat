@@ -59,14 +59,14 @@ echo ━━━━━━━━━━━━━━━━━━━━━━━━━
 echo 👑 Super Admin:
 echo    📧 admin@vigourseeds.com
 echo    🔑 admin123
+echo    ✅ Full access to everything
 echo.
-echo 👔 Manager:
-echo    📧 manager@vigourseeds.com
-echo    🔑 manager123
-echo.
-echo 👤 Employee:
+echo � Employee:
 echo    📧 employee@vigourseeds.com
 echo    🔑 employee123
+echo    ✅ Dashboard access only
+echo.
+echo ℹ️  Manager role removed - simplified to Admin/Employee only
 echo.
 echo 🚀 Ready to start development servers:
 echo    Terminal 1: php artisan serve

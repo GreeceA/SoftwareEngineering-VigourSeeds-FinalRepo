@@ -68,9 +68,10 @@ npm run dev
 
 ## 🔧 Conflict Resolution
 
-### Existing Users
-- If `admin@vigourseeds.com` exists → Backs up to `admin_backup@vigourseeds.com`
-- If test accounts exist → Backs up with `_backup` suffix
+### Existing Test Users
+- If `admin@vigourseeds.com` exists → **Deleted** and replaced with fresh account
+- If `manager@vigourseeds.com` exists → **Deleted** (manager role removed - simplified system)
+- If `employee@vigourseeds.com` exists → **Deleted** and replaced with fresh account
 
 ### Existing Permissions
 - `delete users` → Renamed to `deactivate users`
@@ -79,6 +80,7 @@ npm run dev
 
 ### Existing Roles  
 - `administrator` → Renamed to `admin`
+- `manager` → **Deleted** (simplified to admin/employee only)
 - `user` → Renamed to `employee`
 - `member` → Renamed to `employee`
 
@@ -89,17 +91,14 @@ After setup, you'll have these accounts:
 ### 👑 Super Admin (Full Access)
 - **Email:** admin@vigourseeds.com
 - **Password:** admin123
-- **Can:** Do everything
+- **Can:** Do everything - full access to all modules and permissions
 
-### 👔 Manager (Limited Access)
-- **Email:** manager@vigourseeds.com
-- **Password:** manager123
-- **Can:** View/create/edit users and roles (no delete/deactivate)
-
-### 👤 Employee (View Only)
+### 👤 Employee (Dashboard Only)
 - **Email:** employee@vigourseeds.com
 - **Password:** employee123
-- **Can:** Only view users list
+- **Can:** Access dashboard only (no other permissions)
+
+**Note:** Manager role has been removed to simplify the system to just Admin (full access) and Employee (dashboard only).
 
 ## 🛠️ Troubleshooting
 
@@ -124,7 +123,7 @@ npm run build
 
 ## ⚠️ Important Notes
 
-- **Existing Data:** Our setup is designed to preserve your existing data while standardizing it
+- **Existing Test Users:** Our setup will **delete and replace** any existing test accounts (admin, manager, employee) to ensure proper Spatie permissions
 - **Backups:** Always backup your database before running migrations
 - **Test Accounts:** Delete test accounts before production deployment
 - **Admin Password:** Change admin password after first login

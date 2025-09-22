@@ -59,13 +59,13 @@ return new class extends Migration
 
             if ($oldPermission && !$newPermission) {
                 $oldPermission->update(['name' => $newName]);
-                $this->command->info("Renamed permission: '{$oldName}' → '{$newName}'");
+                // Renamed permission: '{$oldName}' → '{$newName}'
             } elseif ($oldPermission && $newPermission) {
                 // Merge permissions: move all relationships from old to new
                 $oldPermission->roles()->detach();
                 $oldPermission->users()->detach();
                 $oldPermission->delete();
-                $this->command->info("Removed duplicate permission: '{$oldName}'");
+                // Removed duplicate permission: '{$oldName}'
             }
         }
     }
@@ -91,7 +91,7 @@ return new class extends Migration
 
             if ($oldRole && !$newRole) {
                 $oldRole->update(['name' => $newName]);
-                $this->command->info("Renamed role: '{$oldName}' → '{$newName}'");
+                // Renamed role: '{$oldName}' → '{$newName}'
             } elseif ($oldRole && $newRole) {
                 // Merge roles: move all users from old to new
                 foreach ($oldRole->users as $user) {
@@ -99,7 +99,7 @@ return new class extends Migration
                     $user->assignRole($newRole);
                 }
                 $oldRole->delete();
-                $this->command->info("Merged role: '{$oldName}' into '{$newName}'");
+                // Merged role: '{$oldName}' into '{$newName}'
             }
         }
     }
@@ -118,9 +118,9 @@ return new class extends Migration
         foreach ($testEmails as $email) {
             $existingUser = User::where('email', $email)->first();
             if ($existingUser) {
-                $backupEmail = str_replace('@', '_backup@', $email);
-                $existingUser->update(['email' => $backupEmail]);
-                $this->command->info("Backed up existing user: '{$email}' → '{$backupEmail}'");
+                // Delete existing test users instead of backing up
+                $existingUser->delete();
+                // Deleted existing user: '{$email}' to be replaced by seeder
             }
         }
     }
