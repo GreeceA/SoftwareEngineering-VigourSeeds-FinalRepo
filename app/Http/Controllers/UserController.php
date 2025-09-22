@@ -32,9 +32,23 @@ class UserController extends Controller implements HasMiddleware
         $sortBy = $request->input('sort_by', 'id');
         $sortDir = $request->input('sort_dir', 'desc');
         $perPage = $request->input('per_page', 10);
+        $status = $request->input('status', '');
+        $search = $request->input('search', ''); // <-- ADD THIS
 
         $query = User::with('roles')
             ->select('id', DB::raw("CONCAT(first_name, ' ', last_name) as name"), 'email', 'role', 'status', 'created_at', 'avatar');
+
+        // Search functionality
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where(DB::raw("CONCAT(first_name, ' ', last_name)"), 'like', "%{$search}%")
+                ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        if ($status && in_array($status, ['active', 'inactive'])) {
+            $query->where('status', $status);
+        }
 
         // Only allow sorting by allowed columns
         if (in_array($sortBy, ['name', 'email', 'role', 'status', 'created_at'])) {
@@ -43,6 +57,7 @@ class UserController extends Controller implements HasMiddleware
             $query->orderBy('id', 'desc');
         }
 
+        
         $users = $query->paginate($perPage)->withQueryString();
 
         $users->getCollection()->transform(function ($user) {

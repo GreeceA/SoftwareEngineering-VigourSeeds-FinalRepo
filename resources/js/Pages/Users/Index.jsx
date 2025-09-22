@@ -38,7 +38,7 @@ export default function Index({ auth, users, filters }) {
 
     const fetchUsers = (params = {}) => {
         router.get(route('users.index'), {
-            search,
+            search: params.search !== undefined ? params.search : search,
             status: filter !== 'all' ? filter : '',
             sort_by: sortBy,
             sort_dir: sortDir,
@@ -47,13 +47,16 @@ export default function Index({ auth, users, filters }) {
         }, { preserveState: true, replace: true });
     };
 
-    const debouncedSearch = debounce((value) => {
-        setSearch(value);
-        fetchUsers({ search: value, page: 1 });
-    }, 300);
+    // Debounce only the fetchUsers call, not setSearch
+    const debouncedFetchUsers = useRef(
+        debounce((value) => {
+            fetchUsers({ search: value, page: 1 });
+        }, 400)
+    ).current;
 
     const handleSearchChange = (e) => {
-        debouncedSearch(e.target.value);
+        setSearch(e.target.value);
+        debouncedFetchUsers(e.target.value);
     };
 
     const getFilterLabel = () => filter === 'active' ? 'Active Only' : filter === 'inactive' ? 'Inactive Only' : 'All Users';
@@ -87,6 +90,18 @@ export default function Index({ auth, users, filters }) {
             onError: () => setReactivateModalUser(null)
         });
     };
+
+    // Always create a fresh copy to avoid mutating props
+    let displayUsers = [...users.data];
+
+    // When default sort, always show "You" at the top (even if not on first page)
+    if (sortBy === 'id' && sortDir === 'desc') {
+        const currentUserIndex = displayUsers.findIndex(u => u.id === auth.user.id);
+        if (currentUserIndex !== -1) {
+            const [currentUser] = displayUsers.splice(currentUserIndex, 1);
+            displayUsers = [currentUser, ...displayUsers];
+        }
+    }
 
     return (
         <AuthenticatedLayout
@@ -188,7 +203,7 @@ export default function Index({ auth, users, filters }) {
                             <input
                                 type="text"
                                 placeholder="Search by name, email, or role"
-                                defaultValue={search}
+                                value={search}
                                 onChange={handleSearchChange}
                                 className="w-[400px] pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#37692F]"
                             />
@@ -221,7 +236,7 @@ export default function Index({ auth, users, filters }) {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
-                            {users.data.length > 0 ? users.data.map((user) => (
+                            {displayUsers.length > 0 ? displayUsers.map((user) => (
                                 <tr key={user.id} className={`hover:bg-gray-50 ${user.id === auth.user.id ? 'bg-blue-50' : ''}`}>
                                     <td className="px-6 py-4">
                                         {user.avatar ? (

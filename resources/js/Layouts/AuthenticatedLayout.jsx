@@ -139,13 +139,6 @@ export default function AuthenticatedLayout({ header, children }) {
                                 >
                                     Partners
                                 </NavLink>
-                                {/* CONTRACTS */}
-                                <NavLink
-                                    href={route('contracts.index')}
-                                    active={route().current('contracts.index')}
-                                >
-                                    Contracts
-                                </NavLink>
                                 {/* SEEDS */}
                                 <NavLink
                                     href={route('seeds.index')}
@@ -159,6 +152,13 @@ export default function AuthenticatedLayout({ header, children }) {
                                     active={route().current('items.index')}
                                 >
                                     Items
+                                </NavLink>
+                                {/* CONTRACTS */}
+                                <NavLink
+                                    href={route('contracts.index')}
+                                    active={route().current('contracts.index')}
+                                >
+                                    Contracts
                                 </NavLink>
                                 <NavLink
                                     // href={route('dashboard')}
