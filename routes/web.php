@@ -74,6 +74,11 @@ Route::middleware(['auth'])->group(function () {
     Route::post('partners/{partner}/deactivate', [PartnerController::class, 'deactivate'])->name('partners.deactivate');
     Route::post('partners/{partner}/reactivate', [PartnerController::class, 'reactivate'])->name('partners.reactivate');
     Route::get('partners/{partner}', [PartnerController::class, 'show'])->name('partners.show');
+        // Validation routes - Partner fields
+        Route::post('/check/partner/name', [PartnerController::class, 'checkName'])->name('partners.checkName');
+        Route::post('/check/partner/email', [PartnerController::class, 'checkEmail'])->name('partners.checkEmail');
+        Route::post('/check/partner/registration', [PartnerController::class, 'checkRegistrationNumber'])->name('partners.checkRegistration');
+        Route::post('/check/partner/taxid', [PartnerController::class, 'checkTaxId'])->name('partners.checkTaxId');
 
     // Contracts
     Route::resource('contracts', ContractController::class);
@@ -92,6 +97,8 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('seeds/{seed}/restore', [SeedController::class, 'restore'])->name('seeds.restore');
     Route::delete('seeds/{seed}', [SeedController::class, 'destroy'])->name('seeds.destroy');
     Route::get('/seeds/{seed}', [SeedController::class, 'show'])->name('seeds.show');
+        // Validation routes - Seed fields
+        Route::post('/check/seed/variety', [SeedController::class, 'checkVariety'])->name('seeds.checkVariety');
 
     // Items
     Route::resource('items', ItemController::class);

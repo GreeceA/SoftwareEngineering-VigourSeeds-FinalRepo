@@ -199,6 +199,37 @@ export default function Show({ auth, partner }) {
                         </div>
                     )}
 
+                    {/* Farm Information Card */}
+                    {partner.farms && partner.farms.length > 0 && (
+                        <div className="bg-white shadow-lg rounded-lg p-6 md:col-span-2">
+                            <h2 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Farm Information</h2>
+                            <div className="space-y-4">
+                                {partner.farms.map((farm, idx) => (
+                                    <div key={idx} className="border border-gray-200 rounded-lg p-4 mb-2">
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                            <div>
+                                                <span className="block text-xs text-gray-500 mb-1">Farm Name</span>
+                                                <span className="font-medium text-gray-900 text-sm">{farm.location_name || 'N/A'}</span>
+                                            </div>
+                                            <div>
+                                                <span className="block text-xs text-gray-500 mb-1">Area Size (hectares)</span>
+                                                <span className="text-gray-900 text-sm">{farm.area_size || 'N/A'}</span>
+                                            </div>
+                                            <div>
+                                                <span className="block text-xs text-gray-500 mb-1">Soil Type</span>
+                                                <span className="text-gray-900 text-sm">{farm.soil_type ? farm.soil_type.charAt(0).toUpperCase() + farm.soil_type.slice(1) : 'N/A'}</span>
+                                            </div>
+                                            <div className="md:col-span-1">
+                                                <span className="block text-xs text-gray-500 mb-1">Address</span>
+                                                <span className="text-gray-900 text-sm whitespace-pre-wrap">{farm.address || 'N/A'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Associated Contracts Card */}
                     <div className="bg-white shadow-lg rounded-lg p-6 md:col-span-2">
                         <h2 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Associated Contracts</h2>

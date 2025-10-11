@@ -18,7 +18,7 @@ return new class extends Migration
             $table->decimal('price_per_unit', 10, 2);
             $table->integer('growth_cycle');
             $table->string('storage_requirements');
-            $table->string('soil_type_preference');
+            $table->enum('soil_type', ['clay', 'sandy', 'loam', 'silty'])->default('clay');
             $table->text('notes')->nullable();
             $table->timestamps();
         });

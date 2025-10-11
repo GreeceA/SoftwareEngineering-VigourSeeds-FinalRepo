@@ -15,7 +15,7 @@ class Seed extends Model
         'price_per_unit',
         'growth_cycle',
         'storage_requirements',
-        'soil_type_preference',
+        'soil_type',
         'notes'
     ];
 
@@ -38,9 +38,7 @@ class Seed extends Model
         return $query->where(function ($q) use ($search) {
             $q->where('seed_variety', 'like', '%' . $search . '%')
               ->orWhere('growth_cycle', $search)
-              ->orWhere('soil_type_preference', 'like', '%' . $search . '%');
+              ->orWhere('soil_type', 'like', '%' . $search . '%'); 
         });
     }
-
-    
 }

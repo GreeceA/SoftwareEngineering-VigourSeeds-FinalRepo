@@ -26,13 +26,14 @@ class Partner extends Model
         'status' => 'string',
     ];
 
-    public function contacts()
-    {
-        return $this->hasMany(\App\Models\PartnerContact::class);
-    }
-
     public function contactPersons() 
     {
     return $this->hasMany(PartnerContact::class);
     }
+    
+    public function farms()
+    {
+        return $this->hasMany(PartnerFarm::class);
+    }
+
 }

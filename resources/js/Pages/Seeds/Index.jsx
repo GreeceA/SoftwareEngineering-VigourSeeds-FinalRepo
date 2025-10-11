@@ -336,7 +336,7 @@ export default function Index({ auth, seeds, filters }) {
                                                     {seed.seed_variety}
                                                 </Link>
                                                 <div className="font-poppins font-normal text-[12px] text-gray-500">
-                                                    Soil: {seed.soil_type_preference}
+                                                    Soil: {seed.soil_type}
                                                 </div>
                                             </div>
                                         </td>

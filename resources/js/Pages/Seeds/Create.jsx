@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Head, Link, useForm } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import axios from 'axios'; // Import axios for uniqueness check
 
 export default function Create({ auth }) {
     const { data, setData, post, processing, errors } = useForm({
@@ -9,14 +10,58 @@ export default function Create({ auth }) {
         price_per_unit: '',
         growth_cycle: '',
         storage_requirements: '',
-        soil_type_preference: '',
+        soil_type: '', 
         notes: ''
     });
 
+    const soilTypes = ['clay', 'sandy', 'loam', 'silty'];
+    
+    // New states for uniqueness check (similar to PartnerForm)
+    const [nameUniqueError, setNameUniqueError] = useState('');
+    const [checkingName, setCheckingName] = useState(false);
+    const [nameTouched, setNameTouched] = useState(false);
+
+    // --- Uniqueness Check Handler (Similar to handleNameBlur in PartnerForm) ---
+    const checkSeedVarietyUnique = async (variety) => {
+        if (!variety.trim()) {
+            setNameUniqueError('');
+            setCheckingName(false);
+            return;
+        }
+        setCheckingName(true);
+        try {
+            await axios.post(route('seeds.checkVariety'), { 
+                seed_variety: variety.trim(),
+                seedId: null,
+            });
+            setNameUniqueError('');
+        } catch (err) {
+            if (err.response?.status === 422) {
+                setNameUniqueError(
+                    err.response.data.errors?.seed_variety?.[0] ||
+                    'The seed variety is already registered.'
+                );
+            }
+        }
+        setCheckingName(false);
+    };
+
+    // -------------------------------------------------------------------------
+
     const handleSubmit = (e) => {
         e.preventDefault();
+        
+        // Final check before submitting. Stop if there are unique errors.
+        if (nameUniqueError) {
+            // Ensure the user sees the error if they haven't blurred yet
+            setNameTouched(true); 
+            return;
+        }
+
         post(route('seeds.store'));
     };
+
+    const isSubmitDisabled = processing || checkingName || !!nameUniqueError;
 
     return (
         <AuthenticatedLayout
@@ -35,7 +80,7 @@ export default function Create({ auth }) {
                 <div className="px-6 pt-6">
                     <nav className="text-sm text-gray-600">
                         <Link
-                            href="http://localhost/dashboard/SoftwareEngineering-VigourSeeds-FinalRepo/public/dashboard"
+                            href={route('dashboard')} 
                             className="text-[#37692F] hover:underline"
                         >
                             Home
@@ -63,15 +108,23 @@ export default function Create({ auth }) {
                                     <input
                                         type="text"
                                         value={data.seed_variety}
-                                        onChange={(e) => setData('seed_variety', e.target.value)}
+                                        onChange={(e) => {
+                                            setData('seed_variety', e.target.value);
+                                            setNameUniqueError(''); // Clear unique error on change
+                                            checkSeedVarietyUnique(e.target.value); // Check uniqueness on change
+                                        }}
+                                        onBlur={checkSeedVarietyUnique} // Added uniqueness check on blur
                                         className={`mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F] ${
-                                            errors.seed_variety ? 'border-red-500' : ''
+                                            (errors.seed_variety || nameUniqueError) ? 'border-red-500' : ''
                                         }`}
                                         placeholder="e.g., Cherry, Beefsteak"
                                         required
                                     />
-                                    {errors.seed_variety && (
-                                        <p className="mt-1 text-sm text-red-600">{errors.seed_variety}</p>
+                                    {/* Display unique error or Laravel validation error */}
+                                    {(errors.seed_variety || nameUniqueError) && (
+                                        <p className="mt-1 text-sm text-red-600">
+                                            {nameUniqueError || errors.seed_variety}
+                                        </p>
                                     )}
                                 </div>
 
@@ -84,13 +137,13 @@ export default function Create({ auth }) {
                                         <input
                                             type="number"
                                             step="0.01"
-                                            min="0"
+                                            min="0.01" 
                                             value={data.price_per_unit}
                                             onChange={(e) => setData('price_per_unit', e.target.value)}
                                             className={`mt-1 block w-full pl-8 pr-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F] ${
                                                 errors.price_per_unit ? 'border-red-500' : ''
                                             }`}
-                                            placeholder="0.00"
+                                            placeholder="0.01"
                                             required
                                         />
                                     </div>
@@ -113,7 +166,7 @@ export default function Create({ auth }) {
                                     </label>
                                     <input
                                         type="number"
-                                        min="1"
+                                        min="10" 
                                         value={data.growth_cycle}
                                         onChange={(e) => setData('growth_cycle', e.target.value)}
                                         className={`mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F] ${
@@ -128,21 +181,27 @@ export default function Create({ auth }) {
                                 </div>
 
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                                        Soil Type Preference *
+                                    <label className="block text-sm font-medium text-gray-700 mb-2" htmlFor="soil_type">
+                                        Soil Type *
                                     </label>
-                                    <input
-                                        type="text"
-                                        value={data.soil_type_preference}
-                                        onChange={(e) => setData('soil_type_preference', e.target.value)}
+                                    <select
+                                        id="soil_type"
+                                        value={data.soil_type}
+                                        onChange={(e) => setData('soil_type', e.target.value)}
                                         className={`mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F] ${
-                                            errors.soil_type_preference ? 'border-red-500' : ''
+                                            errors.soil_type ? 'border-red-500' : ''
                                         }`}
-                                        placeholder="e.g., Loamy, Sandy, Clay"
                                         required
-                                    />
-                                    {errors.soil_type_preference && (
-                                        <p className="mt-1 text-sm text-red-600">{errors.soil_type_preference}</p>
+                                    >
+                                        <option value="" disabled>Select a soil type</option>
+                                        {soilTypes.map(type => (
+                                            <option key={type} value={type}>
+                                                {type.charAt(0).toUpperCase() + type.slice(1)}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    {errors.soil_type && (
+                                        <p className="mt-1 text-sm text-red-600">{errors.soil_type}</p>
                                     )}
                                 </div>
 
@@ -201,8 +260,8 @@ export default function Create({ auth }) {
                             </Link>
                             <button
                                 type="submit"
-                                disabled={processing}
-                                className="bg-[#37692F] hover:bg-[#2a5624] text-white font-medium py-2 px-4 rounded-md transition-colors disabled:opacity-50"
+                                disabled={isSubmitDisabled} // Use the combined disabled state
+                                className="bg-[#37692F] hover:bg-[#2a5624] text-white font-medium py-2 px-4 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 {processing ? 'Creating...' : 'Create Seed'}
                             </button>

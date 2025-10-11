@@ -12,7 +12,6 @@ return new class extends Migration
             $table->id();
             $table->enum('partner_type', ['individual', 'organization']);
             $table->string('name');
-            $table->string('contact_person')->nullable();
             $table->string('email')->unique();
             $table->string('phone');
             $table->text('address');

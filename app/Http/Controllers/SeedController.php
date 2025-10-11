@@ -3,15 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\Seed;
+use App\Http\Requests\SeedRequest; 
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Illuminate\Validation\Rule;
 
 class SeedController extends Controller
 {
-    /**
-     * Display a listing of seeds.
-     */
     public function index(Request $request)
     {
         $seeds = Seed::query()
@@ -30,7 +27,7 @@ class SeedController extends Controller
                 $sortDir = in_array($request->sort_dir, ['asc', 'desc']) ? $request->sort_dir : 'desc';
                 $query->orderBy($sortBy, $sortDir);
             }, function ($query) {
-                $query->orderBy('id', 'desc'); // Default: newest first
+                $query->orderBy('id', 'desc');
             })
             ->paginate($request->per_page ?? 10)
             ->withQueryString();
@@ -41,27 +38,14 @@ class SeedController extends Controller
         ]);
     }
 
-    /**
-     * Show the form for creating a new seed.
-     */
     public function create()
     {
         return Inertia::render('Seeds/Create');
     }
 
-    /**
-     * Store a newly created seed in storage.
-     */
-    public function store(Request $request)
+    public function store(SeedRequest $request) 
     {
-        $validated = $request->validate([
-            'seed_variety' => 'required|string|max:255',
-            'price_per_unit' => 'required|numeric|min:0|max:99999999.99',
-            'growth_cycle' => 'required|integer|min:1|max:365',
-            'storage_requirements' => 'required|string|max:255',
-            'soil_type_preference' => 'required|string|max:255',
-            'notes' => 'nullable|string'
-        ]);
+        $validated = $request->validated(); 
 
         $validated['status'] = 'active'; 
         Seed::create($validated);
@@ -69,9 +53,6 @@ class SeedController extends Controller
         return redirect()->route('seeds.index')->with('success', 'Seed created successfully!');
     }
 
-    /**
-     * Display the specified seed.
-     */
     public function show(Seed $seed)
     {
         return Inertia::render('Seeds/Show', [
@@ -79,9 +60,6 @@ class SeedController extends Controller
         ]);
     }
 
-    /**
-     * Show the form for editing the specified seed.
-     */
     public function edit(Seed $seed)
     {
         return Inertia::render('Seeds/Edit', [
@@ -89,29 +67,15 @@ class SeedController extends Controller
         ]);
     }
 
-    /**
-     * Update the specified seed in storage.
-     */
-    public function update(Request $request, Seed $seed)
+    public function update(SeedRequest $request, Seed $seed) 
     {
-        $validated = $request->validate([
-            'seed_variety' => 'required|string|max:255',
-            'status' => ['required', Rule::in(['active', 'archived'])],
-            'price_per_unit' => 'required|numeric|min:0|max:99999999.99',
-            'growth_cycle' => 'required|integer|min:1|max:365',
-            'storage_requirements' => 'required|string|max:255',
-            'soil_type_preference' => 'required|string|max:255',
-            'notes' => 'nullable|string'
-        ]);
+        $validated = $request->validated();
 
         $seed->update($validated);
 
         return redirect()->route('seeds.index')->with('success', 'Seed updated successfully!');
     }
 
-    /**
-     * Archive the specified seed.
-     */
     public function archive(Seed $seed)
     {
         $seed->update(['status' => 'archived']);
@@ -119,15 +83,24 @@ class SeedController extends Controller
         return back()->with('success', 'Seed archived successfully!');
     }
 
-    /**
-     * Restore the specified seed.
-     */
     public function restore(Seed $seed)
     {
         $seed->update(['status' => 'active']);
 
         return back()->with('success', 'Seed restored successfully!');
     }
-    
-    
+
+    public function checkVariety(Request $request)
+    {
+        $request->validate([
+            'seed_variety' => [
+                'required',
+                'string',
+                Rule::unique('seeds', 'seed_variety')->ignore($request->seedId),
+            ],
+        ]);
+
+        return response()->json(['message' => 'Variety is unique.'], 200);
+    }
 }
+

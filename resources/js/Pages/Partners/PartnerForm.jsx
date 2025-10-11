@@ -1,14 +1,27 @@
 import React, { useRef, useState } from 'react';
 import { useForm, router } from '@inertiajs/react';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
+import axios from 'axios';
 
 export default function PartnerForm({ partner = null }) {
+    const { props } = usePage();
     const regInputRef = useRef(null);
     const [showErrors, setShowErrors] = useState(false);
     const [localErrors, setLocalErrors] = useState({});
     const [contactWarning, setContactWarning] = useState('');
+    const [farmWarning, setFarmWarning] = useState('');
 
-   const { data, setData, post, put, processing, errors } = useForm({
+    // Uniqueness check states
+    const [nameUniqueError, setNameUniqueError] = useState('');
+    const [emailUniqueError, setEmailUniqueError] = useState('');
+    const [regUniqueError, setRegUniqueError] = useState('');
+    const [tinUniqueError, setTinUniqueError] = useState('');
+    const [checkingName, setCheckingName] = useState(false);
+    const [checkingEmail, setCheckingEmail] = useState(false);
+    const [checkingReg, setCheckingReg] = useState(false);
+    const [checkingTin, setCheckingTin] = useState(false);
+
+    const { data, setData, post, put, processing } = useForm({
         partner_type: partner?.partner_type || 'individual',
         name: partner?.name || '',
         contact_persons:
@@ -26,9 +39,96 @@ export default function PartnerForm({ partner = null }) {
         tax_id: partner?.tax_id || '',
         notes: partner?.notes || '',
         status: partner?.status || 'active',
+        farms: partner?.farms?.length
+            ? partner.farms
+            : [{ location_name: '', address: '', area_size: '', soil_type: '' }],
     });
 
-    // Phone: Only 11 digits, must start with 08 or 09, format XXXX-XXX-XXXX
+    const [touched, setTouched] = useState({
+        name: false,
+        email: false,
+        phone: false,
+        address: false,
+        registration_number: false,
+        tax_id: false,
+    });
+
+    const [contactTouched, setContactTouched] = useState(
+        data.contact_persons.map(() => ({
+            name: false,
+            email: false,
+            phone_number: false,
+        }))
+    );
+
+    const [farmTouched, setFarmTouched] = useState(
+        data.farms.map(() => ({
+            location_name: false,
+            address: false,
+            area_size: false,
+            soil_type: false,
+        }))
+    );
+
+    const setContactFieldTouched = (contactIdx, field) => {
+        setContactTouched(prev => {
+            const updated = [...prev];
+            updated[contactIdx] = { ...updated[contactIdx], [field]: true };
+            return updated;
+        });
+    };
+
+    const setFarmFieldTouched = (farmIdx, field) => {
+        setFarmTouched(prev => {
+            const updated = [...prev];
+            updated[farmIdx] = { ...updated[farmIdx], [field]: true };
+            return updated;
+        });
+    };
+
+    // Partner Info Validation & Handlers
+    const handleNameBlur = async (e) => {
+        const name = e.target.value.trim();
+        if (!name) return;
+        setCheckingName(true);
+        try {
+            await axios.post(route('partners.checkName'), {
+                name,
+                partnerId: partner?.id || null,
+            });
+            setNameUniqueError('');
+        } catch (err) {
+            if (err.response?.status === 422) {
+                setNameUniqueError(
+                    err.response.data.errors?.name?.[0] ||
+                    'A partner with this name already exists. Please provide a different name.'
+                );
+            }
+        }
+        setCheckingName(false);
+    };
+
+    const handleEmailBlur = async (e) => {
+        const email = e.target.value.trim();
+        if (!email) return;
+        setCheckingEmail(true);
+        try {
+            await axios.post(route('partners.checkEmail'), {
+                email,
+                partnerId: partner?.id || null,
+            });
+            setEmailUniqueError('');
+        } catch (err) {
+            if (err.response?.status === 422) {
+                setEmailUniqueError(
+                    err.response.data.errors?.email?.[0] ||
+                    'This email address is already registered.'
+                );
+            }
+        }
+        setCheckingEmail(false);
+    };
+
     const formatPhone = (input) => {
         let value = input.replace(/\D/g, '');
         if (value.length > 0) {
@@ -47,13 +147,170 @@ export default function PartnerForm({ partner = null }) {
     const handlePhoneChange = (e) => {
         const formatted = formatPhone(e.target.value);
         setData('phone', formatted);
-
-        if (showErrors) {
-            validateFields({ ...data, phone: formatted, tax_id: data.tax_id, registration_number: data.registration_number, contact_persons: data.contact_persons });
+        if (touched.phone) {
+            validateFields({ ...data, phone: formatted }, touched, contactTouched, farmTouched, showErrors);
         }
     };
 
-    // DTI Registration: auto-prefix BN- and suffix REG, only allow digits in between
+    // Contact Person Validation & Handlers
+    const validateContactPersons = (persons, contactTouched, showErrors) => {
+        const names = persons.map(p => p.name?.trim()).filter(Boolean);
+        const emails = persons.map(p => p.email?.trim()).filter(Boolean);
+        const phones = persons.map(p => p.phone_number?.trim()).filter(Boolean);
+
+        return persons.map((person, idx) => {
+            let errors = {};
+            
+            if ((contactTouched[idx]?.name || showErrors) && !person.name?.trim()) {
+                errors.name = 'Name is required.';
+            } else if (person.name?.trim() && names.filter(n => n === person.name.trim()).length > 1) {
+                errors.name = 'Contact person names must be unique within the company.';
+            }
+            
+            if ((contactTouched[idx]?.email || showErrors) && !person.email?.trim()) {
+                errors.email = 'Email is required.';
+            } else if ((contactTouched[idx]?.email || showErrors) && person.email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(person.email)) {
+                errors.email = 'Email must be valid.';
+            } else if (person.email?.trim() && emails.filter(e => e === person.email.trim()).length > 1) {
+                errors.email = 'Contact person emails must be unique within the company.';
+            }
+            
+            const phoneRaw = person.phone_number.replace(/-/g, '');
+            if ((contactTouched[idx]?.phone_number || showErrors) && !phoneRaw) {
+                errors.phone_number = 'Phone number is required.';
+            } else if ((contactTouched[idx]?.phone_number || showErrors) && phoneRaw && phoneRaw.length !== 11) {
+                errors.phone_number = 'Phone number must be exactly 11 digits.';
+            } else if ((contactTouched[idx]?.phone_number || showErrors) && phoneRaw && !/^0[89]\d{9}$/.test(phoneRaw)) {
+                errors.phone_number = 'Phone number must start with 08 or 09.';
+            } else if (person.phone_number?.trim() && phones.filter(p => p === person.phone_number.trim()).length > 1) {
+                errors.phone_number = 'Contact person phone numbers must be unique within the company.';
+            }
+            
+            return errors;
+        });
+    };
+
+    const addContactPerson = () => {
+        if (data.contact_persons.length < 3) {
+            setContactWarning('');
+            setData('contact_persons', [
+                ...data.contact_persons,
+                { name: '', email: '', phone_number: '' }
+            ]);
+            setContactTouched([...contactTouched, { name: false, email: false, phone_number: false }]);
+        } else {
+            setContactWarning('⚠️ You can only add up to 3 contact persons.');
+        }
+    };
+
+    const updateContactPerson = (index, field, value) => {
+        const updated = [...data.contact_persons];
+        if (field === 'phone_number') {
+            updated[index][field] = formatPhone(value);
+        } else {
+            updated[index][field] = value;
+        }
+        setData('contact_persons', updated);
+
+        if (contactTouched[index]?.[field]) {
+            validateFields({ ...data, contact_persons: updated }, touched, contactTouched, farmTouched, showErrors);
+        }
+    };
+
+    const removeContactPerson = (index) => {
+        if (data.contact_persons.length > 1) {
+            const updated = [...data.contact_persons];
+            updated.splice(index, 1);
+            setData('contact_persons', updated);
+            
+            const updatedTouched = [...contactTouched];
+            updatedTouched.splice(index, 1);
+            setContactTouched(updatedTouched);
+            
+            setContactWarning('');
+            validateFields({ ...data, contact_persons: updated }, touched, updatedTouched, farmTouched, showErrors);
+        }
+    };
+
+    // Farm Info Validation & Handlers
+    const validateFarms = (farms, farmTouched, showErrors) => {
+        const names = farms.map(f => f.location_name?.trim()).filter(Boolean);
+        return farms.map((farm, idx) => {
+            let errors = {};
+
+            if ((farmTouched[idx]?.location_name || showErrors) && !farm.location_name?.trim()) {
+                errors.location_name = 'Farm name is required.';
+            } else if (farm.location_name?.trim() && names.filter(n => n === farm.location_name.trim()).length > 1) {
+                errors.location_name = 'Farm names must be unique within the same partner.';
+            }
+
+            if ((farmTouched[idx]?.address || showErrors) && !farm.address?.trim()) {
+                errors.address = 'Address is required.';
+            }
+
+            if ((farmTouched[idx]?.area_size || showErrors) && (!farm.area_size || isNaN(farm.area_size))) {
+                errors.area_size = 'Area size is required.';
+            } else if (Number(farm.area_size) <= 0) {
+                errors.area_size = 'Area size must be greater than 0.';
+            } else if (
+                Number(farm.area_size) > 999.99 ||
+                String(farm.area_size).split('.')[0].length > 3 ||
+                (String(farm.area_size).includes('.') && String(farm.area_size).split('.')[1]?.length > 2)
+            ) {
+                errors.area_size = 'Area size must not exceed 1000 hectares.';
+            }
+
+            if ((farmTouched[idx]?.soil_type || showErrors) && (!farm.soil_type || !['clay', 'sandy', 'loam', 'silty'].includes(farm.soil_type))) {
+                errors.soil_type = 'Soil type is required.';
+            }
+
+            return errors;
+        });
+    };
+
+    const addFarm = () => {
+        if (data.farms.length < 10) {
+            setFarmWarning('');
+            setData('farms', [
+                ...data.farms,
+                { location_name: '', address: '', area_size: '', soil_type: '' }
+            ]);
+            setFarmTouched([...farmTouched, { location_name: false, address: false, area_size: false, soil_type: false }]);
+        } else {
+            setFarmWarning('⚠️ You can only add up to 10 farms.');
+        }
+    };
+
+    const updateFarm = (index, field, value) => {
+        const updated = [...data.farms];
+        updated[index][field] = value;
+        setData('farms', updated);
+
+        if (farmTouched[index]?.[field]) {
+            const farmErrors = validateFarms(updated, farmTouched, showErrors);
+            setLocalErrors(errors => ({
+                ...errors,
+                farms: farmErrors,
+            }));
+        }
+    };
+
+    const removeFarm = (index) => {
+        if (data.farms.length > 1) {
+            const updated = [...data.farms];
+            updated.splice(index, 1);
+            setData('farms', updated);
+            
+            const updatedTouched = [...farmTouched];
+            updatedTouched.splice(index, 1);
+            setFarmTouched(updatedTouched);
+            
+            setFarmWarning('');
+            validateFields({ ...data, farms: updated }, touched, contactTouched, updatedTouched, showErrors);
+        }
+    };
+
+    // DTI & TIN Validation & Handlers
     const handleRegFocus = () => {
         if (regInputRef.current) {
             regInputRef.current.setSelectionRange(0, regInputRef.current.value.length);
@@ -61,15 +318,35 @@ export default function PartnerForm({ partner = null }) {
     };
 
     const handleRegChange = (e) => {
-        let value = e.target.value.replace(/\D/g, '').slice(0, 11); // up to 11 digits
+        let value = e.target.value.replace(/\D/g, '').slice(0, 11);
         setData('registration_number', value);
-
-        if (showErrors) {
-            validateFields({ ...data, registration_number: value, phone: data.phone, tax_id: data.tax_id, contact_persons: data.contact_persons });
+        if (touched.registration_number) {
+            validateFields({ ...data, registration_number: value }, touched, contactTouched, farmTouched, showErrors);
         }
+        setRegUniqueError('');
     };
 
-    // TIN: Only 12 digits, format 123-456-789-000
+    const handleRegBlur = async (e) => {
+        const registration_number = e.target.value.replace(/\D/g, '');
+        if (!registration_number) return;
+        setCheckingReg(true);
+        try {
+            await axios.post(route('partners.checkRegistration'), {
+                registration_number,
+                partnerId: partner?.id || null,
+            });
+            setRegUniqueError('');
+        } catch (err) {
+            if (err.response?.status === 422) {
+                setRegUniqueError(
+                    err.response.data.errors?.registration_number?.[0] ||
+                    'DTI Registration Number is already registered.'
+                );
+            }
+        }
+        setCheckingReg(false);
+    };
+
     const formatTin = (input) => {
         let value = input.replace(/\D/g, '').slice(0, 12);
         let formatted = '';
@@ -83,80 +360,139 @@ export default function PartnerForm({ partner = null }) {
     const handleTinChange = (e) => {
         const formatted = formatTin(e.target.value);
         setData('tax_id', formatted);
-
-        if (showErrors) {
-            validateFields({ ...data, tax_id: formatted, phone: data.phone, registration_number: data.registration_number, contact_persons: data.contact_persons });
+        if (touched.tax_id) {
+            validateFields({ ...data, tax_id: formatted }, touched, contactTouched, farmTouched, showErrors);
         }
+        setTinUniqueError('');
     };
 
-    // Contact Person Validation
-    const validateContactPersons = (persons) => {
-        return persons.map((person) => {
-            let errors = {};
-            if (!person.name?.trim()) errors.name = 'Name is required.';
-            if (!person.email?.trim()) errors.email = 'Email is required.';
-            const phoneRaw = person.phone_number.replace(/-/g, '');
-            if (!phoneRaw) {
-                errors.phone_number = 'Phone number is required.';
-            } else if (phoneRaw.length !== 11) {
-                errors.phone_number = 'Phone number must be exactly 11 digits.';
-            } else if (!/^0[89]\d{9}$/.test(phoneRaw)) {
-                errors.phone_number = 'Phone number must start with 08 or 09.';
+    const handleTinBlur = async (e) => {
+        const tax_id = e.target.value; 
+        if (!tax_id) return;
+        setCheckingTin(true);
+        try {
+            await axios.post(route('partners.checkTaxId'), {
+                tax_id,
+                partnerId: partner?.id || null,
+            });
+            setTinUniqueError('');
+        } catch (err) {
+            if (err.response?.status === 422) {
+                setTinUniqueError(
+                    err.response.data.errors?.tax_id?.[0] ||
+                    'Tax ID (TIN) is already registered.'
+                );
             }
-            return errors;
-        });
+        }
+        setCheckingTin(false);
     };
 
-    // Validation function
-    const validateFields = (fields) => {
-        const phoneRaw = fields.phone.replace(/-/g, '');
-        const tinRaw = fields.tax_id.replace(/-/g, '');
-        const regRaw = fields.registration_number.replace(/\D/g, '');
-
+    // Main Validation
+    const validateFields = (fields, touched, contactTouched, farmTouched, showErrors) => {
         let newErrors = {};
 
-        if (phoneRaw.length !== 11) {
+        if ((touched.name || showErrors) && !fields.name?.trim()) {
+            newErrors.name = 'Partner name is required.';
+        }
+
+        if ((touched.email || showErrors) && !fields.email?.trim()) {
+            newErrors.email = 'Email is required.';
+        } else if ((touched.email || showErrors) && fields.email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email)) {
+            newErrors.email = 'Please enter a valid email address.';
+        }
+
+        const phoneRaw = fields.phone.replace(/-/g, '');
+        if ((touched.phone || showErrors) && !phoneRaw) {
+            newErrors.phone = 'Phone number is required.';
+        } else if ((touched.phone || showErrors) && phoneRaw && phoneRaw.length !== 11) {
             newErrors.phone = 'Phone number must be exactly 11 digits.';
+        } else if ((touched.phone || showErrors) && phoneRaw && !/^0[89]\d{9}$/.test(phoneRaw)) {
+            newErrors.phone = 'Phone number must start with 08 or 09.';
         }
-        // Always require TIN and registration number for both types
-        if (tinRaw.length !== 12) {
-            newErrors.tax_id = 'TIN must be exactly 12 digits.';
+
+        if ((touched.address || showErrors) && !fields.address?.trim()) {
+            newErrors.address = 'Address is required.';
         }
-        if (regRaw.length !== 11) {
+
+        const regRaw = fields.registration_number.replace(/\D/g, '');
+        if ((touched.registration_number || showErrors) && !regRaw) {
+            newErrors.registration_number = 'DTI number is required.';
+        } else if ((touched.registration_number || showErrors) && regRaw && regRaw.length !== 11) {
             newErrors.registration_number = 'DTI Registration must be exactly 11 digits.';
         }
 
-        // Contact Persons validation only for organizations
-        if (fields.partner_type === 'organization') {
-            const contactErrors = validateContactPersons(fields.contact_persons);
-            newErrors.contact_persons = contactErrors;
+        const tinRaw = fields.tax_id.replace(/-/g, '');
+        if ((touched.tax_id || showErrors) && !tinRaw) {
+            newErrors.tax_id = 'TIN is required.';
+        } else if ((touched.tax_id || showErrors) && tinRaw && tinRaw.length !== 12) {
+            newErrors.tax_id = 'TIN must be exactly 12 digits.';
         }
 
+        if (fields.partner_type === 'organization') {
+            newErrors.contact_persons = validateContactPersons(fields.contact_persons, contactTouched, showErrors);
+        }
+
+        newErrors.farms = validateFarms(fields.farms, farmTouched, showErrors);
+
         setLocalErrors(newErrors);
+
         const hasContactErrors = newErrors.contact_persons?.some(e => Object.keys(e).length > 0);
-        return Object.keys(newErrors).filter(k => k !== 'contact_persons').length === 0 && !hasContactErrors;
+        const hasFarmErrors = newErrors.farms?.some(e => Object.keys(e).length > 0);
+        return Object.keys(newErrors).filter(k => k !== 'contact_persons' && k !== 'farms').length === 0 && !hasContactErrors && !hasFarmErrors;
     };
 
+    // Submit Handler
     const submit = (e) => {
         e.preventDefault();
         setShowErrors(true);
 
-        const isValid = validateFields(data);
+        const allTouched = {
+            name: true,
+            email: true,
+            phone: true,
+            address: true,
+            registration_number: true,
+            tax_id: true,
+        };
+        setTouched(allTouched);
 
-        if (!isValid) {
+        const allContactTouched = data.contact_persons.map(() => ({
+            name: true,
+            email: true,
+            phone_number: true,
+        }));
+        setContactTouched(allContactTouched);
+
+        const allFarmTouched = data.farms.map(() => ({
+            location_name: true,
+            address: true,
+            area_size: true,
+            soil_type: true,
+        }));
+        setFarmTouched(allFarmTouched);
+
+        const isValid = validateFields(
+            data,
+            allTouched,
+            allContactTouched,
+            allFarmTouched,
+            true
+        );
+
+        if (!isValid || nameUniqueError || emailUniqueError || regUniqueError || tinUniqueError) {
             return;
         }
 
         const regRaw = data.registration_number.replace(/\D/g, '');
         const regNum = regRaw ? `BN-${regRaw}REG` : '';
+        const tinRaw = data.tax_id.replace(/\D/g, '');
 
-        // Prepare payload
         const payload = {
             ...data,
             registration_number: regNum,
+            tax_id: tinRaw,
         };
 
-        // Only send contact_persons for organizations
         if (data.partner_type !== 'organization') {
             delete payload.contact_persons;
         }
@@ -174,45 +510,9 @@ export default function PartnerForm({ partner = null }) {
         }
     };
 
-    // Contact person handlers
-    const addContactPerson = () => {
-        if (data.contact_persons.length < 3) {
-            setContactWarning('');
-            setData('contact_persons', [
-                ...data.contact_persons,
-                { name: '', email: '', phone_number: '' }
-            ]);
-        } else {
-            setContactWarning('⚠️ You can only add up to 3 contact persons.');
-        }
-    };
-
-    const updateContactPerson = (index, field, value) => {
-        const updated = [...data.contact_persons];
-        if (field === 'phone_number') {
-            updated[index][field] = formatPhone(value);
-        } else {
-            updated[index][field] = value;
-        }
-        setData('contact_persons', updated);
-
-        if (showErrors) {
-            validateFields({ ...data, contact_persons: updated });
-        }
-    };
-
-    const removeContactPerson = (index) => {
-        if (data.contact_persons.length > 1) {
-            const updated = [...data.contact_persons];
-            updated.splice(index, 1);
-            setData('contact_persons', updated);
-            setContactWarning('');
-        }
-    };
-
     return (
         <div className="p-6">
-            {/* Breadcrumb */}
+            {/* Breadcrumb Navigation */}
             <div className="px-6 pt-6">
                 <nav className="text-sm text-gray-600">
                     <Link
@@ -231,7 +531,7 @@ export default function PartnerForm({ partner = null }) {
                 </h1>
 
                 <form onSubmit={submit} className="space-y-6">
-                    {/* Partner Type */}
+                    {/* Partner Type Selection */}
                     <div>
                         <label htmlFor="partner_type" className="block text-sm font-medium text-gray-700">
                             Partner Type *
@@ -239,13 +539,15 @@ export default function PartnerForm({ partner = null }) {
                         <select
                             id="partner_type"
                             value={data.partner_type}
-                            disabled={!!partner} // Disable if editing
+                            disabled={!!partner}
                             onChange={(e) => {
                                 setData('partner_type', e.target.value);
                                 if (e.target.value === 'organization') {
                                     setData('contact_persons', [{ name: '', email: '', phone_number: '' }]);
+                                    setContactTouched([{ name: false, email: false, phone_number: false }]);
                                 } else {
                                     setData('contact_persons', []);
+                                    setContactTouched([]);
                                 }
                             }}
                             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
@@ -254,147 +556,125 @@ export default function PartnerForm({ partner = null }) {
                             <option value="individual">Individual</option>
                             <option value="organization">Organization</option>
                         </select>
-                        {errors.partner_type && <p className="mt-1 text-sm text-red-600">{errors.partner_type}</p>}
                     </div>
 
-                    {/* Organization or Individual Fields */}
-                    {data.partner_type === 'organization' ? (
-                        <>
-                            <div>
-                                <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                                    Organization Name *
-                                </label>
-                                <input
-                                    type="text"
-                                    id="name"
-                                    value={data.name}
-                                    onChange={(e) => setData('name', e.target.value)}
-                                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
-                                    required
-                                />
-                                {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                                        Company Email *
-                                    </label>
-                                    <input
-                                        type="email"
-                                        id="email"
-                                        value={data.email}
-                                        onChange={(e) => setData('email', e.target.value)}
-                                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
-                                        required
-                                    />
-                                    {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
-                                </div>
-                                <div>
-                                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                                        Company Phone *
-                                    </label>
-                                    <input
-                                        type="tel"
-                                        id="phone"
-                                        value={data.phone}
-                                        onChange={handlePhoneChange}
-                                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
-                                        required
-                                        maxLength={13}
-                                    />
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        Enter 11-digit mobile number (e.g., 0912-345-6789)
-                                    </p>
-                                    {showErrors && localErrors.phone && (
-                                        <p className="mt-1 text-sm text-red-600">{localErrors.phone}</p>
-                                    )}
-                                </div>
-                            </div>
-                            <div>
-                                <label htmlFor="address" className="block text-sm font-medium text-gray-700">
-                                    Company Address *
-                                </label>
-                                <textarea
-                                    id="address"
-                                    rows={3}
-                                    value={data.address}
-                                    onChange={(e) => setData('address', e.target.value)}
-                                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
-                                    required
-                                />
-                                {errors.address && <p className="mt-1 text-sm text-red-600">{errors.address}</p>}
-                            </div>
-                        </>
-                    ) : (
-                        <>
-                            <div>
-                                <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-                                    Name *
-                                </label>
-                                <input
-                                    type="text"
-                                    id="name"
-                                    value={data.name}
-                                    onChange={(e) => setData('name', e.target.value)}
-                                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
-                                    required
-                                />
-                                {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div>
-                                    <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                                        Email *
-                                    </label>
-                                    <input
-                                        type="email"
-                                        id="email"
-                                        value={data.email}
-                                        onChange={(e) => setData('email', e.target.value)}
-                                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
-                                        required
-                                    />
-                                    {errors.email && <p className="mt-1 text-sm text-red-600">{errors.email}</p>}
-                                </div>
-                                <div>
-                                    <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                                        Phone *
-                                    </label>
-                                    <input
-                                        type="tel"
-                                        id="phone"
-                                        value={data.phone}
-                                        onChange={handlePhoneChange}
-                                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
-                                        required
-                                        maxLength={13}
-                                    />
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        Enter 11-digit mobile number (e.g., 0912-345-6789)
-                                    </p>
-                                    {showErrors && localErrors.phone && (
-                                        <p className="mt-1 text-sm text-red-600">{localErrors.phone}</p>
-                                    )}
-                                </div>
-                            </div>
-                            <div>
-                                <label htmlFor="address" className="block text-sm font-medium text-gray-700">
-                                    Address *
-                                </label>
-                                <textarea
-                                    id="address"
-                                    rows={3}
-                                    value={data.address}
-                                    onChange={(e) => setData('address', e.target.value)}
-                                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
-                                    required
-                                />
-                                {errors.address && <p className="mt-1 text-sm text-red-600">{errors.address}</p>}
-                            </div>
-                        </>
-                    )}
+                    {/* Partner Name */}
+                    <div>
+                        <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                            {data.partner_type === 'organization' ? 'Organization Name *' : 'Name *'}
+                        </label>
+                        <input
+                            type="text"
+                            id="name"
+                            value={data.name}
+                            onChange={e => {
+                                setData('name', e.target.value);
+                                setNameUniqueError('');
+                                if (touched.name) {
+                                    validateFields({ ...data, name: e.target.value }, touched, contactTouched, farmTouched, showErrors);
+                                }
+                            }}
+                            onBlur={e => {
+                                setTouched(t => ({ ...t, name: true }));
+                                validateFields({ ...data, name: e.target.value }, { ...touched, name: true }, contactTouched, farmTouched, showErrors);
+                                if (e.target.value) handleNameBlur(e);
+                            }}
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                            required
+                        />
+                        {(touched.name || showErrors) && (localErrors.name || nameUniqueError) && (
+                            <p className="mt-1 text-sm text-red-600">
+                                {localErrors.name || nameUniqueError}
+                            </p>
+                        )}
+                    </div>
 
-                    {/* Contact Persons for Organization */}
+                    {/* Email and Phone */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                                {data.partner_type === 'organization' ? 'Company Email *' : 'Email *'}
+                            </label>
+                            <input
+                                type="email"
+                                id="email"
+                                value={data.email}
+                                onChange={e => {
+                                    setData('email', e.target.value);
+                                    setEmailUniqueError('');
+                                    if (touched.email) {
+                                        validateFields({ ...data, email: e.target.value }, touched, contactTouched, farmTouched, showErrors);
+                                    }
+                                }}
+                                onBlur={e => {
+                                    setTouched(t => ({ ...t, email: true }));
+                                    validateFields({ ...data, email: e.target.value }, { ...touched, email: true }, contactTouched, farmTouched, showErrors);
+                                    if (e.target.value) handleEmailBlur(e);
+                                }}
+                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                                required
+                            />
+                            {(touched.email || showErrors) && (localErrors.email || emailUniqueError) && (
+                                <p className="mt-1 text-sm text-red-600">
+                                    {localErrors.email || emailUniqueError}
+                                </p>
+                            )}
+                        </div>
+
+                        <div>
+                            <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+                                {data.partner_type === 'organization' ? 'Company Phone *' : 'Phone *'}
+                            </label>
+                            <input
+                                type="tel"
+                                id="phone"
+                                value={data.phone}
+                                onChange={handlePhoneChange}
+                                onBlur={e => {
+                                    setTouched(t => ({ ...t, phone: true }));
+                                    validateFields({ ...data, phone: e.target.value }, { ...touched, phone: true }, contactTouched, farmTouched, showErrors);
+                                }}
+                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                                required
+                                maxLength={13}
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                                Enter 11-digit mobile number (e.g., 0912-345-6789)
+                            </p>
+                            {(touched.phone || showErrors) && localErrors.phone && (
+                                <p className="mt-1 text-sm text-red-600">{localErrors.phone}</p>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Address */}
+                    <div>
+                        <label htmlFor="address" className="block text-sm font-medium text-gray-700">
+                            {data.partner_type === 'organization' ? 'Company Address *' : 'Address *'}
+                        </label>
+                        <textarea
+                            id="address"
+                            rows={3}
+                            value={data.address}
+                            onChange={e => {
+                                setData('address', e.target.value);
+                                if (touched.address) {
+                                    validateFields({ ...data, address: e.target.value }, touched, contactTouched, farmTouched, showErrors);
+                                }
+                            }}
+                            onBlur={e => {
+                                setTouched(t => ({ ...t, address: true }));
+                                validateFields({ ...data, address: e.target.value }, { ...touched, address: true }, contactTouched, farmTouched, showErrors);
+                            }}
+                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                            required
+                        />
+                        {(touched.address || showErrors) && localErrors.address && (
+                            <p className="mt-1 text-sm text-red-600">{localErrors.address}</p>
+                        )}
+                    </div>
+
+                    {/* Contact Persons Section */}
                     {data.partner_type === 'organization' && (
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Contact Persons</label>
@@ -406,32 +686,50 @@ export default function PartnerForm({ partner = null }) {
                                             placeholder="Name"
                                             value={person.name}
                                             onChange={e => updateContactPerson(idx, 'name', e.target.value)}
+                                            onBlur={e => {
+                                                setContactFieldTouched(idx, 'name');
+                                                validateFields(data, touched, contactTouched, farmTouched, showErrors);
+                                            }}
                                             required
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                         />
-                                        {showErrors && localErrors.contact_persons && localErrors.contact_persons[idx]?.name && (
-                                            <p className="mt-1 text-sm text-red-600">{localErrors.contact_persons[idx].name}</p>
+                                        {(contactTouched[idx]?.name || showErrors) && localErrors.contact_persons?.[idx]?.name && (
+                                            <p className="mt-1 text-sm text-red-600">
+                                                {localErrors.contact_persons[idx].name}
+                                            </p>
                                         )}
                                     </div>
+
                                     <div className="col-span-4">
                                         <input
                                             type="email"
                                             placeholder="Email"
                                             value={person.email}
                                             onChange={e => updateContactPerson(idx, 'email', e.target.value)}
+                                            onBlur={e => {
+                                                setContactFieldTouched(idx, 'email');
+                                                validateFields(data, touched, contactTouched, farmTouched, showErrors);
+                                            }}
                                             required
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                         />
-                                        {showErrors && localErrors.contact_persons && localErrors.contact_persons[idx]?.email && (
-                                            <p className="mt-1 text-sm text-red-600">{localErrors.contact_persons[idx].email}</p>
+                                        {(contactTouched[idx]?.email || showErrors) && localErrors.contact_persons?.[idx]?.email && (
+                                            <p className="mt-1 text-sm text-red-600">
+                                                {localErrors.contact_persons[idx].email}
+                                            </p>
                                         )}
                                     </div>
+
                                     <div className="col-span-3">
                                         <input
                                             type="text"
                                             placeholder="Phone"
                                             value={person.phone_number}
                                             onChange={e => updateContactPerson(idx, 'phone_number', e.target.value)}
+                                            onBlur={e => {
+                                                setContactFieldTouched(idx, 'phone_number');
+                                                validateFields(data, touched, contactTouched, farmTouched, showErrors);
+                                            }}
                                             required
                                             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                             maxLength={13}
@@ -439,11 +737,13 @@ export default function PartnerForm({ partner = null }) {
                                         <p className="text-xs text-gray-500 mt-1">
                                             Enter 11-digit mobile number (e.g., 0912-345-6789)
                                         </p>
-                                        {showErrors && localErrors.contact_persons && localErrors.contact_persons[idx]?.phone_number && (
-                                            <p className="mt-1 text-sm text-red-600">{localErrors.contact_persons[idx].phone_number}</p>
+                                        {(contactTouched[idx]?.phone_number || showErrors) && localErrors.contact_persons?.[idx]?.phone_number && (
+                                            <p className="mt-1 text-sm text-red-600">
+                                                {localErrors.contact_persons[idx].phone_number}
+                                            </p>
                                         )}
                                     </div>
-                                    {/* Only show X button for contact persons after the first one */}
+
                                     <div className="col-span-1 flex items-center justify-center h-10 mt-2">
                                         {idx > 0 && (
                                             <button
@@ -458,7 +758,7 @@ export default function PartnerForm({ partner = null }) {
                                     </div>
                                 </div>
                             ))}
-                            {/* Show add button only if less than 3 contact persons */}
+
                             {data.contact_persons.length < 3 && (
                                 <button
                                     type="button"
@@ -471,13 +771,160 @@ export default function PartnerForm({ partner = null }) {
                                     Add Another Contact Person
                                 </button>
                             )}
+
                             {contactWarning && (
                                 <p className="mt-2 text-sm text-yellow-600">{contactWarning}</p>
                             )}
                         </div>
                     )}
 
-                    {/* Registration Number & Tax ID */}
+                    {/* Farm Information Section */}
+                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mt-6">
+                        <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-medium text-gray-800">Farm Information</h3>
+                            <span className="text-sm text-gray-500">
+                                {data.farms.length} {data.farms.length === 1 ? 'farm' : 'farms'} added
+                            </span>
+                        </div>
+
+                        <div className="space-y-4">
+                            {data.farms.map((farm, idx) => (
+                                <div key={idx} className="bg-white p-4 rounded-md shadow-sm border border-gray-200">
+                                    <div className="flex justify-between items-start mb-3">
+                                        <h4 className="font-medium text-gray-700">
+                                            Farm #{idx + 1} {farm.location_name && `- ${farm.location_name}`}
+                                        </h4>
+                                        {idx > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => removeFarm(idx)}
+                                                className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50 transition-colors"
+                                                title="Remove farm"
+                                            >
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Farm Name *</label>
+                                            <input
+                                                type="text"
+                                                placeholder="e.g., North Valley Farm"
+                                                value={farm.location_name}
+                                                onChange={e => updateFarm(idx, 'location_name', e.target.value)}
+                                                onBlur={e => {
+                                                    setFarmFieldTouched(idx, 'location_name');
+                                                    validateFields(data, touched, contactTouched, farmTouched, showErrors);
+                                                }}
+                                                required
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                                            />
+                                            {(farmTouched[idx]?.location_name || showErrors) && localErrors.farms?.[idx]?.location_name && (
+                                                <p className="mt-1 text-sm text-red-600">{localErrors.farms[idx].location_name}</p>
+                                            )}
+                                        </div>
+
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Area Size (hectares) *</label>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                max="999.99"
+                                                placeholder="0.00"
+                                                value={farm.area_size}
+                                                onChange={e => {
+                                                    let val = e.target.value;
+                                                    if (val.includes('.')) {
+                                                        const [whole, decimal] = val.split('.');
+                                                        if (decimal && decimal.length > 2) val = whole + '.' + decimal.slice(0, 2);
+                                                    }
+                                                    const [whole] = val.split('.');
+                                                    if (whole.length > 3) return;
+                                                    updateFarm(idx, 'area_size', val);
+                                                }}
+                                                onBlur={e => {
+                                                    setFarmFieldTouched(idx, 'area_size');
+                                                    validateFields(data, touched, contactTouched, farmTouched, showErrors);
+                                                }}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                                            />
+                                            {(farmTouched[idx]?.area_size || showErrors) && localErrors.farms?.[idx]?.area_size && (
+                                                <p className="mt-1 text-sm text-red-600">{localErrors.farms[idx].area_size}</p>
+                                            )}
+                                        </div>
+
+                                        <div className="md:col-span-2">
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Address *</label>
+                                            <input
+                                                type="text"
+                                                placeholder="Full farm address"
+                                                value={farm.address}
+                                                onChange={e => updateFarm(idx, 'address', e.target.value)}
+                                                onBlur={e => {
+                                                    setFarmFieldTouched(idx, 'address');
+                                                    validateFields(data, touched, contactTouched, farmTouched, showErrors);
+                                                }}
+                                                required
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                                            />
+                                            {(farmTouched[idx]?.address || showErrors) && localErrors.farms?.[idx]?.address && (
+                                                <p className="mt-1 text-sm text-red-600">{localErrors.farms[idx].address}</p>
+                                            )}
+                                        </div>
+
+                                        <div className="md:col-span-2">
+                                            <label className="block text-sm font-medium text-gray-700 mb-1">Soil Type *</label>
+                                            <select
+                                                value={farm.soil_type}
+                                                onChange={e => updateFarm(idx, 'soil_type', e.target.value)}
+                                                onBlur={e => {
+                                                    setFarmFieldTouched(idx, 'soil_type');
+                                                    validateFields(data, touched, contactTouched, farmTouched, showErrors);
+                                                }}
+                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                                            >
+                                                <option value="">Select soil type</option>
+                                                <option value="clay">Clay</option>
+                                                <option value="sandy">Sandy</option>
+                                                <option value="loam">Loam</option>
+                                                <option value="silty">Silty</option>
+                                            </select>
+                                            {(farmTouched[idx]?.soil_type || showErrors) && localErrors.farms?.[idx]?.soil_type && (
+                                                <p className="mt-1 text-sm text-red-600">{localErrors.farms[idx].soil_type}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <button
+                            type="button"
+                            onClick={addFarm}
+                            disabled={data.farms.length >= 10}
+                            className="mt-4 flex items-center justify-center w-full py-2 border-2 border-dashed border-gray-300 rounded-md text-[#37692F] hover:bg-green-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                            Add Another Farm
+                        </button>
+
+                        {farmWarning && (
+                            <p className="mt-2 text-sm text-yellow-600 bg-yellow-50 p-2 rounded-md">{farmWarning}</p>
+                        )}
+
+                        <p className="text-xs text-gray-500 mt-2">
+                            You can add up to 10 farms. Required fields are marked with *.
+                        </p>
+                    </div>
+
+                    {/* DTI Registration and Tax ID */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label htmlFor="registration_number" className="block text-sm font-medium text-gray-700">
@@ -494,6 +941,11 @@ export default function PartnerForm({ partner = null }) {
                                     value={data.registration_number}
                                     onFocus={handleRegFocus}
                                     onChange={handleRegChange}
+                                    onBlur={e => {
+                                        setTouched(t => ({ ...t, registration_number: true }));
+                                        validateFields({ ...data, registration_number: e.target.value }, { ...touched, registration_number: true }, contactTouched, farmTouched, showErrors);
+                                        if (e.target.value) handleRegBlur(e);
+                                    }}
                                     className="flex-1 px-3 py-2 border border-gray-300 rounded-none focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                     maxLength={11}
                                     required
@@ -505,10 +957,13 @@ export default function PartnerForm({ partner = null }) {
                             <p className="text-xs text-gray-500 mt-1">
                                 Format: BN-YYYY#####REG
                             </p>
-                            {showErrors && localErrors.registration_number && (
-                                <p className="mt-1 text-sm text-red-600">{localErrors.registration_number}</p>
+                            {(touched.registration_number || showErrors) && (localErrors.registration_number || regUniqueError) && (
+                                <p className="mt-1 text-sm text-red-600">
+                                    {localErrors.registration_number || regUniqueError}
+                                </p>
                             )}
                         </div>
+
                         <div>
                             <label htmlFor="tax_id" className="block text-sm font-medium text-gray-700">
                                 Tax ID (TIN) *
@@ -518,6 +973,11 @@ export default function PartnerForm({ partner = null }) {
                                 id="tax_id"
                                 value={data.tax_id}
                                 onChange={handleTinChange}
+                                onBlur={e => {
+                                    setTouched(t => ({ ...t, tax_id: true }));
+                                    validateFields({ ...data, tax_id: e.target.value }, { ...touched, tax_id: true }, contactTouched, farmTouched, showErrors);
+                                    if (e.target.value) handleTinBlur(e);
+                                }}
                                 className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                 maxLength={15}
                                 required
@@ -525,13 +985,15 @@ export default function PartnerForm({ partner = null }) {
                             <p className="text-xs text-gray-500 mt-1">
                                 Enter 12-digit TIN (e.g., 123-456-789-000)
                             </p>
-                            {showErrors && localErrors.tax_id && (
-                                <p className="mt-1 text-sm text-red-600">{localErrors.tax_id}</p>
+                            {(touched.tax_id || showErrors) && (localErrors.tax_id || tinUniqueError) && (
+                                <p className="mt-1 text-sm text-red-600">
+                                    {localErrors.tax_id || tinUniqueError}
+                                </p>
                             )}
                         </div>
                     </div>
 
-                    {/* Notes */}
+                    {/* Additional Notes */}
                     <div>
                         <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
                             Notes
@@ -544,10 +1006,9 @@ export default function PartnerForm({ partner = null }) {
                             className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                             placeholder="Additional notes about this partner..."
                         />
-                        {errors.notes && <p className="mt-1 text-sm text-red-600">{errors.notes}</p>}
                     </div>
 
-                    {/* Actions */}
+                    {/* Form Actions */}
                     <div className="flex justify-end space-x-2 pt-4">
                         <Link
                             href={route('partners.index')}
@@ -557,8 +1018,26 @@ export default function PartnerForm({ partner = null }) {
                         </Link>
                         <button
                             type="submit"
-                            disabled={processing}
-                            className="bg-[#37692F] hover:bg-[#2a5624] text-white font-medium py-2 px-4 rounded-md transition-colors disabled:opacity-50"
+                            disabled={
+                                processing ||
+                                !!nameUniqueError ||
+                                !!emailUniqueError ||
+                                !!regUniqueError ||
+                                !!tinUniqueError ||
+                                checkingName ||
+                                checkingEmail ||
+                                checkingReg ||
+                                checkingTin ||
+                                localErrors.name ||
+                                localErrors.email ||
+                                localErrors.phone ||
+                                localErrors.address ||
+                                localErrors.registration_number ||
+                                localErrors.tax_id ||
+                                localErrors.contact_persons?.some(e => Object.keys(e).length > 0) ||
+                                localErrors.farms?.some(e => Object.keys(e).length > 0)
+                            }
+                            className="bg-[#37692F] hover:bg-[#2a5624] text-white font-medium py-2 px-4 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {processing ? 'Saving...' : (partner ? 'Update Partner' : 'Create Partner')}
                         </button>
