@@ -17,6 +17,7 @@ class PartnerFarm extends Model
         'soil_type',
     ];
 
+    // Relationship with the partner.
     public function partner()
     {
         return $this->belongsTo(Partner::class);

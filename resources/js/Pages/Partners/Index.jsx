@@ -6,7 +6,7 @@ import '../../../css/fonts.css';
 import { ArchiveBoxIcon, ChevronDownIcon, FunnelIcon, ArrowsUpDownIcon } from '@heroicons/react/24/outline';
 import ArchivePartnerModal from '@/Pages/Partners/ArchivePartnerModal';
 import ReactivatePartnerModal from '@/Pages/Partners/ReactivatePartnerModal';
-
+import React from 'react';
 
 export default function Index({ auth, partners, filters }) {
     const [search, setSearch] = useState(filters.search || '');
@@ -57,6 +57,7 @@ export default function Index({ auth, partners, filters }) {
 
     const handleSearchChange = (e) => debouncedSearch(e.target.value);
 
+    // Filter/Sort label helpers
     const getFilterLabel = () => filter === 'active' ? 'Active Only' : filter === 'inactive' ? 'Inactive Only' : 'All Partners';
     const getTypeLabel = () => partnerTypeFilter === 'individual' ? 'Individual' : partnerTypeFilter === 'organization' ? 'Organization' : 'All Types';
     const getSortLabel = () => {
@@ -64,9 +65,12 @@ export default function Index({ auth, partners, filters }) {
         if (sortBy === 'email') return sortDir === 'asc' ? 'Email (A to Z)' : 'Email (Z to A)';
         return 'Default';
     };
+
+    // Style helpers
     const getStatusColor = (status) => status === 'active' ? "bg-green-100 text-green-700" : status === 'inactive' ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-700";
     const getTypeColor = (type) => type === 'organization' ? "bg-purple-600 text-white" : type === 'individual' ? "bg-blue-600 text-white" : "bg-gray-600 text-white";
 
+    // Modal Handlers
     const handleDeactivateConfirm = (id) => {
         router.post(route('partners.deactivate', id), {}, {
             preserveScroll: true,
@@ -109,7 +113,6 @@ export default function Index({ auth, partners, filters }) {
         >
             <Head title="Partners" />
 
-            {/* Breadcrumb */}
             <div className="px-6 pt-6">
                 <nav className="text-sm text-gray-600">
                     <Link
@@ -123,8 +126,8 @@ export default function Index({ auth, partners, filters }) {
             </div>
 
             <div className="p-6">
-                {/* Header Section */}
-                <div className="flex justify-between items-center mb-6">
+                {/* Header Section and Controls */}
+                <div className="mb-6 flex items-center justify-between">
                     <h1 className="text-2xl font-semibold text-gray-800">Partners</h1>
                     <div className="flex space-x-3">
                         {/* Status Filter Dropdown */}
@@ -135,14 +138,14 @@ export default function Index({ auth, partners, filters }) {
                                     setShowSortDropdown(false);
                                     setShowTypeDropdown(false);
                                 }}
-                                className="flex items-center px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#37692F] bg-white"
+                                className="flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm hover:bg-gray-50 focus:ring-[#37692F] focus:outline-none focus:ring-2"
                             >
-                                <FunnelIcon className="w-4 h-4 mr-2 text-gray-500" />
+                                <FunnelIcon className="mr-2 h-4 w-4 text-gray-500" />
                                 {getFilterLabel()}
-                                <ChevronDownIcon className="w-4 h-4 ml-2 text-gray-500" />
+                                <ChevronDownIcon className="ml-2 h-4 w-4 text-gray-500" />
                             </button>
                             {showFilterDropdown && (
-                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-10">
+                                <div className="absolute right-0 z-10 mt-2 w-48 rounded-md border border-gray-200 bg-white shadow-lg">
                                     <div className="py-1">
                                         {['all', 'active', 'inactive'].map((status) => (
                                             <button
@@ -152,7 +155,7 @@ export default function Index({ auth, partners, filters }) {
                                                     setShowFilterDropdown(false);
                                                     fetchPartners({ status: status !== 'all' ? status : '', page: 1 });
                                                 }}
-                                                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${filter === status ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                                className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 ${filter === status ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
                                             >
                                                 {status === 'all' ? 'All Partners' : status.charAt(0).toUpperCase() + status.slice(1) + ' Only'}
                                             </button>
@@ -162,7 +165,6 @@ export default function Index({ auth, partners, filters }) {
                             )}
                         </div>
 
-                        {/* Type Filter Dropdown */}
                         <div className="relative" ref={typeRef}>
                             <button
                                 onClick={() => {
@@ -170,14 +172,14 @@ export default function Index({ auth, partners, filters }) {
                                     setShowSortDropdown(false);
                                     setShowFilterDropdown(false);
                                 }}
-                                className="flex items-center px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#37692F] bg-white"
+                                className="flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm hover:bg-gray-50 focus:ring-[#37692F] focus:outline-none focus:ring-2"
                             >
-                                <FunnelIcon className="w-4 h-4 mr-2 text-gray-500" />
+                                <FunnelIcon className="mr-2 h-4 w-4 text-gray-500" />
                                 {getTypeLabel()}
-                                <ChevronDownIcon className="w-4 h-4 ml-2 text-gray-500" />
+                                <ChevronDownIcon className="ml-2 h-4 w-4 text-gray-500" />
                             </button>
                             {showTypeDropdown && (
-                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-10">
+                                <div className="absolute right-0 z-10 mt-2 w-48 rounded-md border border-gray-200 bg-white shadow-lg">
                                     <div className="py-1">
                                         {['all', 'individual', 'organization'].map((type) => (
                                             <button
@@ -187,7 +189,7 @@ export default function Index({ auth, partners, filters }) {
                                                     setShowTypeDropdown(false);
                                                     fetchPartners({ partner_type: type !== 'all' ? type : '', page: 1 });
                                                 }}
-                                                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${partnerTypeFilter === type ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                                className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 ${partnerTypeFilter === type ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
                                             >
                                                 {type === 'all' ? 'All Types' : type.charAt(0).toUpperCase() + type.slice(1)}
                                             </button>
@@ -205,14 +207,14 @@ export default function Index({ auth, partners, filters }) {
                                     setShowFilterDropdown(false);
                                     setShowTypeDropdown(false);
                                 }}
-                                className="flex items-center px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#37692F] bg-white"
+                                className="flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm hover:bg-gray-50 focus:ring-[#37692F] focus:outline-none focus:ring-2"
                             >
-                                <ArrowsUpDownIcon className="w-4 h-4 mr-2 text-gray-500" />
+                                <ArrowsUpDownIcon className="mr-2 h-4 w-4 text-gray-500" />
                                 {getSortLabel()}
-                                <ChevronDownIcon className="w-4 h-4 ml-2 text-gray-500" />
+                                <ChevronDownIcon className="ml-2 h-4 w-4 text-gray-500" />
                             </button>
                             {showSortDropdown && (
-                                <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg border border-gray-200 z-10">
+                                <div className="absolute right-0 z-10 mt-2 w-56 rounded-md border border-gray-200 bg-white shadow-lg">
                                     <div className="py-1">
                                         <button
                                             onClick={() => {
@@ -221,7 +223,7 @@ export default function Index({ auth, partners, filters }) {
                                                 setShowSortDropdown(false);
                                                 fetchPartners({ sort_by: 'id', sort_dir: 'desc', page: 1 });
                                             }}
-                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'id' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                            className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 ${sortBy === 'id' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
                                         >
                                             Default
                                         </button>
@@ -232,7 +234,7 @@ export default function Index({ auth, partners, filters }) {
                                                 setShowSortDropdown(false);
                                                 fetchPartners({ sort_by: 'name', sort_dir: 'asc', page: 1 });
                                             }}
-                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'name' && sortDir === 'asc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                            className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 ${sortBy === 'name' && sortDir === 'asc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
                                         >
                                             Name (A to Z)
                                         </button>
@@ -243,7 +245,7 @@ export default function Index({ auth, partners, filters }) {
                                                 setShowSortDropdown(false);
                                                 fetchPartners({ sort_by: 'name', sort_dir: 'desc', page: 1 });
                                             }}
-                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'name' && sortDir === 'desc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                            className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 ${sortBy === 'name' && sortDir === 'desc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
                                         >
                                             Name (Z to A)
                                         </button>
@@ -254,7 +256,7 @@ export default function Index({ auth, partners, filters }) {
                                                 setShowSortDropdown(false);
                                                 fetchPartners({ sort_by: 'email', sort_dir: 'asc', page: 1 });
                                             }}
-                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'email' && sortDir === 'asc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                            className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 ${sortBy === 'email' && sortDir === 'asc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
                                         >
                                             Email (A to Z)
                                         </button>
@@ -265,7 +267,7 @@ export default function Index({ auth, partners, filters }) {
                                                 setShowSortDropdown(false);
                                                 fetchPartners({ sort_by: 'email', sort_dir: 'desc', page: 1 });
                                             }}
-                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'email' && sortDir === 'desc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                            className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 ${sortBy === 'email' && sortDir === 'desc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
                                         >
                                             Email (Z to A)
                                         </button>
@@ -281,7 +283,7 @@ export default function Index({ auth, partners, filters }) {
                                 placeholder="Search by name, email, or phone..."
                                 defaultValue={search}
                                 onChange={handleSearchChange}
-                                className="w-[400px] pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#37692F]"
+                                className="w-[400px] rounded-md border border-gray-300 pl-10 pr-4 py-2 text-sm focus:ring-[#37692F] focus:outline-none focus:ring-2"
                             />
                             <svg
                                 className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
@@ -301,10 +303,10 @@ export default function Index({ auth, partners, filters }) {
                         {/* Add Partner Button */}
                         <Link
                             href={route('partners.create')}
-                            className="bg-[#37692F] text-white px-4 py-2 rounded-md hover:bg-[#2a5624] flex items-center"
+                            className="flex items-center rounded-md bg-[#37692F] px-4 py-2 text-white hover:bg-[#2a5624]"
                         >
                             <svg
-                                className="w-5 h-5 mr-2"
+                                className="mr-2 h-5 w-5"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -322,14 +324,14 @@ export default function Index({ auth, partners, filters }) {
                 </div>
 
                 {/* Partners Table */}
-                <div className="overflow-x-auto bg-white shadow-lg rounded-lg">
-                    <table className="w-full text-sm text-left">
-                        <thead className="bg-[#37692F] text-gray-600 uppercase text-xs">
+                <div className="overflow-x-auto rounded-lg bg-white shadow-lg">
+                    <table className="w-full text-left text-sm">
+                        <thead className="bg-[#37692F] text-xs uppercase text-gray-600">
                             <tr>
                                 {['NAME', 'TYPE', 'EMAIL', 'PHONE', 'STATUS', 'ACTIONS'].map((header) => (
                                     <th
                                         key={header}
-                                        className="px-6 py-4 font-poppins font-medium text-[14px] text-white"
+                                        className="px-6 py-4 font-poppins text-[14px] font-medium text-white"
                                     >
                                         {header}
                                     </th>
@@ -340,7 +342,7 @@ export default function Index({ auth, partners, filters }) {
                             {partners.data.length > 0 ? (
                                 partners.data.map((partner) => (
                                     <tr key={partner.id} className="hover:bg-gray-50">
-                                        <td className="px-6 py-4 font-poppins font-normal text-[13px] text-gray-900">
+                                        <td className="px-6 py-4 font-poppins text-[13px] font-normal text-gray-900">
                                             <Link
                                                 href={route('partners.show', partner.id)}
                                                 className="transition-colors duration-200 hover:text-[#37692F]"
@@ -350,34 +352,45 @@ export default function Index({ auth, partners, filters }) {
                                             </Link>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <span className={`px-3 py-1 rounded-full text-xs font-poppins font-medium shadow-sm ${getTypeColor(partner.partner_type)}`}>
+                                            <span className={`rounded-full px-3 py-1 text-xs font-poppins font-medium shadow-sm ${getTypeColor(partner.partner_type)}`}>
                                                 {partner.partner_type}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4 font-poppins font-normal text-[13px] text-gray-900">
+                                        <td className="px-6 py-4 font-poppins text-[13px] font-normal text-gray-900">
                                             {partner.email}
                                         </td>
-                                        <td className="px-6 py-4 font-poppins font-normal text-[13px] text-gray-900">
+                                        <td className="px-6 py-4 font-poppins text-[13px] font-normal text-gray-900">
                                             {partner.phone}
                                         </td>
                                         <td className="px-6 py-4">
                                             <span
-                                                className={`px-3 py-1 rounded-full text-xs font-poppins font-normal ${getStatusColor(partner.status)}`}
+                                                className={`rounded-full px-3 py-1 text-xs font-poppins font-normal ${getStatusColor(partner.status)}`}
                                             >
                                                 {partner.status}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex space-x-2">
-                                                <Link
-                                                    href={route('partners.edit', partner.id)}
-                                                    className="text-blue-600 hover:text-blue-800"
-                                                    title="Edit Partner"
-                                                >
-                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                    </svg>
-                                                </Link>
+                                                {partner.status === 'active' ? (
+                                                    <Link
+                                                        href={route('partners.edit', partner.id)}
+                                                        className="text-blue-600 hover:text-blue-800"
+                                                        title="Edit Partner"
+                                                    >
+                                                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                        </svg>
+                                                    </Link>
+                                                ) : (
+                                                    <span
+                                                        className="cursor-not-allowed text-gray-400"
+                                                        title="Cannot edit inactive partner"
+                                                    >
+                                                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                        </svg>
+                                                    </span>
+                                                )}
                                                 {partner.status === 'active' ? (
                                                     <button
                                                         className="text-yellow-600 hover:text-yellow-800"
@@ -387,7 +400,7 @@ export default function Index({ auth, partners, filters }) {
                                                         }}
                                                         title="Archive Partner"
                                                     >
-                                                        <ArchiveBoxIcon className="w-5 h-5" /> {/* Use the solid icon here */}
+                                                        <ArchiveBoxIcon className="h-5 w-5" /> 
                                                     </button>
                                                 ) : (
                                                     <button
@@ -398,8 +411,8 @@ export default function Index({ auth, partners, filters }) {
                                                         }}
                                                         title="Reactivate Partner"
                                                     >
-                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                                         </svg>
                                                     </button>
                                                 )}
@@ -417,13 +430,14 @@ export default function Index({ auth, partners, filters }) {
                         </tbody>
                     </table>
                 </div>
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between mt-6 gap-4">
+
+                <div className="mt-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     {/* Per Page Selector */}
-                    <div className="flex items-center space-x-2 relative">
+                    <div className="relative flex items-center space-x-2">
                         <span className="text-sm text-gray-700">Show</span>
                         <div className="relative">
                             <select
-                                className="appearance-none border border-gray-300 rounded px-2 py-1 pr-6 text-sm focus:ring-[#37692F] focus:border-[#37692F]"
+                                className="appearance-none rounded border border-gray-300 px-2 py-1 pr-6 text-sm focus:ring-[#37692F] focus:border-[#37692F]"
                                 value={perPage}
                                 onChange={e => {
                                     setPerPage(Number(e.target.value));
@@ -440,7 +454,7 @@ export default function Index({ auth, partners, filters }) {
 
                     {/* Pagination Controls */}
                     {partners && partners.links && partners.links.length > 1 && (
-                        <div className="flex justify-center w-full md:w-auto">
+                        <div className="flex w-full justify-center md:w-auto">
                             <nav className="inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
                                 {partners.links.map((link, idx) => {
                                     const href = link.url ? link.url.replace(/&amp;/g, '&') : null;
@@ -451,10 +465,10 @@ export default function Index({ auth, partners, filters }) {
                                             preserveScroll
                                             preserveState
                                             className={
-                                                `px-3 py-2 border text-sm font-medium ${
+                                                `border px-3 py-2 text-sm font-medium ${
                                                     link.active
-                                                        ? 'z-10 bg-[#37692F] border-[#37692F] text-white'
-                                                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                                                        ? 'z-10 border-[#37692F] bg-[#37692F] text-white'
+                                                        : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
                                                 } ${!link.url ? 'pointer-events-none opacity-50' : ''}`
                                             }
                                             dangerouslySetInnerHTML={{ __html: link.label }}
@@ -467,6 +481,7 @@ export default function Index({ auth, partners, filters }) {
                 </div>
             </div>
 
+            {/* Modals */}
             {showDeactivateModal && (
                 <ArchivePartnerModal
                     partner={selectedPartner}

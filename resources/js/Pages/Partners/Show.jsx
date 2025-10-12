@@ -3,7 +3,7 @@ import { Head, Link } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 
 export default function Show({ auth, partner }) {
-    // Static contract data for demonstration - SAMPLE MUNA TO BE REPLACED WITH DYNAMIC DATA HIHI
+    // Static contract data for demonstration - SAMPLE TO BE REPLACED WITH DYNAMIC DATA
     const associatedContracts = [
         {
             id: 1,
@@ -31,13 +31,17 @@ export default function Show({ auth, partner }) {
         }
     ];
 
+    const dateFormatter = (dateString) => new Date(dateString).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+    });
+
     return (
         <AuthenticatedLayout
             user={auth.user}
         >
             <Head title={partner.name} />
-
-            {/* Breadcrumb */}
             <div className="px-6 pt-6">
                 <nav className="text-sm text-gray-600">
                     <Link
@@ -59,23 +63,23 @@ export default function Show({ auth, partner }) {
 
             <div className="p-6">
                 {/* Header Section */}
-                <div className="flex justify-between items-center mb-6">
+                <div className="mb-6 flex items-center justify-between">
                     <h1 className="text-2xl font-semibold text-gray-800">Partner Information</h1>
                     <div className="flex space-x-3">
                         <Link
                             href={route('partners.edit', partner.id)}
-                            className="bg-[#37692F] text-white px-4 py-2 rounded-md hover:bg-[#2a5624] flex items-center"
+                            className="flex items-center rounded-md bg-[#37692F] px-4 py-2 text-white hover:bg-[#2a5624]"
                         >
-                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
                             Edit Partner
                         </Link>
                         <Link
                             href={route('partners.index')}
-                            className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 flex items-center"
+                            className="flex items-center rounded-md bg-gray-500 px-4 py-2 text-white hover:bg-gray-600"
                         >
-                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                             </svg>
                             Back to List
@@ -83,21 +87,21 @@ export default function Show({ auth, partner }) {
                     </div>
                 </div>
 
-                {/* Main Content */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Basic Information Card */}
-                    <div className="bg-white shadow-lg rounded-lg p-6">
-                        <h2 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Basic Information</h2>
+                {/* Main Content Grid */}
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                    {/* Basic Information */}
+                    <div className="rounded-lg bg-white p-6 shadow-lg">
+                        <h2 className="mb-4 border-b pb-2 text-lg font-semibold text-gray-800">Basic Information</h2>
                         
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                                <p className="text-sm text-gray-900 font-poppins font-normal">{partner.name}</p>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Name</label>
+                                <p className="font-poppins text-sm font-normal text-gray-900">{partner.name}</p>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Partner Type</label>
-                                <span className={`inline-flex px-3 py-1 rounded-full text-xs font-poppins font-medium shadow-sm ${
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Partner Type</label>
+                                <span className={`inline-flex rounded-full px-3 py-1 text-xs font-poppins font-medium shadow-sm ${
                                     partner.partner_type === 'individual' 
                                         ? 'bg-blue-600 text-white' 
                                         : 'bg-purple-600 text-white'
@@ -107,8 +111,8 @@ export default function Show({ auth, partner }) {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                                <span className={`inline-flex px-3 py-1 rounded-full text-xs font-poppins font-normal ${
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Status</label>
+                                <span className={`inline-flex rounded-full px-3 py-1 text-xs font-poppins font-normal ${
                                     partner.status === 'active' 
                                         ? 'bg-green-100 text-green-700' 
                                         : 'bg-red-100 text-red-700'
@@ -120,44 +124,44 @@ export default function Show({ auth, partner }) {
                     </div>
 
                     {/* Contact Information Card */}
-                    <div className="bg-white shadow-lg rounded-lg p-6">
-                        <h2 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Contact Information</h2>
+                    <div className="rounded-lg bg-white p-6 shadow-lg">
+                        <h2 className="mb-4 border-b pb-2 text-lg font-semibold text-gray-800">Contact Information</h2>
                         
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                                <p className="text-sm text-gray-900 font-poppins font-normal">{partner.email || 'N/A'}</p>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Email</label>
+                                <p className="font-poppins text-sm font-normal text-gray-900">{partner.email || 'N/A'}</p>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                                <p className="text-sm text-gray-900 font-poppins font-normal">{partner.phone || 'N/A'}</p>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Phone</label>
+                                <p className="font-poppins text-sm font-normal text-gray-900">{partner.phone || 'N/A'}</p>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                                <p className="text-sm text-gray-900 font-poppins font-normal whitespace-pre-wrap">{partner.address || 'N/A'}</p>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Address</label>
+                                <p className="whitespace-pre-wrap font-poppins text-sm font-normal text-gray-900">{partner.address || 'N/A'}</p>
                             </div>
                         </div>
                     </div>
 
                     {/* Business Information Card */}
                     {(partner.registration_number || partner.tax_id) && (
-                        <div className="bg-white shadow-lg rounded-lg p-6">
-                            <h2 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Business Information</h2>
+                        <div className="rounded-lg bg-white p-6 shadow-lg">
+                            <h2 className="mb-4 border-b pb-2 text-lg font-semibold text-gray-800">Business Information</h2>
                             
                             <div className="space-y-4">
                                 {partner.registration_number && (
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Registration Number</label>
-                                        <p className="text-sm text-gray-900 font-poppins font-normal">{partner.registration_number}</p>
+                                        <label className="mb-1 block text-sm font-medium text-gray-700">Registration Number</label>
+                                        <p className="font-poppins text-sm font-normal text-gray-900">{partner.registration_number}</p>
                                     </div>
                                 )}
 
                                 {partner.tax_id && (
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">Tax ID</label>
-                                        <p className="text-sm text-gray-900 font-poppins font-normal">{partner.tax_id}</p>
+                                        <label className="mb-1 block text-sm font-medium text-gray-700">Tax ID</label>
+                                        <p className="font-poppins text-sm font-normal text-gray-900">{partner.tax_id}</p>
                                     </div>
                                 )}
                             </div>
@@ -166,31 +170,31 @@ export default function Show({ auth, partner }) {
 
                     {/* Notes Card */}
                     {partner.notes && (
-                        <div className="bg-white shadow-lg rounded-lg p-6">
-                            <h2 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Notes</h2>
-                            <p className="text-sm text-gray-900 font-poppins font-normal whitespace-pre-wrap">{partner.notes}</p>
+                        <div className="rounded-lg bg-white p-6 shadow-lg">
+                            <h2 className="mb-4 border-b pb-2 text-lg font-semibold text-gray-800">Notes</h2>
+                            <p className="whitespace-pre-wrap font-poppins text-sm font-normal text-gray-900">{partner.notes}</p>
                         </div>
                     )}
 
                     {/* Contact Persons Card */}
                     {partner.partner_type === 'organization' && partner.contact_persons && partner.contact_persons.length > 0 && (
-                        <div className="bg-white shadow-lg rounded-lg p-6 md:col-span-2">
-                            <h2 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Contact Persons</h2>
+                        <div className="md:col-span-2 rounded-lg bg-white p-6 shadow-lg">
+                            <h2 className="mb-4 border-b pb-2 text-lg font-semibold text-gray-800">Contact Persons</h2>
                             <div className="space-y-4">
                                 {partner.contact_persons.map((person, idx) => (
-                                    <div key={idx} className="border border-gray-200 rounded-lg p-4">
-                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div key={idx} className="rounded-lg border border-gray-200 p-4">
+                                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                                             <div>
-                                                <span className="block text-xs text-gray-500 mb-1">Name</span>
-                                                <span className="font-medium text-gray-900 text-sm font-poppins font-normal">{person.name}</span>
+                                                <span className="mb-1 block text-xs text-gray-500">Name</span>
+                                                <span className="font-poppins text-sm font-normal font-medium text-gray-900">{person.name}</span>
                                             </div>
                                             <div>
-                                                <span className="block text-xs text-gray-500 mb-1">Email</span>
-                                                <span className="text-gray-900 text-sm font-poppins font-normal">{person.email || 'N/A'}</span>
+                                                <span className="mb-1 block text-xs text-gray-500">Email</span>
+                                                <span className="font-poppins text-sm font-normal text-gray-900">{person.email || 'N/A'}</span>
                                             </div>
                                             <div>
-                                                <span className="block text-xs text-gray-500 mb-1">Phone</span>
-                                                <span className="text-gray-900 text-sm font-poppins font-normal">{person.phone_number || 'N/A'}</span>
+                                                <span className="mb-1 block text-xs text-gray-500">Phone</span>
+                                                <span className="font-poppins text-sm font-normal text-gray-900">{person.phone_number || 'N/A'}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -201,27 +205,27 @@ export default function Show({ auth, partner }) {
 
                     {/* Farm Information Card */}
                     {partner.farms && partner.farms.length > 0 && (
-                        <div className="bg-white shadow-lg rounded-lg p-6 md:col-span-2">
-                            <h2 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Farm Information</h2>
+                        <div className="md:col-span-2 rounded-lg bg-white p-6 shadow-lg">
+                            <h2 className="mb-4 border-b pb-2 text-lg font-semibold text-gray-800">Farm Information</h2>
                             <div className="space-y-4">
                                 {partner.farms.map((farm, idx) => (
-                                    <div key={idx} className="border border-gray-200 rounded-lg p-4 mb-2">
-                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                    <div key={idx} className="mb-2 rounded-lg border border-gray-200 p-4">
+                                        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                                             <div>
-                                                <span className="block text-xs text-gray-500 mb-1">Farm Name</span>
-                                                <span className="font-medium text-gray-900 text-sm">{farm.location_name || 'N/A'}</span>
+                                                <span className="mb-1 block text-xs text-gray-500">Farm Name</span>
+                                                <span className="text-sm font-medium text-gray-900">{farm.location_name || 'N/A'}</span>
                                             </div>
                                             <div>
-                                                <span className="block text-xs text-gray-500 mb-1">Area Size (hectares)</span>
-                                                <span className="text-gray-900 text-sm">{farm.area_size || 'N/A'}</span>
+                                                <span className="mb-1 block text-xs text-gray-500">Area Size (hectares)</span>
+                                                <span className="text-sm text-gray-900">{farm.area_size || 'N/A'}</span>
                                             </div>
                                             <div>
-                                                <span className="block text-xs text-gray-500 mb-1">Soil Type</span>
-                                                <span className="text-gray-900 text-sm">{farm.soil_type ? farm.soil_type.charAt(0).toUpperCase() + farm.soil_type.slice(1) : 'N/A'}</span>
+                                                <span className="mb-1 block text-xs text-gray-500">Soil Type</span>
+                                                <span className="text-sm text-gray-900">{farm.soil_type ? farm.soil_type.charAt(0).toUpperCase() + farm.soil_type.slice(1) : 'N/A'}</span>
                                             </div>
                                             <div className="md:col-span-1">
-                                                <span className="block text-xs text-gray-500 mb-1">Address</span>
-                                                <span className="text-gray-900 text-sm whitespace-pre-wrap">{farm.address || 'N/A'}</span>
+                                                <span className="mb-1 block text-xs text-gray-500">Address</span>
+                                                <span className="whitespace-pre-wrap text-sm text-gray-900">{farm.address || 'N/A'}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -231,13 +235,13 @@ export default function Show({ auth, partner }) {
                     )}
 
                     {/* Associated Contracts Card */}
-                    <div className="bg-white shadow-lg rounded-lg p-6 md:col-span-2">
-                        <h2 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Associated Contracts</h2>
+                    <div className="md:col-span-2 rounded-lg bg-white p-6 shadow-lg">
+                        <h2 className="mb-4 border-b pb-2 text-lg font-semibold text-gray-800">Associated Contracts</h2>
                         
                         {associatedContracts.length > 0 ? (
                             <div className="overflow-x-auto">
-                                <table className="w-full text-sm text-left">
-                                    <thead className="bg-gray-100 text-gray-700 uppercase text-xs">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="text-xs uppercase bg-gray-100 text-gray-700">
                                         <tr>
                                             <th className="px-4 py-3 font-poppins font-medium">Contract Name</th>
                                             <th className="px-4 py-3 font-poppins font-medium">Status</th>
@@ -252,7 +256,7 @@ export default function Show({ auth, partner }) {
                                                     {contract.name}
                                                 </td>
                                                 <td className="px-4 py-3">
-                                                    <span className={`px-3 py-1 rounded-full text-xs font-poppins font-normal ${
+                                                    <span className={`rounded-full px-3 py-1 text-xs font-poppins font-normal ${
                                                         contract.status === "active" 
                                                             ? "bg-green-100 text-green-700" 
                                                             : "bg-red-100 text-red-700"
@@ -261,15 +265,7 @@ export default function Show({ auth, partner }) {
                                                     </span>
                                                 </td>
                                                 <td className="px-4 py-3 font-poppins font-normal text-gray-600">
-                                                    {new Date(contract.start_date).toLocaleDateString('en-US', {
-                                                        month: 'short',
-                                                        day: 'numeric',
-                                                        year: 'numeric'
-                                                    })} - {new Date(contract.end_date).toLocaleDateString('en-US', {
-                                                        month: 'short',
-                                                        day: 'numeric',
-                                                        year: 'numeric'
-                                                    })}
+                                                    {dateFormatter(contract.start_date)} - {dateFormatter(contract.end_date)}
                                                 </td>
                                                 <td className="px-4 py-3 font-poppins font-normal text-gray-900">
                                                     {contract.value}
@@ -280,23 +276,15 @@ export default function Show({ auth, partner }) {
                                 </table>
                             </div>
                         ) : (
-                            <p className="text-sm text-gray-500 font-poppins font-normal">No contracts associated with this partner.</p>
+                            <p className="font-poppins text-sm font-normal text-gray-500">No contracts associated with this partner.</p>
                         )}
                     </div>
                 </div>
 
                 {/* Timestamps */}
-                <div className="mt-6 text-sm text-gray-500 font-poppins font-normal">
-                    <p>Created: {new Date(partner.created_at).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric'
-                    })}</p>
-                    <p>Last Updated: {new Date(partner.updated_at).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric'
-                    })}</p>
+                <div className="mt-6 font-poppins text-sm font-normal text-gray-500">
+                    <p>Created: {dateFormatter(partner.created_at)}</p>
+                    <p>Last Updated: {dateFormatter(partner.updated_at)}</p>
                 </div>
             </div>
         </AuthenticatedLayout>

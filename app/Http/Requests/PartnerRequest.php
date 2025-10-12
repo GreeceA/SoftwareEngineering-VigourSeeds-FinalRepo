@@ -17,27 +17,33 @@ class PartnerRequest extends FormRequest
         $partnerId = $this->route('partner') ? $this->route('partner')->id : null;
 
         return [
-            'partner_type' => ['required', 'in:individual,organization'],
+            'partner_type' => [
+                'required',
+                'in:individual,organization',
+            ],
             'name' => [
                 'required',
                 'string',
                 'max:255',
                 'filled',
-                Rule::unique('partners')->ignore($partnerId), 
+                Rule::unique('partners')->ignore($partnerId),
             ],
             'email' => [
                 'required',
                 'email',
                 'max:255',
-                Rule::unique('partners')->ignore($partnerId), 
+                Rule::unique('partners')->ignore($partnerId),
             ],
             'phone' => [
                 'required',
                 'string',
-                'regex:/^(0[89]\d{2}-\d{3}-\d{4})$/', 
-                'max:13'
+                'regex:/^(0[89]\d{2}-\d{3}-\d{4})$/',
+                'max:13',
             ],
-            'address' => ['required', 'string'],
+            'address' => [
+                'required',
+                'string',
+            ],
             'registration_number' => [
                 'required',
                 'string',
@@ -47,8 +53,14 @@ class PartnerRequest extends FormRequest
                 'required',
                 'regex:/^\d{3}-\d{3}-\d{3}-\d{3}$/',
             ],
-            'notes' => ['nullable', 'string'],
-            'status' => ['required', 'in:active,inactive'],
+            'notes' => [
+                'nullable',
+                'string',
+            ],
+            'status' => [
+                'required',
+                'in:active,inactive',
+            ],
 
             // Organization contacts
             'contact_persons' => [
@@ -61,13 +73,13 @@ class PartnerRequest extends FormRequest
                 Rule::requiredIf($this->input('partner_type') === 'organization'),
                 'string',
                 'max:255',
-                'distinct', 
+                'distinct',
             ],
             'contact_persons.*.email' => [
                 Rule::requiredIf($this->input('partner_type') === 'organization'),
                 'email',
                 'max:255',
-                'distinct', 
+                'distinct',
             ],
             'contact_persons.*.phone_number' => [
                 Rule::requiredIf($this->input('partner_type') === 'organization'),
@@ -78,22 +90,39 @@ class PartnerRequest extends FormRequest
             ],
 
             // Farms validation
-            'farms' => ['required', 'array', 'min:1', 'max:10'],
-            'farms.*.location_name' => ['required', 'string', 'max:255', 'distinct'],
-            'farms.*.address' => ['required', 'string'],
+            'farms' => [
+                'required',
+                'array',
+                'min:1',
+                'max:10',
+            ],
+            'farms.*.location_name' => [
+                'required',
+                'string',
+                'max:255',
+                'distinct',
+            ],
+            'farms.*.address' => [
+                'required',
+                'string',
+            ],
             'farms.*.area_size' => [
-                'required', 'numeric', 
+                'required',
+                'numeric',
                 'min:0.01',
                 'max:999.99',
             ],
-            'farms.*.soil_type' => ['required', Rule::in(['clay', 'sandy', 'loam', 'silty'])], // bawal na dili magpili
+            'farms.*.soil_type' => [
+                'required',
+                Rule::in(['clay', 'sandy', 'loam', 'silty']),
+            ],
         ];
     }
 
     public function messages(): array
     {
         return [
-            // Partner fields
+            // Partner fields messages
             'partner_type.required' => 'Partner type is required.',
             'partner_type.in' => 'Invalid partner type selected. Please choose either Individual or Organization.',
             'name.required' => 'Partner name is required.',

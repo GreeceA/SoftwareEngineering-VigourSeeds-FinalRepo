@@ -70,6 +70,7 @@ export default function PartnerForm({ partner = null }) {
         }))
     );
 
+    // State Updaters
     const setContactFieldTouched = (contactIdx, field) => {
         setContactTouched(prev => {
             const updated = [...prev];
@@ -86,8 +87,9 @@ export default function PartnerForm({ partner = null }) {
         });
     };
 
-    // Partner Info Validation & Handlers
-    const handleNameBlur = async (e) => {
+    //  Partner Info Validation & Handlers
+
+    async function handleNameBlur(e) {
         const name = e.target.value.trim();
         if (!name) return;
         setCheckingName(true);
@@ -106,7 +108,7 @@ export default function PartnerForm({ partner = null }) {
             }
         }
         setCheckingName(false);
-    };
+    }
 
     const handleEmailBlur = async (e) => {
         const email = e.target.value.trim();
@@ -152,7 +154,8 @@ export default function PartnerForm({ partner = null }) {
         }
     };
 
-    // Contact Person Validation & Handlers
+    //  Contact Person Validation & Handlers
+
     const validateContactPersons = (persons, contactTouched, showErrors) => {
         const names = persons.map(p => p.name?.trim()).filter(Boolean);
         const emails = persons.map(p => p.email?.trim()).filter(Boolean);
@@ -232,7 +235,8 @@ export default function PartnerForm({ partner = null }) {
         }
     };
 
-    // Farm Info Validation & Handlers
+    //  Farm Info Validation & Handlers 
+
     const validateFarms = (farms, farmTouched, showErrors) => {
         const names = farms.map(f => f.location_name?.trim()).filter(Boolean);
         return farms.map((farm, idx) => {
@@ -248,12 +252,15 @@ export default function PartnerForm({ partner = null }) {
                 errors.address = 'Address is required.';
             }
 
-            if ((farmTouched[idx]?.area_size || showErrors) && (!farm.area_size || isNaN(farm.area_size))) {
+            // Area size validation logic
+            const areaSizeValue = parseFloat(farm.area_size);
+
+            if ((farmTouched[idx]?.area_size || showErrors) && (!farm.area_size || isNaN(areaSizeValue))) {
                 errors.area_size = 'Area size is required.';
-            } else if (Number(farm.area_size) <= 0) {
+            } else if (areaSizeValue <= 0) {
                 errors.area_size = 'Area size must be greater than 0.';
             } else if (
-                Number(farm.area_size) > 999.99 ||
+                areaSizeValue > 999.99 ||
                 String(farm.area_size).split('.')[0].length > 3 ||
                 (String(farm.area_size).includes('.') && String(farm.area_size).split('.')[1]?.length > 2)
             ) {
@@ -387,20 +394,24 @@ export default function PartnerForm({ partner = null }) {
         setCheckingTin(false);
     };
 
-    // Main Validation
+    // Main Validation Logic
+    
     const validateFields = (fields, touched, contactTouched, farmTouched, showErrors) => {
         let newErrors = {};
 
+        // Partner Name
         if ((touched.name || showErrors) && !fields.name?.trim()) {
             newErrors.name = 'Partner name is required.';
         }
 
+        // Email
         if ((touched.email || showErrors) && !fields.email?.trim()) {
             newErrors.email = 'Email is required.';
         } else if ((touched.email || showErrors) && fields.email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email)) {
             newErrors.email = 'Please enter a valid email address.';
         }
 
+        // Phone
         const phoneRaw = fields.phone.replace(/-/g, '');
         if ((touched.phone || showErrors) && !phoneRaw) {
             newErrors.phone = 'Phone number is required.';
@@ -410,10 +421,12 @@ export default function PartnerForm({ partner = null }) {
             newErrors.phone = 'Phone number must start with 08 or 09.';
         }
 
+        // Address
         if ((touched.address || showErrors) && !fields.address?.trim()) {
             newErrors.address = 'Address is required.';
         }
 
+        // DTI Registration
         const regRaw = fields.registration_number.replace(/\D/g, '');
         if ((touched.registration_number || showErrors) && !regRaw) {
             newErrors.registration_number = 'DTI number is required.';
@@ -421,6 +434,7 @@ export default function PartnerForm({ partner = null }) {
             newErrors.registration_number = 'DTI Registration must be exactly 11 digits.';
         }
 
+        // TIN
         const tinRaw = fields.tax_id.replace(/-/g, '');
         if ((touched.tax_id || showErrors) && !tinRaw) {
             newErrors.tax_id = 'TIN is required.';
@@ -428,10 +442,12 @@ export default function PartnerForm({ partner = null }) {
             newErrors.tax_id = 'TIN must be exactly 12 digits.';
         }
 
+        // Contact Persons (Conditional)
         if (fields.partner_type === 'organization') {
             newErrors.contact_persons = validateContactPersons(fields.contact_persons, contactTouched, showErrors);
         }
 
+        // Farms
         newErrors.farms = validateFarms(fields.farms, farmTouched, showErrors);
 
         setLocalErrors(newErrors);
@@ -441,7 +457,6 @@ export default function PartnerForm({ partner = null }) {
         return Object.keys(newErrors).filter(k => k !== 'contact_persons' && k !== 'farms').length === 0 && !hasContactErrors && !hasFarmErrors;
     };
 
-    // Submit Handler
     const submit = (e) => {
         e.preventDefault();
         setShowErrors(true);
@@ -510,13 +525,22 @@ export default function PartnerForm({ partner = null }) {
         }
     };
 
+    const isAnyFormError = 
+        localErrors.name ||
+        localErrors.email ||
+        localErrors.phone ||
+        localErrors.address ||
+        localErrors.registration_number ||
+        localErrors.tax_id ||
+        localErrors.contact_persons?.some(e => Object.keys(e).length > 0) ||
+        localErrors.farms?.some(e => Object.keys(e).length > 0);
+
     return (
         <div className="p-6">
-            {/* Breadcrumb Navigation */}
             <div className="px-6 pt-6">
                 <nav className="text-sm text-gray-600">
                     <Link
-                        href="http://localhost/dashboard/SoftwareEngineering-VigourSeeds-FinalRepo/public/dashboard"
+                        href={route('dashboard')} 
                         className="text-[#37692F] hover:underline"
                     >
                         Home
@@ -525,8 +549,8 @@ export default function PartnerForm({ partner = null }) {
                 </nav>
             </div>
 
-            <div className="bg-white shadow-lg rounded-lg p-6 mt-4">
-                <h1 className="text-2xl font-semibold text-gray-800 mb-6">
+            <div className="mt-4 rounded-lg bg-white p-6 shadow-lg">
+                <h1 className="mb-6 text-2xl font-semibold text-gray-800">
                     {partner ? 'Edit Partner' : 'Create New Partner'}
                 </h1>
 
@@ -550,7 +574,7 @@ export default function PartnerForm({ partner = null }) {
                                     setContactTouched([]);
                                 }
                             }}
-                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-[#37692F] focus:outline-none focus:ring-2 focus:ring-[#37692F]"
                             required
                         >
                             <option value="individual">Individual</option>
@@ -579,7 +603,7 @@ export default function PartnerForm({ partner = null }) {
                                 validateFields({ ...data, name: e.target.value }, { ...touched, name: true }, contactTouched, farmTouched, showErrors);
                                 if (e.target.value) handleNameBlur(e);
                             }}
-                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                            className={`mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-[#37692F] focus:outline-none focus:ring-2 focus:ring-[#37692F] ${(touched.name || showErrors) && (localErrors.name || nameUniqueError) ? 'border-red-500' : ''}`}
                             required
                         />
                         {(touched.name || showErrors) && (localErrors.name || nameUniqueError) && (
@@ -590,7 +614,7 @@ export default function PartnerForm({ partner = null }) {
                     </div>
 
                     {/* Email and Phone */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                         <div>
                             <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                                 {data.partner_type === 'organization' ? 'Company Email *' : 'Email *'}
@@ -611,7 +635,7 @@ export default function PartnerForm({ partner = null }) {
                                     validateFields({ ...data, email: e.target.value }, { ...touched, email: true }, contactTouched, farmTouched, showErrors);
                                     if (e.target.value) handleEmailBlur(e);
                                 }}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                                className={`mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-[#37692F] focus:outline-none focus:ring-2 focus:ring-[#37692F] ${(touched.email || showErrors) && (localErrors.email || emailUniqueError) ? 'border-red-500' : ''}`}
                                 required
                             />
                             {(touched.email || showErrors) && (localErrors.email || emailUniqueError) && (
@@ -634,11 +658,11 @@ export default function PartnerForm({ partner = null }) {
                                     setTouched(t => ({ ...t, phone: true }));
                                     validateFields({ ...data, phone: e.target.value }, { ...touched, phone: true }, contactTouched, farmTouched, showErrors);
                                 }}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                                className={`mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-[#37692F] focus:outline-none focus:ring-2 focus:ring-[#37692F] ${(touched.phone || showErrors) && localErrors.phone ? 'border-red-500' : ''}`}
                                 required
                                 maxLength={13}
                             />
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="mt-1 text-xs text-gray-500">
                                 Enter 11-digit mobile number (e.g., 0912-345-6789)
                             </p>
                             {(touched.phone || showErrors) && localErrors.phone && (
@@ -666,7 +690,7 @@ export default function PartnerForm({ partner = null }) {
                                 setTouched(t => ({ ...t, address: true }));
                                 validateFields({ ...data, address: e.target.value }, { ...touched, address: true }, contactTouched, farmTouched, showErrors);
                             }}
-                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                            className={`mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-[#37692F] focus:outline-none focus:ring-2 focus:ring-[#37692F] ${(touched.address || showErrors) && localErrors.address ? 'border-red-500' : ''}`}
                             required
                         />
                         {(touched.address || showErrors) && localErrors.address && (
@@ -677,21 +701,21 @@ export default function PartnerForm({ partner = null }) {
                     {/* Contact Persons Section */}
                     {data.partner_type === 'organization' && (
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Contact Persons</label>
+                            <label className="mb-2 block text-sm font-medium text-gray-700">Contact Persons</label>
                             {data.contact_persons.map((person, idx) => (
-                                <div key={idx} className="grid grid-cols-12 gap-2 mt-2 items-start">
+                                <div key={idx} className="mt-2 grid grid-cols-12 items-start gap-2">
                                     <div className="col-span-4">
                                         <input
                                             type="text"
                                             placeholder="Name"
                                             value={person.name}
                                             onChange={e => updateContactPerson(idx, 'name', e.target.value)}
-                                            onBlur={e => {
+                                            onBlur={() => {
                                                 setContactFieldTouched(idx, 'name');
                                                 validateFields(data, touched, contactTouched, farmTouched, showErrors);
                                             }}
                                             required
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                                            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-[#37692F] focus:outline-none focus:ring-2 focus:ring-[#37692F]"
                                         />
                                         {(contactTouched[idx]?.name || showErrors) && localErrors.contact_persons?.[idx]?.name && (
                                             <p className="mt-1 text-sm text-red-600">
@@ -706,12 +730,12 @@ export default function PartnerForm({ partner = null }) {
                                             placeholder="Email"
                                             value={person.email}
                                             onChange={e => updateContactPerson(idx, 'email', e.target.value)}
-                                            onBlur={e => {
+                                            onBlur={() => {
                                                 setContactFieldTouched(idx, 'email');
                                                 validateFields(data, touched, contactTouched, farmTouched, showErrors);
                                             }}
                                             required
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                                            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-[#37692F] focus:outline-none focus:ring-2 focus:ring-[#37692F]"
                                         />
                                         {(contactTouched[idx]?.email || showErrors) && localErrors.contact_persons?.[idx]?.email && (
                                             <p className="mt-1 text-sm text-red-600">
@@ -726,15 +750,15 @@ export default function PartnerForm({ partner = null }) {
                                             placeholder="Phone"
                                             value={person.phone_number}
                                             onChange={e => updateContactPerson(idx, 'phone_number', e.target.value)}
-                                            onBlur={e => {
+                                            onBlur={() => {
                                                 setContactFieldTouched(idx, 'phone_number');
                                                 validateFields(data, touched, contactTouched, farmTouched, showErrors);
                                             }}
                                             required
-                                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                                            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-[#37692F] focus:outline-none focus:ring-2 focus:ring-[#37692F]"
                                             maxLength={13}
                                         />
-                                        <p className="text-xs text-gray-500 mt-1">
+                                        <p className="mt-1 text-xs text-gray-500">
                                             Enter 11-digit mobile number (e.g., 0912-345-6789)
                                         </p>
                                         {(contactTouched[idx]?.phone_number || showErrors) && localErrors.contact_persons?.[idx]?.phone_number && (
@@ -744,12 +768,12 @@ export default function PartnerForm({ partner = null }) {
                                         )}
                                     </div>
 
-                                    <div className="col-span-1 flex items-center justify-center h-10 mt-2">
+                                    <div className="col-span-1 mt-2 flex h-10 items-center justify-center">
                                         {idx > 0 && (
                                             <button
                                                 type="button"
                                                 onClick={() => removeContactPerson(idx)}
-                                                className="text-red-600 hover:text-red-800 h-10 w-10 flex items-center justify-center rounded-md hover:bg-red-50 transition-colors"
+                                                className="flex h-10 w-10 items-center justify-center rounded-md text-red-600 transition-colors hover:bg-red-50 hover:text-red-800"
                                                 title="Remove contact person"
                                             >
                                                 ✕
@@ -763,9 +787,9 @@ export default function PartnerForm({ partner = null }) {
                                 <button
                                     type="button"
                                     onClick={addContactPerson}
-                                    className="mt-4 text-sm text-[#37692F] hover:text-[#2a5624] font-medium flex items-center"
+                                    className="mt-4 flex items-center font-medium text-[#37692F] text-sm hover:text-[#2a5624]"
                                 >
-                                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <svg className="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                                     </svg>
                                     Add Another Contact Person
@@ -779,8 +803,8 @@ export default function PartnerForm({ partner = null }) {
                     )}
 
                     {/* Farm Information Section */}
-                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mt-6">
-                        <div className="flex justify-between items-center mb-4">
+                    <div className="mt-6 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                        <div className="mb-4 flex items-center justify-between">
                             <h3 className="text-lg font-medium text-gray-800">Farm Information</h3>
                             <span className="text-sm text-gray-500">
                                 {data.farms.length} {data.farms.length === 1 ? 'farm' : 'farms'} added
@@ -789,8 +813,8 @@ export default function PartnerForm({ partner = null }) {
 
                         <div className="space-y-4">
                             {data.farms.map((farm, idx) => (
-                                <div key={idx} className="bg-white p-4 rounded-md shadow-sm border border-gray-200">
-                                    <div className="flex justify-between items-start mb-3">
+                                <div key={idx} className="rounded-md border border-gray-200 bg-white p-4 shadow-sm">
+                                    <div className="mb-3 flex items-start justify-between">
                                         <h4 className="font-medium text-gray-700">
                                             Farm #{idx + 1} {farm.location_name && `- ${farm.location_name}`}
                                         </h4>
@@ -798,30 +822,30 @@ export default function PartnerForm({ partner = null }) {
                                             <button
                                                 type="button"
                                                 onClick={() => removeFarm(idx)}
-                                                className="text-red-500 hover:text-red-700 p-1 rounded-full hover:bg-red-50 transition-colors"
+                                                className="rounded-full p-1 text-red-500 transition-colors hover:bg-red-50 hover:text-red-700"
                                                 title="Remove farm"
                                             >
-                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                                 </svg>
                                             </button>
                                         )}
                                     </div>
 
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Farm Name *</label>
+                                            <label className="mb-1 block text-sm font-medium text-gray-700">Farm Name *</label>
                                             <input
                                                 type="text"
                                                 placeholder="e.g., North Valley Farm"
                                                 value={farm.location_name}
                                                 onChange={e => updateFarm(idx, 'location_name', e.target.value)}
-                                                onBlur={e => {
+                                                onBlur={() => {
                                                     setFarmFieldTouched(idx, 'location_name');
                                                     validateFields(data, touched, contactTouched, farmTouched, showErrors);
                                                 }}
                                                 required
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                                                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-[#37692F] focus:outline-none focus:ring-2 focus:ring-[#37692F]"
                                             />
                                             {(farmTouched[idx]?.location_name || showErrors) && localErrors.farms?.[idx]?.location_name && (
                                                 <p className="mt-1 text-sm text-red-600">{localErrors.farms[idx].location_name}</p>
@@ -829,48 +853,58 @@ export default function PartnerForm({ partner = null }) {
                                         </div>
 
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Area Size (hectares) *</label>
+                                            <label className="mb-1 block text-sm font-medium text-gray-700">Area Size (hectares) *</label>
                                             <input
-                                                type="number"
-                                                step="0.01"
-                                                min="0"
-                                                max="999.99"
-                                                placeholder="0.00"
+                                                type="text"
+                                                inputMode="decimal"
+                                                placeholder="0.01"
                                                 value={farm.area_size}
                                                 onChange={e => {
                                                     let val = e.target.value;
-                                                    if (val.includes('.')) {
-                                                        const [whole, decimal] = val.split('.');
-                                                        if (decimal && decimal.length > 2) val = whole + '.' + decimal.slice(0, 2);
-                                                    }
-                                                    const [whole] = val.split('.');
-                                                    if (whole.length > 3) return;
+                                                    
+                                                    if (!/^\d*\.?\d{0,2}$/.test(val)) return;
+
+                                                    const numericValue = parseFloat(val);
+                                                    if (numericValue > 999.99) return;
+                                                    
                                                     updateFarm(idx, 'area_size', val);
                                                 }}
                                                 onBlur={e => {
                                                     setFarmFieldTouched(idx, 'area_size');
+                                                    
+                                                    let val = e.target.value;
+                                                    const numericValue = parseFloat(val);
+                                                    
+                                                    if (numericValue >= 0.01 && numericValue <= 999.99) {
+                                                        val = numericValue.toFixed(2);
+                                                    } else if (numericValue === 0) {
+                                                        val = ''; // Clear if zero to trigger min:0.01 error
+                                                    }
+                                                    
+                                                    updateFarm(idx, 'area_size', val);
                                                     validateFields(data, touched, contactTouched, farmTouched, showErrors);
                                                 }}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                                                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-[#37692F] focus:outline-none focus:ring-2 focus:ring-[#37692F]"
                                             />
+                                            <p className="mt-1 text-xs text-gray-500">Valid range: 0.01–999.99</p>
                                             {(farmTouched[idx]?.area_size || showErrors) && localErrors.farms?.[idx]?.area_size && (
                                                 <p className="mt-1 text-sm text-red-600">{localErrors.farms[idx].area_size}</p>
                                             )}
                                         </div>
 
                                         <div className="md:col-span-2">
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Address *</label>
+                                            <label className="mb-1 block text-sm font-medium text-gray-700">Address *</label>
                                             <input
                                                 type="text"
                                                 placeholder="Full farm address"
                                                 value={farm.address}
                                                 onChange={e => updateFarm(idx, 'address', e.target.value)}
-                                                onBlur={e => {
+                                                onBlur={() => {
                                                     setFarmFieldTouched(idx, 'address');
                                                     validateFields(data, touched, contactTouched, farmTouched, showErrors);
                                                 }}
                                                 required
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                                                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-[#37692F] focus:outline-none focus:ring-2 focus:ring-[#37692F]"
                                             />
                                             {(farmTouched[idx]?.address || showErrors) && localErrors.farms?.[idx]?.address && (
                                                 <p className="mt-1 text-sm text-red-600">{localErrors.farms[idx].address}</p>
@@ -878,15 +912,15 @@ export default function PartnerForm({ partner = null }) {
                                         </div>
 
                                         <div className="md:col-span-2">
-                                            <label className="block text-sm font-medium text-gray-700 mb-1">Soil Type *</label>
+                                            <label className="mb-1 block text-sm font-medium text-gray-700">Soil Type *</label>
                                             <select
                                                 value={farm.soil_type}
                                                 onChange={e => updateFarm(idx, 'soil_type', e.target.value)}
-                                                onBlur={e => {
+                                                onBlur={() => {
                                                     setFarmFieldTouched(idx, 'soil_type');
                                                     validateFields(data, touched, contactTouched, farmTouched, showErrors);
                                                 }}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                                                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-[#37692F] focus:outline-none focus:ring-2 focus:ring-[#37692F]"
                                             >
                                                 <option value="">Select soil type</option>
                                                 <option value="clay">Clay</option>
@@ -907,31 +941,31 @@ export default function PartnerForm({ partner = null }) {
                             type="button"
                             onClick={addFarm}
                             disabled={data.farms.length >= 10}
-                            className="mt-4 flex items-center justify-center w-full py-2 border-2 border-dashed border-gray-300 rounded-md text-[#37692F] hover:bg-green-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="mt-4 flex w-full items-center justify-center rounded-md border-2 border-dashed border-gray-300 py-2 text-[#37692F] transition-colors disabled:cursor-not-allowed disabled:opacity-50 hover:bg-green-50"
                         >
-                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                             </svg>
                             Add Another Farm
                         </button>
 
                         {farmWarning && (
-                            <p className="mt-2 text-sm text-yellow-600 bg-yellow-50 p-2 rounded-md">{farmWarning}</p>
+                            <p className="mt-2 rounded-md bg-yellow-50 p-2 text-sm text-yellow-600">{farmWarning}</p>
                         )}
 
-                        <p className="text-xs text-gray-500 mt-2">
+                        <p className="mt-2 text-xs text-gray-500">
                             You can add up to 10 farms. Required fields are marked with *.
                         </p>
                     </div>
 
                     {/* DTI Registration and Tax ID */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                         <div>
                             <label htmlFor="registration_number" className="block text-sm font-medium text-gray-700">
                                 DTI Registration Number *
                             </label>
                             <div className="flex">
-                                <span className="inline-flex items-center px-2 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+                                <span className="inline-flex items-center rounded-l-md border border-r-0 border-gray-300 bg-gray-50 px-2 text-sm text-gray-500">
                                     BN-
                                 </span>
                                 <input
@@ -946,15 +980,15 @@ export default function PartnerForm({ partner = null }) {
                                         validateFields({ ...data, registration_number: e.target.value }, { ...touched, registration_number: true }, contactTouched, farmTouched, showErrors);
                                         if (e.target.value) handleRegBlur(e);
                                     }}
-                                    className="flex-1 px-3 py-2 border border-gray-300 rounded-none focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                                    className="flex-1 rounded-none border border-gray-300 px-3 py-2 text-gray-900 focus:border-[#37692F] focus:outline-none focus:ring-2 focus:ring-[#37692F]"
                                     maxLength={11}
                                     required
                                 />
-                                <span className="inline-flex items-center px-2 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-500 text-sm">
+                                <span className="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-2 text-sm text-gray-500">
                                     REG
                                 </span>
                             </div>
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="mt-1 text-xs text-gray-500">
                                 Format: BN-YYYY#####REG
                             </p>
                             {(touched.registration_number || showErrors) && (localErrors.registration_number || regUniqueError) && (
@@ -978,11 +1012,11 @@ export default function PartnerForm({ partner = null }) {
                                     validateFields({ ...data, tax_id: e.target.value }, { ...touched, tax_id: true }, contactTouched, farmTouched, showErrors);
                                     if (e.target.value) handleTinBlur(e);
                                 }}
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                                className={`mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-[#37692F] focus:outline-none focus:ring-2 focus:ring-[#37692F] ${(touched.tax_id || showErrors) && (localErrors.tax_id || tinUniqueError) ? 'border-red-500' : ''}`}
                                 maxLength={15}
                                 required
                             />
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="mt-1 text-xs text-gray-500">
                                 Enter 12-digit TIN (e.g., 123-456-789-000)
                             </p>
                             {(touched.tax_id || showErrors) && (localErrors.tax_id || tinUniqueError) && (
@@ -1003,16 +1037,16 @@ export default function PartnerForm({ partner = null }) {
                             rows={4}
                             value={data.notes}
                             onChange={(e) => setData('notes', e.target.value)}
-                            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                            className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-[#37692F] focus:outline-none focus:ring-2 focus:ring-[#37692F]"
                             placeholder="Additional notes about this partner..."
                         />
                     </div>
 
-                    {/* Form Actions */}
+                    {/* Button Actions */}
                     <div className="flex justify-end space-x-2 pt-4">
                         <Link
                             href={route('partners.index')}
-                            className="bg-gray-300 hover:bg-gray-400 text-gray-800 font-medium py-2 px-4 rounded-md transition-colors"
+                            className="rounded-md bg-gray-300 px-4 py-2 font-medium text-gray-800 transition-colors hover:bg-gray-400"
                         >
                             Cancel
                         </Link>
@@ -1028,16 +1062,9 @@ export default function PartnerForm({ partner = null }) {
                                 checkingEmail ||
                                 checkingReg ||
                                 checkingTin ||
-                                localErrors.name ||
-                                localErrors.email ||
-                                localErrors.phone ||
-                                localErrors.address ||
-                                localErrors.registration_number ||
-                                localErrors.tax_id ||
-                                localErrors.contact_persons?.some(e => Object.keys(e).length > 0) ||
-                                localErrors.farms?.some(e => Object.keys(e).length > 0)
+                                isAnyFormError 
                             }
-                            className="bg-[#37692F] hover:bg-[#2a5624] text-white font-medium py-2 px-4 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="rounded-md bg-[#37692F] px-4 py-2 font-medium text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 hover:bg-[#2a5624]"
                         >
                             {processing ? 'Saving...' : (partner ? 'Update Partner' : 'Create Partner')}
                         </button>
