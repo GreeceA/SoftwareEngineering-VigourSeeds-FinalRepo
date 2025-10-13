@@ -1,6 +1,6 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, Link, router } from '@inertiajs/react';
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { debounce } from 'lodash';
 import ArchiveModal from './ArchiveItemsModal';
 import ActivateModal from './ActivateItemsModal';
@@ -49,8 +49,9 @@ export default function Index({ auth, items, filters }) {
 
     const handleSearchChange = (e) => debouncedSearch(e.target.value);
 
+    // Label Helpers
     const getFilterLabel = () => {
-        switch(filter) {
+        switch (filter) {
             case 'active': return 'Active Only';
             case 'archived': return 'Archived Only';
             default: return 'All Items';
@@ -63,12 +64,14 @@ export default function Index({ auth, items, filters }) {
         return 'Default';
     };
 
-    const getStatusColor = (status) => 
+    // Style Helpers
+    const getStatusColor = (status) =>
         status === 'active' ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700";
 
-    const getTypeColor = (type) => 
+    const getTypeColor = (type) =>
         type === 'fertilizer' ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700";
 
+    // Action Handlers
     const handleArchiveConfirm = (id) => {
         router.patch(route('items.archive', id), {}, {
             preserveScroll: true,
@@ -99,6 +102,8 @@ export default function Index({ auth, items, filters }) {
         setSelectedItem(null);
     };
 
+    // NOTE: Removed getPageNumber helper as we now rely on Inertia Link
+
     return (
         <AuthenticatedLayout
             user={auth.user}
@@ -126,7 +131,7 @@ export default function Index({ auth, items, filters }) {
 
             <div className="p-6">
                 {/* Header Section */}
-                <div className="flex justify-between items-center mb-6">
+                <div className="mb-6 flex items-center justify-between">
                     <h1 className="text-2xl font-semibold text-gray-800">Items Management System</h1>
                     <div className="flex space-x-3">
                         {/* Status Filter Dropdown */}
@@ -136,14 +141,14 @@ export default function Index({ auth, items, filters }) {
                                     setShowFilterDropdown(!showFilterDropdown);
                                     setShowSortDropdown(false);
                                 }}
-                                className="flex items-center px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#37692F] bg-white"
+                                className="flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm hover:bg-gray-50 focus:ring-[#37692F] focus:outline-none focus:ring-2"
                             >
-                                <FunnelIcon className="w-4 h-4 mr-2 text-gray-500" />
+                                <FunnelIcon className="mr-2 h-4 w-4 text-gray-500" />
                                 {getFilterLabel()}
-                                <ChevronDownIcon className="w-4 h-4 ml-2 text-gray-500" />
+                                <ChevronDownIcon className="ml-2 h-4 w-4 text-gray-500" />
                             </button>
                             {showFilterDropdown && (
-                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-10">
+                                <div className="absolute right-0 z-10 mt-2 w-48 rounded-md border border-gray-200 bg-white shadow-lg">
                                     <div className="py-1">
                                         {['all', 'active', 'archived'].map((status) => (
                                             <button
@@ -153,7 +158,7 @@ export default function Index({ auth, items, filters }) {
                                                     setShowFilterDropdown(false);
                                                     fetchItems({ status: status !== 'all' ? status : '', page: 1 });
                                                 }}
-                                                className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${filter === status ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                                className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 ${filter === status ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
                                             >
                                                 {status === 'all' ? 'All Items' : status.charAt(0).toUpperCase() + status.slice(1) + ' Only'}
                                             </button>
@@ -170,67 +175,42 @@ export default function Index({ auth, items, filters }) {
                                     setShowSortDropdown(!showSortDropdown);
                                     setShowFilterDropdown(false);
                                 }}
-                                className="flex items-center px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#37692F] bg-white"
+                                className="flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm hover:bg-gray-50 focus:ring-[#37692F] focus:outline-none focus:ring-2"
                             >
-                                <ArrowsUpDownIcon className="w-4 h-4 mr-2 text-gray-500" />
+                                <ArrowsUpDownIcon className="mr-2 h-4 w-4 text-gray-500" />
                                 {getSortLabel()}
-                                <ChevronDownIcon className="w-4 h-4 ml-2 text-gray-500" />
+                                <ChevronDownIcon className="ml-2 h-4 w-4 text-gray-500" />
                             </button>
                             {showSortDropdown && (
-                                <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg border border-gray-200 z-10">
+                                <div className="absolute right-0 z-10 mt-2 w-56 rounded-md border border-gray-200 bg-white shadow-lg">
                                     <div className="py-1">
                                         <button
-                                            onClick={() => {
-                                                setSortBy('id');
-                                                setSortDir('desc');
-                                                setShowSortDropdown(false);
-                                                fetchItems({ sort_by: 'id', sort_dir: 'desc', page: 1 });
-                                            }}
-                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'id' && sortDir === 'desc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                            onClick={() => { setSortBy('id'); setSortDir('desc'); setShowSortDropdown(false); fetchItems({ sort_by: 'id', sort_dir: 'desc', page: 1 }); }}
+                                            className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 ${sortBy === 'id' && sortDir === 'desc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
                                         >
                                             Default (Newest)
                                         </button>
                                         <button
-                                            onClick={() => {
-                                                setSortBy('name');
-                                                setSortDir('asc');
-                                                setShowSortDropdown(false);
-                                                fetchItems({ sort_by: 'name', sort_dir: 'asc', page: 1 });
-                                            }}
-                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'name' && sortDir === 'asc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                            onClick={() => { setSortBy('name'); setSortDir('asc'); setShowSortDropdown(false); fetchItems({ sort_by: 'name', sort_dir: 'asc', page: 1 }); }}
+                                            className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 ${sortBy === 'name' && sortDir === 'asc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
                                         >
                                             Name (A to Z)
                                         </button>
                                         <button
-                                            onClick={() => {
-                                                setSortBy('name');
-                                                setSortDir('desc');
-                                                setShowSortDropdown(false);
-                                                fetchItems({ sort_by: 'name', sort_dir: 'desc', page: 1 });
-                                            }}
-                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'name' && sortDir === 'desc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                            onClick={() => { setSortBy('name'); setSortDir('desc'); setShowSortDropdown(false); fetchItems({ sort_by: 'name', sort_dir: 'desc', page: 1 }); }}
+                                            className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 ${sortBy === 'name' && sortDir === 'desc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
                                         >
                                             Name (Z to A)
                                         </button>
                                         <button
-                                            onClick={() => {
-                                                setSortBy('price_per_unit');
-                                                setSortDir('asc');
-                                                setShowSortDropdown(false);
-                                                fetchItems({ sort_by: 'price_per_unit', sort_dir: 'asc', page: 1 });
-                                            }}
-                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'price_per_unit' && sortDir === 'asc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                            onClick={() => { setSortBy('price_per_unit'); setSortDir('asc'); setShowSortDropdown(false); fetchItems({ sort_by: 'price_per_unit', sort_dir: 'asc', page: 1 }); }}
+                                            className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 ${sortBy === 'price_per_unit' && sortDir === 'asc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
                                         >
                                             Price (Low to High)
                                         </button>
                                         <button
-                                            onClick={() => {
-                                                setSortBy('price_per_unit');
-                                                setSortDir('desc');
-                                                setShowSortDropdown(false);
-                                                fetchItems({ sort_by: 'price_per_unit', sort_dir: 'desc', page: 1 });
-                                            }}
-                                            className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'price_per_unit' && sortDir === 'desc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                            onClick={() => { setSortBy('price_per_unit'); setSortDir('desc'); setShowSortDropdown(false); fetchItems({ sort_by: 'price_per_unit', sort_dir: 'desc', page: 1 }); }}
+                                            className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 ${sortBy === 'price_per_unit' && sortDir === 'desc' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
                                         >
                                             Price (High to Low)
                                         </button>
@@ -246,7 +226,7 @@ export default function Index({ auth, items, filters }) {
                                 placeholder="Search by name or description..."
                                 defaultValue={search}
                                 onChange={handleSearchChange}
-                                className="w-[400px] pl-10 pr-4 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#37692F]"
+                                className="w-[400px] rounded-md border border-gray-300 pl-10 pr-4 py-2 text-sm focus:ring-[#37692F] focus:outline-none focus:ring-2"
                             />
                             <svg
                                 className="absolute left-3 top-2.5 h-5 w-5 text-gray-400"
@@ -266,10 +246,10 @@ export default function Index({ auth, items, filters }) {
                         {/* Add Item Button */}
                         <Link
                             href={route('items.create')}
-                            className="bg-[#37692F] text-white px-4 py-2 rounded-md hover:bg-[#2a5624] flex items-center"
+                            className="flex items-center rounded-md bg-[#37692F] px-4 py-2 text-white hover:bg-[#2a5624]"
                         >
                             <svg
-                                className="w-5 h-5 mr-2"
+                                className="mr-2 h-5 w-5"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -287,14 +267,14 @@ export default function Index({ auth, items, filters }) {
                 </div>
 
                 {/* Items Table */}
-                <div className="overflow-x-auto bg-white shadow-lg rounded-lg">
-                    <table className="w-full text-sm text-left">
-                        <thead className="bg-[#37692F] text-gray-600 uppercase text-xs">
+                <div className="overflow-x-auto rounded-lg bg-white shadow-lg">
+                    <table className="w-full text-left text-sm">
+                        <thead className="bg-[#37692F] text-xs uppercase text-gray-600">
                             <tr>
                                 {['NAME', 'TYPE', 'BASE UNIT', 'PRICE', 'STATUS', 'ACTIONS'].map((header) => (
                                     <th
                                         key={header}
-                                        className="px-6 py-4 font-poppins font-medium text-[14px] text-white"
+                                        className="px-6 py-4 font-poppins text-[14px] font-medium text-white"
                                     >
                                         {header}
                                     </th>
@@ -309,71 +289,84 @@ export default function Index({ auth, items, filters }) {
                                             <div>
                                                 <Link
                                                     href={route('items.show', item.id)}
-                                                    className="font-poppins font-medium text-[13px] text-gray-900 hover:text-[#37692F]"
+                                                    className="font-poppins text-[13px] font-medium text-gray-900 transition-colors duration-200 hover:text-[#37692F]"
                                                 >
                                                     {item.name}
                                                 </Link>
-                                                <div className="font-poppins font-normal text-[12px] text-gray-500 max-w-xs truncate">
-                                                    {item.description}
-                                                </div>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <span
-                                                className={`px-3 py-1 rounded-full text-xs font-poppins font-normal ${getTypeColor(item.type)}`}
+                                                className={`rounded-full px-3 py-1 text-xs font-poppins font-normal ${getTypeColor(item.type)}`}
                                             >
                                                 {item.type}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="font-poppins font-normal text-[13px] text-gray-900">
+                                            <div className="font-poppins text-[13px] font-normal text-gray-900">
                                                 {item.base_unit}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
-                                            <div className="font-poppins font-medium text-[13px] text-gray-900">
-                                                ₱{parseFloat(item.price_per_unit).toFixed(2)}
+                                            <div className="font-poppins text-[13px] font-medium text-gray-900">
+                                                {new Intl.NumberFormat('en-PH', { 
+                                                    style: 'currency',
+                                                    currency: 'PHP',
+                                                    minimumFractionDigits: 2,
+                                                }).format(item.price_per_unit)}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <span
-                                                className={`px-3 py-1 rounded-full text-xs font-poppins font-normal ${getStatusColor(item.status)}`}
+                                                className={`rounded-full px-3 py-1 text-xs font-poppins font-normal ${getStatusColor(item.status)}`}
                                             >
                                                 {item.status}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex space-x-2">
-                                                <Link
-                                                    href={route('items.edit', item.id)}
-                                                    className="text-blue-600 hover:text-blue-800 transition-colors duration-200"
-                                                    title="Edit Item"
-                                                >
-                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                    </svg>
-                                                </Link>
+                                                {item.status === 'archived' ? (
+                                                    <button
+                                                        className="cursor-not-allowed text-gray-400"
+                                                        title="Cannot edit archived item"
+                                                        disabled
+                                                    >
+                                                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                        </svg>
+                                                    </button>
+                                                ) : (
+                                                    <Link
+                                                        href={route('items.edit', item.id)}
+                                                        className="text-blue-600 transition-colors duration-200 hover:text-blue-800"
+                                                        title="Edit Item"
+                                                    >
+                                                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                        </svg>
+                                                    </Link>
+                                                )}
                                                 {item.status === 'active' ? (
                                                     <button
-                                                        className="text-yellow-600 hover:text-yellow-800 transition-colors duration-200"
+                                                        className="text-yellow-600 transition-colors duration-200 hover:text-yellow-800"
                                                         onClick={() => {
                                                             setSelectedItem(item);
                                                             setShowArchiveModal(true);
                                                         }}
                                                         title="Archive Item"
                                                     >
-                                                        <ArchiveBoxIcon className="w-5 h-5" />
+                                                        <ArchiveBoxIcon className="h-5 w-5" />
                                                     </button>
                                                 ) : (
                                                     <button
-                                                        className="text-green-600 hover:text-green-800 transition-colors duration-200"
+                                                        className="text-green-600 transition-colors duration-200 hover:text-green-800"
                                                         onClick={() => {
                                                             setSelectedItem(item);
                                                             setShowActivateModal(true);
                                                         }}
                                                         title="Activate Item"
                                                     >
-                                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                                                         </svg>
                                                     </button>
@@ -392,14 +385,15 @@ export default function Index({ auth, items, filters }) {
                         </tbody>
                     </table>
                 </div>
-                
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between mt-6 gap-4">
+
+                {/* Pagination and Per Page Controls */}
+                <div className="mt-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                     {/* Per Page Selector */}
-                    <div className="flex items-center space-x-2 relative">
+                    <div className="relative flex items-center space-x-2">
                         <span className="text-sm text-gray-700">Show</span>
                         <div className="relative">
                             <select
-                                className="appearance-none border border-gray-300 rounded px-2 py-1 pr-6 text-sm focus:ring-[#37692F] focus:border-[#37692F]"
+                                className="appearance-none rounded border border-gray-300 px-2 py-1 pr-6 text-sm focus:border-[#37692F] focus:ring-[#37692F]"
                                 value={perPage}
                                 onChange={e => {
                                     setPerPage(Number(e.target.value));
@@ -414,24 +408,25 @@ export default function Index({ auth, items, filters }) {
                         <span className="text-sm text-gray-700">entries</span>
                     </div>
 
-                    {/* Pagination Controls */}
+                    {/* Pagination Controls (FIXED) */}
                     {items && items.links && items.links.length > 1 && (
-                        <div className="flex justify-center w-full md:w-auto">
+                        <div className="flex w-full justify-center md:w-auto">
                             <nav className="inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
                                 {items.links.map((link, idx) => {
                                     const href = link.url ? link.url.replace(/&amp;/g, '&') : null;
                                     return (
-                                        <Link
+                                        <Link // Changed from <button> to <Link>
                                             key={idx}
                                             href={href || ''}
                                             preserveScroll
                                             preserveState
+                                            // The disabled logic will now apply to the Link component's styles
                                             className={
-                                                `px-3 py-2 border text-sm font-medium ${
+                                                `border px-3 py-2 text-sm font-medium ${
                                                     link.active
-                                                        ? 'z-10 bg-[#37692F] border-[#37692F] text-white'
-                                                        : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                                                } ${!link.url ? 'pointer-events-none opacity-50' : ''}`
+                                                        ? 'z-10 border-[#37692F] bg-[#37692F] text-white'
+                                                        : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                                                } ${!link.url ? 'pointer-events-none opacity-50 cursor-not-allowed' : ''}` // Added pointer-events-none and cursor style
                                             }
                                             dangerouslySetInnerHTML={{ __html: link.label }}
                                         />
@@ -446,16 +441,16 @@ export default function Index({ auth, items, filters }) {
             {/* Modals */}
             {showArchiveModal && (
                 <ArchiveModal
-                    show={showArchiveModal}
-                    onClose={handleArchiveCancel}
+                    onConfirm={handleArchiveConfirm}
+                    onCancel={handleArchiveCancel}
                     item={selectedItem}
                 />
             )}
 
             {showActivateModal && (
                 <ActivateModal
-                    show={showActivateModal}
-                    onClose={handleActivateCancel}
+                    onConfirm={handleActivateConfirm}
+                    onCancel={handleActivateCancel}
                     item={selectedItem}
                 />
             )}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from '@inertiajs/react';
+import { Link, router } from '@inertiajs/react';
 import axios from 'axios';
 
 export default function SeedForm({
@@ -20,6 +20,7 @@ export default function SeedForm({
     const [priceError, setPriceError] = useState('');
     const [growthCycleError, setGrowthCycleError] = useState('');
     const [checkingName, setCheckingName] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
 
     // Touched state for required fields
     const [touched, setTouched] = useState({
@@ -30,7 +31,7 @@ export default function SeedForm({
         storage_requirements: false,
     });
 
-    // Format price
+    // Format price on mount
     useEffect(() => {
         if (isEdit && data.price_per_unit) {
             const raw = String(data.price_per_unit).replace(/,/g, '');
@@ -45,7 +46,6 @@ export default function SeedForm({
     // Empty input helper
     const isFieldRequiredEmpty = (fieldName) => {
         const value = data[fieldName];
-
         const rawValue = typeof value === 'string' ? value.replace(/,/g, '').trim() : value;
         return touched[fieldName] && (!rawValue || rawValue === 0);
     };
@@ -114,6 +114,7 @@ export default function SeedForm({
             setPriceError('');
             return;
         }
+        
         const value = parseFloat(raw);
         if (value < 0.01) {
             setPriceError('The price must be greater than zero.');
@@ -161,7 +162,35 @@ export default function SeedForm({
             return;
         }
 
-        onSubmit(e);
+        // Prepare clean data for submission
+        const cleanPrice = data.price_per_unit.replace(/,/g, '');
+        
+        const submitData = {
+            seed_variety: data.seed_variety,
+            price_per_unit: parseFloat(cleanPrice),
+            growth_cycle: data.growth_cycle,
+            soil_type: data.soil_type,
+            storage_requirements: data.storage_requirements,
+            notes: data.notes || '',
+            ...(isEdit && { status: data.status }),
+        };
+
+        setIsProcessing(true);
+
+        const routeName = isEdit ? 'seeds.update' : 'seeds.store';
+        const routeParams = isEdit ? seedId : undefined;
+
+        router[isEdit ? 'put' : 'post'](route(routeName, routeParams), submitData, {
+            preserveState: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                setIsProcessing(false);
+            },
+            onError: (errors) => {
+                setIsProcessing(false);
+                console.log('Form errors:', errors);
+            },
+        });
     };
 
     const isAnyRequiredFieldEmpty = 
@@ -172,7 +201,7 @@ export default function SeedForm({
         isFieldRequiredEmpty('storage_requirements');
 
     const isSubmitDisabled =
-        processing ||
+        isProcessing ||
         checkingName ||
         !!nameUniqueError ||
         !!priceError ||
@@ -352,7 +381,7 @@ export default function SeedForm({
                     </label>
                     <textarea
                         rows="4"
-                        value={data.notes}
+                        value={data.notes || ''}
                         onChange={(e) => setData('notes', e.target.value)}
                         className={`mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-[#37692F] focus:outline-none focus:ring-2 focus:ring-[#37692F] ${
                             errors.notes ? 'border-red-500' : ''
@@ -378,7 +407,7 @@ export default function SeedForm({
                     disabled={isSubmitDisabled}
                     className="rounded-md bg-[#37692F] px-4 py-2 font-medium text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 hover:bg-[#2a5624]"
                 >
-                    {processing ? `${isEdit ? 'Updating' : 'Creating'}...` : submitLabel}
+                    {isProcessing ? `${isEdit ? 'Updating' : 'Creating'}...` : submitLabel}
                 </button>
             </div>
         </form>

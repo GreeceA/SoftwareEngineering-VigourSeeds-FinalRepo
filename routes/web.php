@@ -105,6 +105,8 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('items/{item}/archive', [ItemController::class, 'archive'])->name('items.archive');
     Route::patch('items/{item}/activate', [ItemController::class, 'activate'])->name('items.activate');
     Route::get('/items/{item}', [ItemController::class, 'show'])->name('items.show');
+        // Validation routes - Item fields
+        Route::post('/check/item/name', [ItemController::class, 'checkName'])->name('items.checkName');
     
 });
 

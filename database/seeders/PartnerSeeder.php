@@ -178,7 +178,8 @@ class PartnerSeeder extends Seeder
             }
         ];
 
-        return $faker->unique()->randomElement($patterns)();
+        $pattern = $faker->randomElement($patterns);
+        return $pattern();
     }
 
     // Generate natural-sounding farm names

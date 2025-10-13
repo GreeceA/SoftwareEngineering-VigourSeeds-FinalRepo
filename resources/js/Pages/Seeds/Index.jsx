@@ -341,7 +341,11 @@ export default function Index({ auth, seeds, filters }) {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="font-poppins text-[13px] font-medium text-gray-900">
-                                                ₱{seed.price_per_unit}
+                                                {new Intl.NumberFormat('en-PH', { 
+                                                    style: 'currency',
+                                                    currency: 'PHP',
+                                                    minimumFractionDigits: 2,
+                                                }).format(seed.price_per_unit)}
                                             </div>
                                             <div className="font-poppins text-[12px] font-normal text-gray-500">
                                                 per unit

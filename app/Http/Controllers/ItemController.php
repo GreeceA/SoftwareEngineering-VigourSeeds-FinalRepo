@@ -2,56 +2,51 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Item;
 use App\Http\Requests\ItemRequest;
+use App\Models\Item;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class ItemController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
+    // Display a listing of the resource.
     public function index(Request $request)
     {
-        $query = Item::query();
-
-        // Filter by status if provided
-        if ($request->has('status') && in_array($request->status, ['active', 'archived'])) {
-            $query->where('status', $request->status);
-        }
-
-        // Search functionality
-        if ($request->has('search') && $request->search) {
-            $query->where(function($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->search . '%')
-                  ->orWhere('description', 'like', '%' . $request->search . '%');
-            });
-        }
-
+        $perPage = $request->get('per_page', 10);
+        
         $sortable = ['id', 'name', 'price_per_unit'];
         $sortBy = in_array($request->get('sort_by'), $sortable) ? $request->get('sort_by') : 'id';
         $sortDir = $request->get('sort_dir') === 'asc' ? 'asc' : 'desc';
 
-        $items = $query->orderBy($sortBy, $sortDir)->paginate($request->get('per_page', 15));
+        $query = Item::query()
+            // Filter by status if provided
+            ->when($request->has('status') && in_array($request->status, ['active', 'archived']), function ($query) use ($request) {
+                $query->where('status', $request->status);
+            })
+            // Search functionality
+            ->when($request->has('search') && $request->search, function ($query) use ($request) {
+                $query->where(function($q) use ($request) {
+                    $q->where('name', 'like', '%' . $request->search . '%')
+                      ->orWhere('description', 'like', '%' . $request->search . '%');
+                });
+            })
+            ->orderBy($sortBy, $sortDir);
+
+        $items = $query->paginate($perPage)->withQueryString();
 
         return Inertia::render('Items/Index', [
             'items' => $items,
-            'filters' => $request->only(['search', 'status'])
+            'filters' => $request->only(['search', 'status', 'sort_by', 'sort_dir', 'per_page']),
         ]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
+    // Show the form for creating a new resource.
     public function create()
     {
         return Inertia::render('Items/Create');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
+    // Store a newly created resource in storage.
     public function store(ItemRequest $request)
     {
         Item::create($request->validated());
@@ -60,9 +55,7 @@ class ItemController extends Controller
             ->with('success', 'Item created successfully.');
     }
 
-    /**
-     * Display the specified resource.
-     */
+    // Display the specified resource.
     public function show(Item $item)
     {
         return Inertia::render('Items/Show', [
@@ -73,19 +66,15 @@ class ItemController extends Controller
         ]);
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
+    // Show the form for editing the specified resource.
     public function edit(Item $item)
     {
         return Inertia::render('Items/Edit', [
-            'item' => $item
+            'item' => $item,
         ]);
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
+    // Update the specified resource in storage.
     public function update(ItemRequest $request, Item $item)
     {
         $item->update($request->validated());
@@ -94,10 +83,7 @@ class ItemController extends Controller
             ->with('success', 'Item updated successfully.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     * This method archives the item instead of deleting it.
-     */
+    // Remove the specified resource from storage (archives the item).
     public function destroy(Item $item)
     {
         $item->archive();
@@ -106,9 +92,7 @@ class ItemController extends Controller
             ->with('success', 'Item archived successfully.');
     }
 
-    /**
-     * Archive the specified item.
-     */
+    // Archive the specified item.
     public function archive(Item $item)
     {
         $item->archive();
@@ -117,9 +101,7 @@ class ItemController extends Controller
             ->with('success', 'Item archived successfully.');
     }
 
-    /**
-     * Activate the specified item.
-     */
+    // Activate the specified item.
     public function activate(Item $item)
     {
         $item->activate();
@@ -128,5 +110,23 @@ class ItemController extends Controller
             ->with('success', 'Item activated successfully.');
     }
 
-    
+    // AJAX Uniqueness Check for Item Name.
+    public function checkName(Request $request)
+    {
+        $exists = Item::where('name', $request->name)
+            ->when($request->itemId, function ($query) use ($request) {
+                $query->where('id', '!=', $request->itemId);
+            })
+            ->exists();
+
+        if ($exists) {
+            return response()->json([
+                'errors' => [
+                    'name' => ['An item with this name already exists. Please enter a different item name.'],
+                ],
+            ], 422);
+        }
+        
+        return response()->json(['success' => true]);
+    }
 }
