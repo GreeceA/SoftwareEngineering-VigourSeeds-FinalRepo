@@ -1,5 +1,5 @@
 import React from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react'; // Added Link just in case for better practice
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import ContractForm from './ContractForm';
 
@@ -15,7 +15,10 @@ export default function Create({ auth, partners, seeds }) {
             }
         >
             <Head title="Create Contract" />
+            
+            {/* The ContractForm component now handles the breadcrumb and content wrapper */}
             <ContractForm partners={partners} seeds={seeds} />
+            
         </AuthenticatedLayout>
     );
 }

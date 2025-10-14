@@ -1,9 +1,16 @@
+// File: Contracts/Edit.jsx
+
 import React from 'react';
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import ContractForm from './ContractForm';
 
 export default function Edit({ auth, partners, seeds, contract }) {
+    // Determine if the contract is in a FINAL, NON-EDITABLE state (Terminated, Cancelled, Completed)
+    // Tandaan: can_be_edited = true for 'draft' and 'under_review' (Base on your Model)
+    const isFinalState = contract.status === 'terminated' || contract.status === 'cancelled' || contract.status === 'completed';
+    const isEditable = contract.can_be_edited || contract.can_be_partially_edited;
+    
     return (
         <AuthenticatedLayout
             user={auth.user}
@@ -14,8 +21,26 @@ export default function Edit({ auth, partners, seeds, contract }) {
                 </h2>
             }
         >
-            <Head title="Edit Contract" />
-            <ContractForm partners={partners} seeds={seeds} contract={contract} />
+            <Head title={`Edit Contract: ${contract.contract_name}`} />
+
+            {/* 👇 KITA NA LANG ANG WARNING KUNG FINAL/NON-EDITABLE STATUS LANG */}
+            {isFinalState && !isEditable && (
+                <div className="p-6">
+                    <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4" role="alert">
+                        <p className="font-bold">Contract is Closed</p>
+                        <p>This contract is in **{contract.status.toUpperCase()}** status and cannot be modified. It is locked for historical purposes.</p>
+                        <Link href={route('contracts.show', contract.id)} className="text-red-500 underline mt-2 block">View Details</Link>
+                    </div>
+                </div>
+            )}
+
+            {/* RENDER THE FORM: The ContractForm will handle enabling/disabling individual fields
+                based on the specific 'can_be_edited' or 'can_be_partially_edited' flags. */}
+            <ContractForm 
+                partners={partners} 
+                seeds={seeds} 
+                contract={contract} 
+            />
         </AuthenticatedLayout>
     );
 }

@@ -10,21 +10,35 @@ return new class extends Migration
     {
         Schema::create('contracts', function (Blueprint $table) {
             $table->id();
+            
+            // Link to Partner (REQUIRED)
             $table->foreignId('partner_id')->constrained()->onDelete('cascade');
-            $table->string('title');
-            $table->string('contract_file')->nullable();
-            // $table->string('original_file_name')->nullable();
-            $table->date('contract_date');
+            
+            // CRITICAL NEW FIELD: Link to the specific Partner Farm where the contract will be executed
+            $table->foreignId('farm_id')->constrained('partner_farms')->onDelete('cascade'); 
+            
+            $table->string('contract_name'); 
+            
+            // Contract Files are REQUIRED
+            $table->string('contract_file');
+            $table->string('original_file_name');
+            
+            $table->date('signing_date'); 
             $table->date('effective_date')->nullable();
             $table->date('expiration_date')->nullable();
+            
+            // CRITICAL: Buyback price committed (high precision)
+            $table->decimal('buyback_price_per_unit', 10, 4); 
+
             $table->text('notes')->nullable();
             $table->enum('status', [
                 'draft', 
+                'under_review', 
                 'active', 
                 'suspended', 
                 'terminated', 
                 'cancelled', 
-                'archived'
+                'completed'
             ])->default('draft');
             $table->timestamps();
         });

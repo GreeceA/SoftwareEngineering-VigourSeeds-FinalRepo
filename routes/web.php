@@ -18,6 +18,7 @@ use App\Http\Controllers\ItemController;
 
 
 
+
 // -----------------
 // Public Routes
 // -----------------
@@ -86,6 +87,7 @@ Route::middleware(['auth'])->group(function () {
         ->name('contracts.change-status');
     Route::get('partners/search', [ContractController::class, 'searchPartners'])
         ->name('partners.search');
+    Route::post('/contracts/{contract}/cancel', [ContractController::class, 'destroy'])->name('contracts.cancel');
     Route::get('/contracts/preview-pdf/{filename}', [ContractController::class, 'previewDocxAsPdf']);
         // Download routes - Contract files
             Route::get('/contracts/download-pdf/{filename}', [ContractController::class, 'downloadAsPdf']);
