@@ -246,8 +246,24 @@ export default function ContractForm({ partners, seeds, contract = null }) {
     }
 
     // Determine edit permissions
-    const isFullyEditable = !isEditing || contract?.can_be_edited;
-    const isPartiallyEditable = isEditing && (contract?.can_be_edited || contract?.can_be_partially_edited);
+    const isDraft = isEditing && contract?.status === 'draft';
+    const isFullyEditable = !isEditing || isDraft || contract?.can_be_edited;
+    const isPartiallyEditable = isEditing && contract?.status === 'under_review' && contract?.can_be_partially_edited;
+    
+    const isLocked = (field) => {
+        if (!isPartiallyEditable) return false; // Only lock if partial edit
+        // Editable fields in under_review
+        const editableFields = [
+            'expiration_date',
+            'buyback_price_per_unit',
+            'contract_file',
+            'notes',
+            'planting_date',
+            'expected_first_harvest_date',
+            'expected_buyback_amount',
+        ];
+        return !editableFields.includes(field);
+    };
     
     // Check if required fields for commitment are filled (used for disabling seed selector)
     const requiredContractFieldsFilled = 
@@ -410,7 +426,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                 onChange={(e) => setData('expiration_date', e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                 min={expirationMin}
-                                disabled={!data.effective_date || !isFullyEditable}
+                                disabled={!data.effective_date || isLocked('expiration_date')}
                             />
                             {!data.effective_date && (<span className="text-xs text-gray-500 block">Select Effective Date first.</span>)}
                             {errors.expiration_date && <p className="mt-1 text-sm text-red-600">{errors.expiration_date}</p>}
@@ -429,7 +445,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                     className="w-full px-3 py-2 pl-8 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                     placeholder="0.0001"
                                     required
-                                    disabled={!isFullyEditable && !contract?.can_be_partially_edited}
+                                    disabled={isLocked('buyback_price_per_unit')}
                                 />
                             </div>
                             {errors.buyback_price_per_unit && <p className="mt-1 text-sm text-red-600">{errors.buyback_price_per_unit}</p>}
@@ -447,7 +463,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                 accept=".pdf,.doc,.docx"
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                 required={!isEditing || !contract.contract_file}
-                                disabled={!isFullyEditable && !contract?.can_be_partially_edited}
+                                disabled={isLocked('contract_file')}
                             />
                             {isEditing && contract.contract_file && (
                                 <p className="text-xs text-gray-500 mt-1">Current File: {contract.original_file_name || 'Attached'}</p>
@@ -463,7 +479,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                 onChange={(e) => setData('notes', e.target.value)}
                                 rows={3}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
-                                disabled={!isFullyEditable && !contract?.can_be_partially_edited}
+                                disabled={isLocked('notes')}
                             />
                             {errors.notes && <p className="mt-1 text-sm text-red-600">{errors.notes}</p>}
                         </div>
@@ -614,7 +630,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                                         required
                                                         // Editable if Full or Partial edit is allowed
-                                                        disabled={!data.effective_date || (!isFullyEditable && !contract?.can_be_partially_edited)}
+                                                        disabled={!data.effective_date || isLocked('planting_date')}
                                                     />
                                                     {!data.effective_date && (<p className="text-xs text-gray-500 mt-1">Select Effective Date first.</p>)}
                                                     {errors[`seeds.${index}.planting_date`] && <p className="text-red-500 text-xs mt-1">{errors[`seeds.${index}.planting_date`]}</p>}
@@ -638,7 +654,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                                         required
                                                         // Editable if Full or Partial edit is allowed
-                                                        disabled={impossible || !seed.planting_date || (!isFullyEditable && !contract?.can_be_partially_edited)}
+                                                        disabled={impossible || !seed.planting_date || isLocked('expected_first_harvest_date')}
                                                     />
                                                     {impossible && (<p className="text-red-500 text-xs mt-1">Adjust dates or contract duration.</p>)}
                                                     {errors[`seeds.${index}.expected_first_harvest_date`] && <p className="text-red-500 text-xs mt-1">{errors[`seeds.${index}.expected_first_harvest_date`]}</p>}
@@ -680,7 +696,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                                         required
                                                         // Editable if Full or Partial edit is allowed
-                                                        disabled={!isFullyEditable && !contract?.can_be_partially_edited}
+                                                        disabled={isLocked('expected_buyback_amount')}
                                                     />
                                                     {errors[`seeds.${index}.expected_buyback_amount`] && <p className="text-red-500 text-xs mt-1">{errors[`seeds.${index}.expected_buyback_amount`]}</p>}
                                                 </div>

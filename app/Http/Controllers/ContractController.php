@@ -276,8 +276,8 @@ class ContractController extends Controller
             }
 
             DB::commit();
-            return redirect()->route('contracts.index')->with('success', 'Contract updated successfully.');
-
+            return redirect()->route('contracts.show', $contract->id)
+                ->with('success', 'Contract updated successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
             if (isset($validated['contract_file']) && $request->hasFile('contract_file')) {
