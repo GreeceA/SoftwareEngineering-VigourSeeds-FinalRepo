@@ -1,17 +1,26 @@
 <?php
+
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ContractRequest;
 use App\Models\Contract;
-use App\Models\ContractSeedCommitment; 
+use App\Models\ContractSeedCommitment;
 use App\Models\Partner;
 use App\Models\Seed;
-use App\Models\PartnerFarm;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Illuminate\Validation\Rule;
-use App\Http\Requests\ContractRequest; 
-use Illuminate\Http\Request;
+use App\Models\PartnerFarm;
+use PhpOffice\PhpWord\IOFactory;
+use Dompdf\Dompdf;
+use Illuminate\Support\Facades\Response;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\ContractNotification;
+use App\Mail\ContractReviewMail; // Uncomment when you have your Mailable
+use App\Models\User; // Uncomment if you want to fetch internal users dynamically
+
 
 class ContractController extends Controller
 {
@@ -22,12 +31,12 @@ class ContractController extends Controller
             ->paginate(15)
             ->through(fn ($contract) => [
                 'id' => $contract->id,
-                'contract_name' => $contract->contract_name, 
+                'contract_name' => $contract->contract_name,
                 'partner_name' => $contract->partner->name,
-                'signing_date' => $contract->signing_date->format('Y-m-d'), 
+                'signing_date' => $contract->signing_date->format('Y-m-d'),
                 'effective_date' => $contract->effective_date?->format('Y-m-d'),
                 'expiration_date' => $contract->expiration_date?->format('Y-m-d'),
-                'seed_varieties' => $contract->contractSeedCommitments 
+                'seed_varieties' => $contract->contractSeedCommitments
                     ->take(3)
                     ->map(fn ($item) => $item->seed->seed_variety)
                     ->implode(', '),
@@ -43,12 +52,15 @@ class ContractController extends Controller
 
     public function create()
     {
-        $partners = Partner::with('farms:id,partner_id,location_name,soil_type')->select('id', 'name')->get(); 
-        $seeds = Seed::select('id', 'seed_variety', 'price_per_unit', 'growth_cycle', 'soil_type')->get(); 
+        $partners = Partner::with('farms:id,partner_id,location_name,soil_type')
+            ->select('id', 'name')
+            ->get();
+        
+        $seeds = Seed::select('id', 'seed_variety', 'price_per_unit', 'growth_cycle', 'soil_type')->get();
 
         return Inertia::render('Contracts/Create', [
             'partners' => $partners,
-            'seeds' => $seeds, 
+            'seeds' => $seeds,
         ]);
     }
 
@@ -59,16 +71,20 @@ class ContractController extends Controller
         DB::beginTransaction();
 
         try {
+            // Handle file upload
             if ($request->hasFile('contract_file')) {
                 $file = $request->file('contract_file');
                 $validated['contract_file'] = $file->store('contracts', 'public');
                 $validated['original_file_name'] = $file->getClientOriginalName();
             } else {
+                // This exception should only trigger if validation was bypassed
                 throw new \Exception('Contract file is required.');
             }
 
+            // Create contract (Status defaults to 'draft')
             $contract = Contract::create($validated); 
 
+            // Create seed commitments
             foreach ($validated['seeds'] as $seedData) {
                 ContractSeedCommitment::create([
                     'contract_id' => $contract->id,
@@ -100,6 +116,7 @@ class ContractController extends Controller
 
     public function show(Contract $contract)
     {
+        // Eager load all necessary relationships
         $contract->load(['partner.farms', 'farm', 'contractSeedCommitments.seed']);
 
         return Inertia::render('Contracts/Show', [
@@ -124,7 +141,7 @@ class ContractController extends Controller
                     'seed_quantity' => $item->seed_quantity,
                     'unit' => $item->unit,
                     'seed_price_at_contract' => $item->seed_price_at_contract,
-                    'planting_date' => $item->planting_date->format('Y-m-d'), 
+                    'planting_date' => $item->planting_date->format('Y-m-d'),
                     'expected_first_harvest_date' => $item->expected_first_harvest_date->format('Y-m-d'),
                     'agreed_cycles' => $item->agreed_cycles,
                     'expected_buyback_amount' => $item->expected_buyback_amount,
@@ -166,7 +183,7 @@ class ContractController extends Controller
                         'seed_quantity' => $item->seed_quantity,
                         'unit' => $item->unit,
                         'seed_price_at_contract' => $item->seed_price_at_contract,
-                        'planting_date' => $item->planting_date ? $item->planting_date->format('Y-m-d') : null, 
+                        'planting_date' => $item->planting_date ? $item->planting_date->format('Y-m-d') : null,
                         'expected_first_harvest_date' => $item->expected_first_harvest_date ? $item->expected_first_harvest_date->format('Y-m-d') : null,
                         'agreed_cycles' => $item->agreed_cycles,
                         'expected_buyback_amount' => $item->expected_buyback_amount,
@@ -180,7 +197,9 @@ class ContractController extends Controller
                     ];
                 })->values(),
             ],
-            'partners' => Partner::with('farms:id,partner_id,location_name,soil_type')->select('id', 'name')->get(),
+            'partners' => Partner::with('farms:id,partner_id,location_name,soil_type')
+                ->select('id', 'name')
+                ->get(),
             'seeds' => Seed::select('id', 'seed_variety', 'price_per_unit', 'growth_cycle', 'soil_type')->get(),
         ]);
     }
@@ -210,14 +229,22 @@ class ContractController extends Controller
                 $validated['original_file_name'] = $file->getClientOriginalName();
             }
 
-            // Only allow certain fields for partial edit
+            // Restrict $validated array for partial updates
             if ($isPartiallyEditable && !$isFullyEditable) {
-                $updatableFields = ['notes', 'expiration_date', 'buyback_price_per_unit', 'contract_file', 'original_file_name'];
+                $updatableFields = [
+                    'notes',
+                    'expiration_date',
+                    'buyback_price_per_unit',
+                    'contract_file',
+                    'original_file_name',
+                    'seeds'
+                ];
                 $validated = array_intersect_key($validated, array_flip($updatableFields));
             }
 
             $contract->update($validated);
 
+            // 1. FULL EDIT: Delete/recreate commitments (Only allowed if isFullyEditable is true)
             if ($isFullyEditable && isset($validated['seeds'])) {
                 $contract->contractSeedCommitments()->delete(); 
 
@@ -236,7 +263,8 @@ class ContractController extends Controller
                     ]);
                 }
             }
-            
+
+            // 2. PARTIAL EDIT: Update dynamic fields only
             if ($isPartiallyEditable && !$isFullyEditable && isset($validated['seeds'])) {
                 foreach ($validated['seeds'] as $seedData) {
                     ContractSeedCommitment::where('id', $seedData['id'])->update([
@@ -261,7 +289,7 @@ class ContractController extends Controller
 
     public function destroy(Contract $contract)
     {
-        $contract->update(['status' => 'cancelled']); 
+        $contract->update(['status' => 'cancelled']);
 
         return redirect()->route('contracts.index')
             ->with('success', 'Contract cancelled successfully.');
@@ -269,30 +297,46 @@ class ContractController extends Controller
 
     public function changeStatus(Request $request, Contract $contract)
     {
-        $validated = $request->validate([
-            'status' => ['required', Rule::in([
-                'draft', 'under_review', 'active', 'suspended', 'terminated', 'cancelled', 'completed'
-            ])],
-        ]);
+        // NOTE: $request->validate() is typically preferred over manual checks when possible,
+        // but since we need to log context, the current structure is fine.
 
-        $newStatus = $validated['status'];
+        // Try to get status from all possible sources
+        $status = $request->input('status') ?? ($request->json('status') ?? null);
 
-        if (!$contract->canTransitionTo($newStatus)) {
+        if (!$status) {
+            // Using the validation error response for consistent front-end error handling
             return redirect()->back()->withErrors([
-                'error' => "Cannot transition from {$contract->status} to {$newStatus}."
+                'status' => 'The status field is required.'
             ]);
         }
 
-        if (in_array($newStatus, ['active', 'under_review']) && !$contract->contract_file) {
+        if (!in_array($status, [
+            'draft', 'under_review', 'active', 'suspended', 'terminated', 'cancelled', 'completed'
+        ])) {
             return redirect()->back()->withErrors([
-                'error' => 'Contract file is required to move the contract out of draft status.'
+                'status' => 'Invalid status value.'
             ]);
         }
 
-        $contract->update(['status' => $newStatus]);
+        // --- CHECK 1: Model Transition Rule ---
+        if (!$contract->canTransitionTo($status)) {
+            return redirect()->back()->withErrors([
+                'error' => "Cannot transition from {$contract->status} to {$status}. Not allowed by model rules."
+            ]);
+        }
+
+        // --- CHECK 2: CRITICAL FILE REQUIREMENT ---
+        if (in_array($status, ['active', 'under_review']) && !$contract->contract_file) {
+            return redirect()->back()->withErrors([
+                'status' => 'Contract file is required to move the contract out of draft status.',
+            ]);
+        }
+
+        // --- EXECUTION: Final Status Update ---
+        $contract->update(['status' => $status]);
 
         return redirect()->back()
-            ->with('success', "Contract status changed to {$newStatus}.");
+            ->with('success', "Contract status successfully changed to {$status}.");
     }
 
     private function getAvailableTransitions($contract)
@@ -309,12 +353,54 @@ class ContractController extends Controller
 
         return $transitions[$contract->status] ?? [];
     }
-    
+
     private function makeDownloadName($contract, $ext)
     {
         $title = preg_replace('/[^A-Za-z0-9]+/', '_', $contract->contract_name);
         $partner = preg_replace('/[^A-Za-z0-9]+/', '_', $contract->partner->name);
-        $date = $contract->signing_date ? date('Ymd', strtotime($contract->signing_date)) : 'nodate'; 
+        $date = $contract->signing_date ? date('Ymd', strtotime($contract->signing_date)) : 'nodate';
         return "{$title}_{$partner}_{$date}_Contract.{$ext}";
+    }
+
+    public function sendEmail(Contract $contract)
+    {
+        // Check missing file/email (your original logic, which is fine for basic check)
+        if (!$contract->partner->email || !$contract->contract_file) {
+            return redirect()->back()->with('error', 'Missing partner email or contract file.');
+        }
+
+        try {
+            $to = $contract->partner->email;
+            // IMPORTANT: In a real system, you'd fetch this dynamically (User::whereIn('role', ...)->pluck('email'))
+            $internalCc = ['legal@yourcompany.com', 'salesmanager@yourcompany.com']; 
+            
+            // EXECUTION: Uses the Mailable class to send the structured email
+            Mail::to($to)->cc($internalCc)->send(new ContractReviewMail($contract, $internalCc));
+
+            \Log::info("Contract #{$contract->id} sent for review via email to: {$to}, CC: " . implode(', ', $internalCc));
+
+            return redirect()->back()->with('success', 'Contract email successfully sent to partner and internal team!');
+        } catch (\Exception $e) {
+            \Log::error("Email failed for Contract ID {$contract->id}: " . $e->getMessage());
+            return redirect()->back()->with('error', 'Email service failed. Please try again or check logs.');
+        }
+    }
+
+    public function showPartner($id)
+    {
+        $contract = Contract::findOrFail($id);
+        // Add any partner-specific logic/checks here
+        return view('partner.contracts.show', compact('contract'));
+    }
+
+    public function verifyPartner($id)
+    {
+        $contract = Contract::findOrFail($id);
+        // Add your verification logic here, e.g.:
+        $contract->status = 'active';
+        $contract->save();
+
+        return redirect()->route('partner.contracts.show', $contract->id)
+            ->with('success', 'Contract verified successfully!');
     }
 }

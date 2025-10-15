@@ -1,22 +1,58 @@
 import React, { useState } from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
+import { Head, Link, useForm, router } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
 import DraftActiveModal from './Draft-ActiveModal'; 
 import ContractFilePreviewModal from './ContractFilePreviewModal';
+import ActivateContractModal from './ActivateContractModal';
 
 
 export default function Show({ auth, contract }) {
     const [showStatusModal, setShowStatusModal] = useState(false);
-    const [selectedStatus, setSelectedStatus] = useState('');
-
+    const [statusToTransition, setStatusToTransition] = useState('');
     const [showFilePreview, setShowFilePreview] = useState(false);
-    const handleOpenPreview = () => setShowFilePreview(true);
-    const handleClosePreview = () => setShowFilePreview(false);
 
     const { post, processing } = useForm();
 
-    
+    const handleOpenPreview = () => setShowFilePreview(true);
+    const handleClosePreview = () => setShowFilePreview(false);
+
+    // Handler to open the modal for transition selection/confirmation
+    const handleOpenStatusModal = (status) => {
+        setStatusToTransition(status);
+        setShowStatusModal(true);
+    };
+
+    // Handler executed AFTER user confirms the action in the modal
+    const handleTransitionConfirm = (newStatus) => {
+        // Use Inertia's post method to hit the dedicated changeStatus route
+        // NOTE: The data is passed directly as the second argument, not nested inside 'data: {}'
+        router.post(route('contracts.change-status', contract.id), { status: newStatus }, {
+            onSuccess: () => {
+                setShowStatusModal(false);
+                setStatusToTransition('');
+            },
+            onError: (errors) => {
+                setShowStatusModal(false);
+                setStatusToTransition('');
+                // The backend ensures the error is returned under the 'status' key or 'error' key
+                const errorMsg = errors.status || errors.error || "An unknown error occurred.";
+                alert(`Transition Failed: ${errorMsg}`);
+            }
+        });
+    };
+
+    // Handler for the direct 'Cancel Contract' button
+    const handleCancel = () => {
+        if (confirm('Are you sure you want to cancel this contract?')) {
+            router.delete(route('contracts.destroy', contract.id), {
+                onSuccess: () => {
+                    // Page refresh handled by Inertia
+                }
+            });
+        }
+    };
+
     // Helper to format currency for display
     const formatPrice = (price, decimals = 2) => {
         if (price === null || price === undefined) return '-';
@@ -30,7 +66,7 @@ export default function Show({ auth, contract }) {
 
     // Helper to format dates
     const formatDate = (dateString) => {
-        if (!dateString) return 'Not set';
+        if (!dateString || dateString === '0000-00-00') return 'Not set';
         return new Date(dateString).toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric',
@@ -38,7 +74,7 @@ export default function Show({ auth, contract }) {
         });
     }
 
-    // UPDATED Status Colors to include new states
+    // UPDATED Status Colors
     const getStatusColor = (status) => {
         const colors = {
             draft: 'bg-gray-200 text-gray-800',
@@ -52,32 +88,33 @@ export default function Show({ auth, contract }) {
         return colors[status] || 'bg-gray-100 text-gray-700';
     };
 
-    const handleStatusChange = () => {
-        if (selectedStatus) {
-            post(route('contracts.change-status', contract.id), {
-                data: { status: selectedStatus },
-                onSuccess: () => {
-                    setShowStatusModal(false);
-                    setSelectedStatus('');
-                }
-            });
-        }
-    };
-
-    // UPDATED: Changed destroy to status transition ('cancelled' or 'terminated' is better than 'archived')
-    const handleCancel = () => {
-        if (confirm('Are you sure you want to cancel this contract?')) {
-            post(route('contracts.cancel', contract.id), {
-                onSuccess: () => {
-                    // Optionally redirect or show a message
-                }
-            });
-        }
-    };
-
 
     // Adjusting contract data access to new names
-    const contractCommitments = contract.contract_commitments || []; // Renamed relation
+    const contractCommitments = contract.contract_commitments || [];
+    const farmSoilType = contract.farm?.soil_type?.toUpperCase() || 'N/A';
+
+    const handleSendEmail = () => {
+        if (!contract.partner?.email) {
+            alert("Cannot send email: Partner email address is missing.");
+            return;
+        }
+        
+        if (confirm(`Confirm sending the finalized contract to ${contract.partner.name}? This uses the official system email service.`)) {
+            // Use the useForm post instance to hit the backend endpoint
+            post(route('contracts.sendEmail', contract.id), {}, {
+                onSuccess: () => {
+                    // Show the success message handled by Inertia flash data (if you want an alert instead of flash: alert("Email sent successfully!");)
+                    // The backend redirects back with flash messages which Inertia should display.
+                },
+                onError: (errors) => {
+                    // The backend returns flash errors like 'Email service failed'
+                    console.error("Email failed:", errors);
+                },
+                preserveState: true,
+                preserveScroll: true
+            });
+        }
+    };
 
     return (
         <AuthenticatedLayout
@@ -89,7 +126,6 @@ export default function Show({ auth, contract }) {
                 </h2>
             }
         >
-            {/* CHANGED: title to contract_name */}
             <Head title={`Contract: ${contract.contract_name}`} />
 
             {/* Breadcrumb */}
@@ -108,97 +144,138 @@ export default function Show({ auth, contract }) {
 
             <div className="p-6">
                 {/* Header Section */}
-                <div className="flex justify-between items-center mb-6">
+                <div className="mb-6 flex items-center justify-between">
                     <h1 className="text-2xl font-semibold text-gray-800">Contract Information</h1>
                     <div className="flex space-x-3">
                         {/* Edit Button */}
                         {(contract.can_be_edited || contract.can_be_partially_edited) && (
                             <Link
                                 href={route('contracts.edit', contract.id)}
-                                className="bg-[#37692F] text-white px-4 py-2 rounded-md hover:bg-[#2a5624] flex items-center"
+                                className="flex items-center rounded-md bg-[#37692F] px-4 py-2 text-white hover:bg-[#2a5624]"
                             >
-                                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
                                 Edit Contract
                             </Link>
                         )}
                         <Link
                             href={route('contracts.index')}
-                            className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 flex items-center"
+                            className="flex items-center rounded-md bg-gray-500 px-4 py-2 text-white hover:bg-gray-600"
                         >
-                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                            <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
                             Back to List
                         </Link>
                     </div>
                 </div>
 
                 {/* Main Content */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                     {/* Contract Details Card */}
-                    <div className="bg-white shadow-lg rounded-lg p-6 md:col-span-2">
-                        <h2 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Contract Details</h2>
+                    <div className="rounded-lg bg-white p-6 shadow-lg md:col-span-2">
+                        <h2 className="mb-4 border-b pb-2 text-lg font-semibold text-gray-800">Contract Details</h2>
                         
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <div>
-                                {/* CHANGED: title to contract_name */}
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Contract Name</label>
-                                <p className="text-sm text-gray-900 font-poppins font-normal">{contract.contract_name}</p>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Contract Name</label>
+                                <p className="font-poppins text-sm font-normal text-gray-900">{contract.contract_name}</p>
                             </div>
-
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Contract ID</label>
-                                <p className="text-sm text-gray-900 font-poppins font-normal">#{contract.id}</p>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Contract ID</label>
+                                <p className="font-poppins text-sm font-normal text-gray-900">#{contract.id}</p>
                             </div>
-
                             <div className="md:col-span-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                                <span className={`inline-flex px-3 py-1 rounded-full text-xs font-poppins font-normal ${getStatusColor(contract.status)}`}>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Status</label>
+                                <span className={`inline-flex rounded-full px-3 py-1 font-poppins text-xs font-normal ${getStatusColor(contract.status)}`}>
                                     {contract.status.replace(/_/g, ' ').charAt(0).toUpperCase() + contract.status.replace(/_/g, ' ').slice(1)}
                                 </span>
                             </div>
-
-                             {/* ADDED: Buyback Price Field */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Committed Buyback Price</label>
-                                <p className="text-sm text-gray-900 font-poppins font-normal">
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Committed Buyback Price</label>
+                                <p className="font-poppins text-sm font-normal text-gray-900">
                                     {formatPrice(contract.buyback_price_per_unit, 4)} / kg
                                 </p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Actions Card */}
-                    <div className="bg-white shadow-lg rounded-lg p-6">
-                        <h2 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Actions</h2>
+                    {/* Actions Card (THE TRANSITION HUB) */}
+                    <div className="rounded-lg bg-white p-6 shadow-lg">
+                        <h2 className="mb-4 border-b pb-2 text-lg font-semibold text-gray-800">Actions</h2>
                         <div className="space-y-3">
-                            {/* Only show Change Status and Cancel if NOT cancelled, completed, or terminated */}
-                            {(contract.status !== 'cancelled' && contract.status !== 'completed' && contract.status !== 'terminated') && (
-                                <>
-                                    {contract.available_transitions?.length > 0 && (
-                                        <button
-                                            onClick={() => setShowStatusModal(true)}
-                                            className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md flex items-center justify-center"
-                                        >
-                                            Change Status
-                                        </button>
-                                    )}
-                                    <button
-                                        onClick={handleCancel}
-                                        className="w-full bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md flex items-center justify-center"
-                                        disabled={processing}
-                                    >
-                                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                                        Cancel Contract
-                                    </button>
-                                </>
+                            
+                            {/* DRAFT -> UNDER REVIEW BUTTON */}
+                            {contract.status === 'draft' && contract.available_transitions?.includes('under_review') && (
+                                <button
+                                    onClick={() => handleOpenStatusModal('under_review')}
+                                    className="flex w-full items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700"
+                                    disabled={processing}
+                                >
+                                    <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
+                                    Submit for Review
+                                </button>
                             )}
+
+                            {/* DRAFT -> UNDER REVIEW BUTTON */}
+                            {contract.status === 'under_review' && contract.available_transitions?.includes('active') && (
+                                <button
+                                    onClick={() => handleOpenStatusModal('active')}
+                                    className="flex w-full items-center justify-center rounded-md bg-green-600 px-4 py-2 text-white transition-colors hover:bg-green-700"
+                                    disabled={processing}
+                                >
+                                    <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    Activate Contract
+                                </button>
+                            )}
+
+                            {/* GENERIC STATUS BUTTON (For Active -> Suspended, etc.) */}
+                            {/* This button will be used for all other valid status changes */}
+                            {/* {['draft', 'under_review'].includes(contract.status) && contract.status !== 'draft' && contract.available_transitions?.length > 0 && (
+                                <button
+                                    onClick={() => setShowStatusModal(true)} // Opens the generic modal
+                                    className="flex w-full items-center justify-center rounded-md bg-orange-600 px-4 py-2 text-white transition-colors hover:bg-orange-700"
+                                    disabled={processing}
+                                >
+                                    Change Status
+                                </button>
+                            )} */}
+
+                            
+
+                            {/* CANCEL BUTTON (Visible if status allows cancellation) */}
+                            {['draft', 'under_review'].includes(contract.status) && contract.available_transitions?.includes('cancelled') && (
+                                <button
+                                    onClick={handleCancel}
+                                    className="flex w-full items-center justify-center rounded-md bg-red-600 px-4 py-2 text-white transition-colors hover:bg-red-700"
+                                    disabled={processing}
+                                >
+                                    <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                    Cancel Contract
+                                </button>
+                            )}
+
+                            {contract.contract_file && (contract.status === 'under_review') && (
+                                <button
+                                    type="button" // Change from <a> to <button>
+                                    onClick={handleSendEmail} // Call the new JavaScript handler
+                                    className="w-full bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-md flex items-center justify-center transition-colors"
+                                    disabled={processing || !contract.contract_file}
+                                >
+                                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                                    Send Contract Email
+                                </button>
+                            )}
+                            
                             {/* File Preview Button stays visible */}
                             {contract.contract_file && (
                                 <button
                                     type="button"
                                     onClick={handleOpenPreview}
-                                    className="w-full inline-flex items-center text-[#37692F] hover:text-[#2a5624] py-2 transition-colors justify-center"
+                                    className="flex w-full items-center justify-center py-2 text-[#37692F] transition-colors hover:text-[#2a5624]"
                                 >
-                                    <ArrowTopRightOnSquareIcon className="w-5 h-5 mr-2" />
+                                    <ArrowTopRightOnSquareIcon className="mr-2 h-5 w-5" />
                                     View Contract File
                                 </button>
                             )}
@@ -206,19 +283,18 @@ export default function Show({ auth, contract }) {
                     </div>
 
 
-                    {/* Partner Information Card (Kept the same) */}
-                    <div className="bg-white shadow-lg rounded-lg p-6">
-                        <h2 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Partner Information</h2>
+                    {/* Partner Information Card */}
+                    <div className="rounded-lg bg-white p-6 shadow-lg">
+                        <h2 className="mb-4 border-b pb-2 text-lg font-semibold text-gray-800">Partner Information</h2>
                         
                         <div className="space-y-4">
-                             {/* ... partner data display logic ... */}
-                             <div>
-                                <label className="block text-sm font-medium text-gray-600 mb-1">Partner Name</label>
+                            <div>
+                                <label className="mb-1 block text-sm font-medium text-gray-600">Partner Name</label>
                                 <div className="flex items-center justify-between">
-                                    <span className="text-sm text-gray-900 font-poppins">{contract.partner.name}</span>
+                                    <span className="font-poppins text-sm text-gray-900">{contract.partner.name}</span>
                                     <Link
                                         href={route('partners.show', contract.partner.id)}
-                                        className="text-[#37692F] text-xs px-2 py-1 rounded hover:bg-green-50 transition-colors"
+                                        className="rounded px-2 py-1 text-xs text-[#37692F] transition-colors hover:bg-green-50"
                                     >
                                         View details
                                     </Link>
@@ -226,20 +302,20 @@ export default function Show({ auth, contract }) {
                             </div>
                             {contract.partner.email && (
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                                    <p className="text-sm text-gray-900 font-poppins font-normal">{contract.partner.email}</p>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">Email</label>
+                                    <p className="font-poppins text-sm font-normal text-gray-900">{contract.partner.email}</p>
                                 </div>
                             )}
                             {contract.partner.phone && (
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                                    <p className="text-sm text-gray-900 font-poppins font-normal">{contract.partner.phone}</p>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">Phone</label>
+                                    <p className="font-poppins text-sm font-normal text-gray-900">{contract.partner.phone}</p>
                                 </div>
                             )}
                             {contract.partner.address && (
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                                    <p className="text-sm text-gray-900 font-poppins font-normal whitespace-pre-wrap">{contract.partner.address}</p>
+                                    <label className="mb-1 block text-sm font-medium text-gray-700">Address</label>
+                                    <p className="font-poppins text-sm font-normal text-gray-900 whitespace-pre-wrap">{contract.partner.address}</p>
                                 </div>
                             )}
                         </div>
@@ -247,67 +323,64 @@ export default function Show({ auth, contract }) {
 
                     {/* FARM INFORMATION CARD */}
                     {contract.farm && (
-                    <div className="bg-white shadow-lg rounded-lg p-6">
-                        <h2 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Farm Information</h2>
+                    <div className="rounded-lg bg-white p-6 shadow-lg">
+                        <h2 className="mb-4 border-b pb-2 text-lg font-semibold text-gray-800">Farm Information</h2>
                         <div className="space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Farm Name</label>
-                                <p className="text-sm text-gray-900 font-poppins font-normal">{contract.farm.location_name}</p>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Farm Name</label>
+                                <p className="font-poppins text-sm font-normal text-gray-900">{contract.farm.location_name}</p>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Area Size (hectares)</label>
-                                <p className="text-sm text-gray-900 font-poppins font-normal">
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Area Size (hectares)</label>
+                                <p className="font-poppins text-sm font-normal text-gray-900">
                                     {contract.farm.area_size ? contract.farm.area_size : 'N/A'}
                                 </p>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Soil Type</label>
-                                <p className="text-sm text-gray-900 font-poppins font-normal">{contract.farm.soil_type}</p>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Soil Type</label>
+                                <p className="font-poppins text-sm font-normal text-gray-900">{contract.farm.soil_type}</p>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
-                                <p className="text-sm text-gray-900 font-poppins font-normal">
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Address</label>
+                                <p className="font-poppins text-sm font-normal text-gray-900">
                                     {contract.farm.address ? contract.farm.address : 'N/A'}
                                 </p>
                             </div>
                         </div>
                     </div>
-                )}
-
+                    )}
+                    
                     {/* Dates Card */}
-                    <div className="bg-white shadow-lg rounded-lg p-6">
-                        <h2 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Contract Dates</h2>
+                    <div className="rounded-lg bg-white p-6 shadow-lg">
+                        <h2 className="mb-4 border-b pb-2 text-lg font-semibold text-gray-800">Contract Dates</h2>
                         
                         <div className="space-y-4">
-                             {/* CHANGED: contract_date to signing_date */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Signing Date</label>
-                                <p className="text-sm text-gray-900 font-poppins font-normal">{formatDate(contract.signing_date)}</p>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Signing Date</label>
+                                <p className="font-poppins text-sm font-normal text-gray-900">{formatDate(contract.signing_date)}</p>
                             </div>
-
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Effective Date</label>
-                                <p className="text-sm text-gray-900 font-poppins font-normal">{formatDate(contract.effective_date)}</p>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Effective Date</label>
+                                <p className="font-poppins text-sm font-normal text-gray-900">{formatDate(contract.effective_date)}</p>
                             </div>
-
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Expiration Date</label>
-                                <p className="text-sm text-gray-900 font-poppins font-normal">{formatDate(contract.expiration_date)}</p>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Expiration Date</label>
+                                <p className="font-poppins text-sm font-normal text-gray-900">{formatDate(contract.expiration_date)}</p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Notes Card (Moved and kept the same) */}
+                    {/* Notes Card */}
                     {contract.notes && (
-                        <div className="bg-white shadow-lg rounded-lg p-6 md:col-span-1">
-                            <h2 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Notes</h2>
-                            <p className="text-sm text-gray-900 font-poppins font-normal whitespace-pre-wrap">{contract.notes}</p>
+                        <div className="rounded-lg bg-white p-6 shadow-lg md:col-span-1">
+                            <h2 className="mb-4 border-b pb-2 text-lg font-semibold text-gray-800">Notes</h2>
+                            <p className="font-poppins text-sm font-normal text-gray-900 whitespace-pre-wrap">{contract.notes}</p>
                         </div>
                     )}
 
                     {/* Seed Varieties Card (Commitments) */}
-                    <div className="bg-white shadow-lg rounded-lg p-6 md:col-span-3">
-                        <h2 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Seed Buyback Commitments ({contractCommitments.length})</h2>
+                    <div className="rounded-lg bg-white p-6 shadow-lg md:col-span-3">
+                        <h2 className="mb-4 border-b pb-2 text-lg font-semibold text-gray-800">Seed Buyback Commitments ({contractCommitments.length})</h2>
                         
                         {contractCommitments.length > 0 ? (
                             <div className="overflow-x-auto">
@@ -332,7 +405,7 @@ export default function Show({ auth, contract }) {
                                                         title="View Seed Details"
                                                     >
                                                         {item.seed.seed_variety}
-                                                        <ArrowTopRightOnSquareIcon className="w-4 h-4 ml-1" />
+                                                        <ArrowTopRightOnSquareIcon className="ml-1 h-4 w-4" />
                                                     </a>
                                                 </td>
                                                 {/* Seed Quantity Sold */}
@@ -361,7 +434,7 @@ export default function Show({ auth, contract }) {
                                 </table>
                             </div>
                         ) : (
-                            <p className="text-sm text-gray-500 font-poppins font-normal">
+                            <p className="font-poppins text-sm font-normal text-gray-500">
                                 No seed commitments found for this contract.
                             </p>
                         )}
@@ -369,32 +442,30 @@ export default function Show({ auth, contract }) {
                 </div>
 
                 {/* Timestamps */}
-                <div className="mt-6 text-sm text-gray-500 font-poppins font-normal">
+                <div className="mt-6 font-poppins text-sm font-normal text-gray-500">
                     <p>Created: {formatDate(contract.created_at)}</p>
                     <p>Last Updated: {formatDate(contract.updated_at)}</p>
                 </div>
             </div>
         
             {/* Modals */}
-            {showStatusModal && (
+            {showStatusModal && statusToTransition === 'active' ? (
+                <ActivateContractModal
+                    contract={contract}
+                    onCancel={() => setShowStatusModal(false)}
+                    onConfirm={handleTransitionConfirm}
+                    processing={processing}
+                />
+            ) : showStatusModal ? (
                 <DraftActiveModal
                     contract={contract}
                     availableTransitions={contract.available_transitions}
                     onCancel={() => setShowStatusModal(false)}
-                    onConfirm={(newStatus) => {
-                        setSelectedStatus(newStatus); // Use the status selected in the modal
-                        // If it's a direct transition, handle it immediately
-                        post(route('contracts.change-status', contract.id), {
-                            data: { status: newStatus },
-                            onSuccess: () => {
-                                setShowStatusModal(false);
-                                setSelectedStatus('');
-                            }
-                        });
-                    }}
+                    onConfirm={handleTransitionConfirm}
+                    statusToTransition={statusToTransition}
                     processing={processing}
                 />
-            )}
+            ) : null}
 
             {showFilePreview && (
                 <ContractFilePreviewModal

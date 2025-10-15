@@ -92,7 +92,10 @@ Route::middleware(['auth'])->group(function () {
         // Download routes - Contract files
             Route::get('/contracts/download-pdf/{filename}', [ContractController::class, 'downloadAsPdf']);
             Route::get('/contracts/download-docx/{filename}', [ContractController::class, 'downloadAsDocx']);
-
+    Route::post('/contracts/{contract}/send-email', [ContractController::class, 'sendEmail'])->name('contracts.sendEmail');
+    Route::get('/partner-portal/contracts/{id}', [ContractController::class, 'showPartner'])->name('partner.contracts.show');
+    Route::post('/partner-portal/contracts/{id}/verify', [ContractController::class, 'verifyPartner'])->name('partner.contracts.verify');
+    
     // Seeds
     Route::resource('seeds', SeedController::class);
     Route::patch('seeds/{seed}/archive', [SeedController::class, 'archive'])->name('seeds.archive');

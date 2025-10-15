@@ -5,10 +5,9 @@ import dayjs from 'dayjs';
 export default function ContractForm({ partners, seeds, contract = null }) {
     const fileInputRef = useRef();
     
-    // Enforce single seed rule here in state management
     const initialSeeds = contract?.contractSeedCommitments ? contract.contractSeedCommitments.map(item => ({
-        ...item.seed, // Base seed details (id, variety, growth_cycle, price_per_unit)
-        ...item,     // Commitment details (seed_quantity, unit, agreed_cycles, dates, expected_buyback_amount, seed_price_at_contract)
+        ...item.seed,
+        ...item,     
     })) : [];
     
     const [selectedSeeds, setSelectedSeeds] = useState(initialSeeds);
@@ -19,11 +18,11 @@ export default function ContractForm({ partners, seeds, contract = null }) {
     
     const isEditing = !!contract;
 
-    // --- FORM DATA ALIGNMENT WITH NEW SCHEMA ---
+    // --- FORM DATA ALIGNMENT ---
     const { data, setData, post, put, processing, errors } = useForm({
-        // CONTRACT FIELDS
         contract_name: contract?.contract_name || '', 
         partner_id: contract?.partner_id || '',
+        farm_id: contract?.farm_id || '',
         signing_date: contract?.signing_date || dayjs().format('YYYY-MM-DD'),
         effective_date: contract?.effective_date || '',
         expiration_date: contract?.expiration_date || '',
@@ -33,7 +32,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
         seeds: initialSeeds, 
     });
 
-    // EFFECT: Recalculate Max Cycles when Contract Effective/Expiration Dates Change
+    // --- EFFECTS ---
     useEffect(() => {
         const updatedSeeds = selectedSeeds.map(seed => {
             const maxCycles = getMaxCycles(seed);
@@ -62,7 +61,6 @@ export default function ContractForm({ partners, seeds, contract = null }) {
     );
 
     const filteredSeeds = seeds.filter(seed =>
-        // Enforce max:1 rule here: only show dropdown if no seed is selected
         selectedSeeds.length === 0 &&
         seed.seed_variety.toLowerCase().includes(seedSearch.toLowerCase())
     );
@@ -78,15 +76,13 @@ export default function ContractForm({ partners, seeds, contract = null }) {
 
         const newSeed = {
             ...seed,
-            // ALIGNING COMMITMENT FIELDS
             seed_quantity: 1, 
             unit: 'kg', 
             seed_price_at_contract: seed.price_per_unit, 
-            expected_buyback_amount: 1, // Default minimum quantity
+            expected_buyback_amount: 1,
             buyback_unit: 'kg', 
             
-            // DATES/CYCLES
-            planting_date: data.effective_date || '', // Suggest effective date as min planting date
+            planting_date: data.effective_date || '',
             expected_first_harvest_date: '',
             agreed_cycles: 1, 
         };
@@ -102,7 +98,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
     };
     
     // --- SEED RULES LOGIC ---
-    const getHarvestMin = (seed, display = false) => {
+    const getHarvestMin = (seed) => {
         if (!seed.planting_date || !seed.growth_cycle) return '';
         const minDate = dayjs(seed.planting_date).add(Number(seed.growth_cycle), 'day');
         return minDate.format('YYYY-MM-DD');
@@ -117,11 +113,10 @@ export default function ContractForm({ partners, seeds, contract = null }) {
         const growthCycle = Number(seed.growth_cycle);
         if (!seed.planting_date || !seed.expected_first_harvest_date || !growthCycle || growthCycle <= 0) return 1;
 
-        // Calculate total days from planting date to contract expiration date
         const plantingDate = dayjs(seed.planting_date);
         const expirationDate = dayjs(data.expiration_date);
 
-        if (expirationDate.isBefore(plantingDate)) return 1; // Safety check
+        if (expirationDate.isBefore(plantingDate)) return 1;
         
         const totalDays = expirationDate.diff(plantingDate, 'day');
         const maxCycles = Math.floor(totalDays / growthCycle);
@@ -169,10 +164,8 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                 if (field === 'planting_date' || field === 'expected_first_harvest_date' || field === 'agreed_cycles') {
                     const maxCycles = getMaxCycles(updatedSeed);
                     if (field !== 'agreed_cycles') {
-                         // Auto-set cycles to max when planting/harvest dates change
-                        updatedSeed.agreed_cycles = maxCycles; 
+                         updatedSeed.agreed_cycles = maxCycles; 
                     } else {
-                        // Clamp input cycles
                         const intValue = parseInt(value) || 1;
                         if (intValue > maxCycles) updatedSeed.agreed_cycles = maxCycles;
                         else if (intValue < 1 || isNaN(intValue)) updatedSeed.agreed_cycles = 1;
@@ -216,7 +209,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
             .trim();
         let buybackPriceValue = cleanBuybackPrice === '' ? 0 : parseFloat(cleanBuybackPrice);
 
-        // Prepare submission data
+        // Prepare submission data (NO status field—it defaults to 'draft')
         const submissionData = {
             ...data,
             buyback_price_per_unit: buybackPriceValue,
@@ -230,7 +223,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
 
         if (isEditing) {
             router.post(route('contracts.update', contract.id), submissionData, {
-                onSuccess: () => router.visit(route('contracts.index')),
+                onSuccess: () => router.visit(route('contracts.show', contract.id)), // Redirect to SHOW page for next action
                 onError: (e) => console.error(e)
             });
         } else {
@@ -252,14 +245,23 @@ export default function ContractForm({ partners, seeds, contract = null }) {
         expirationMin = dayjs(data.effective_date).add(1, 'day').format('YYYY-MM-DD');
     }
 
-    const canAddSeeds =
+    // Determine edit permissions
+    const isFullyEditable = !isEditing || contract?.can_be_edited;
+    const isPartiallyEditable = isEditing && (contract?.can_be_edited || contract?.can_be_partially_edited);
+    
+    // Check if required fields for commitment are filled (used for disabling seed selector)
+    const requiredContractFieldsFilled = 
         data.contract_name.trim() &&
         data.partner_id &&
+        data.farm_id && // Include farm_id check
         data.signing_date &&
         data.effective_date &&
         data.expiration_date &&
-        data.buyback_price_per_unit && // New check
+        data.buyback_price_per_unit && 
         (isEditing || data.contract_file);
+
+    const canAddSeeds = requiredContractFieldsFilled;
+
 
     return (
         <div className="p-6">
@@ -292,6 +294,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                 onChange={(e) => setData('contract_name', e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                 required
+                                disabled={!isFullyEditable}
                             />
                             {errors.contract_name && <p className="mt-1 text-sm text-red-600">{errors.contract_name}</p>}
                         </div>
@@ -301,7 +304,9 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                             <label className="block text-sm font-medium text-gray-700 mb-2">Partner *</label>
                             <div className="relative">
                                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
                                 </div>
                                 <input
                                     type="text"
@@ -312,27 +317,31 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                         if (!e.target.value) setData('partner_id', '');
                                     }}
                                     onFocus={() => setShowPartnerDropdown(true)}
+                                    onBlur={() => setTimeout(() => setShowPartnerDropdown(false), 150)}
                                     className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                     placeholder="Search by partner's name..."
                                     required
+                                    disabled={!isFullyEditable}
                                 />
+                                {showPartnerDropdown && filteredPartners.length > 0 && (
+                                    <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                                        {filteredPartners.map(partner => (
+                                            <div
+                                                key={partner.id}
+                                                onClick={() => handlePartnerSelect(partner)}
+                                                className="px-4 py-3 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                                            >
+                                                <div className="font-medium text-gray-900">{partner.name}</div>
+                                                <div className="text-xs text-gray-500">{partner.email}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
-                            {showPartnerDropdown && filteredPartners.length > 0 && (
-                                <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                                    {filteredPartners.map((partner) => (
-                                        <div
-                                            key={partner.id}
-                                            onClick={() => handlePartnerSelect(partner)}
-                                            className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
-                                        >
-                                            {partner.name}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
                             {errors.partner_id && <p className="mt-1 text-sm text-red-600">{errors.partner_id}</p>}
                         </div>
 
+                        {/* 2b. Farm Selection */}
                         <div className="relative">
                             <label className="block text-sm font-medium text-gray-700 mb-2">Farm *</label>
                             <select
@@ -340,9 +349,9 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                 onChange={e => setData('farm_id', e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                 required
-                                disabled={!data.partner_id}
+                                disabled={!data.partner_id || !isFullyEditable}
                             >
-                                <option value="">Select a farm...</option>
+                                <option value="" disabled>Select a farm...</option>
                                 {partners
                                     .find(p => p.id === Number(data.partner_id))
                                     ?.farms?.map(farm => (
@@ -369,6 +378,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                 required
                                 max={today}
                                 min={oneWeekAgo}
+                                disabled={!isFullyEditable}
                             />
                             {errors.signing_date && <p className="mt-1 text-sm text-red-600">{errors.signing_date}</p>}
                         </div>
@@ -385,7 +395,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                 }}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                 min={effectiveMin}
-                                disabled={!data.signing_date}
+                                disabled={!data.signing_date || !isFullyEditable}
                             />
                             {!data.signing_date && (<span className="text-xs text-gray-500 block">Select Signing Date first.</span>)}
                             {errors.effective_date && <p className="mt-1 text-sm text-red-600">{errors.effective_date}</p>}
@@ -400,7 +410,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                 onChange={(e) => setData('expiration_date', e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                 min={expirationMin}
-                                disabled={!data.effective_date}
+                                disabled={!data.effective_date || !isFullyEditable}
                             />
                             {!data.effective_date && (<span className="text-xs text-gray-500 block">Select Effective Date first.</span>)}
                             {errors.expiration_date && <p className="mt-1 text-sm text-red-600">{errors.expiration_date}</p>}
@@ -419,6 +429,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                     className="w-full px-3 py-2 pl-8 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                     placeholder="0.0001"
                                     required
+                                    disabled={!isFullyEditable && !contract?.can_be_partially_edited}
                                 />
                             </div>
                             {errors.buyback_price_per_unit && <p className="mt-1 text-sm text-red-600">{errors.buyback_price_per_unit}</p>}
@@ -436,6 +447,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                 accept=".pdf,.doc,.docx"
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                 required={!isEditing || !contract.contract_file}
+                                disabled={!isFullyEditable && !contract?.can_be_partially_edited}
                             />
                             {isEditing && contract.contract_file && (
                                 <p className="text-xs text-gray-500 mt-1">Current File: {contract.original_file_name || 'Attached'}</p>
@@ -451,6 +463,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                 onChange={(e) => setData('notes', e.target.value)}
                                 rows={3}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                                disabled={!isFullyEditable && !contract?.can_be_partially_edited}
                             />
                             {errors.notes && <p className="mt-1 text-sm text-red-600">{errors.notes}</p>}
                         </div>
@@ -538,6 +551,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                                 type="button"
                                                 onClick={() => removeSeed()}
                                                 className="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                                                disabled={!isFullyEditable}
                                             >
                                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                             </button>
@@ -545,7 +559,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                         
                                         {/* Commitment Fields - IMPROVED GRID LAYOUT */}
                                         <div className="space-y-6">
-                                            {/* Row 1: Seed Details */}
+                                            {/* Row 1: Seed Details (Disabled if not full edit) */}
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 mb-2">Seed Quantity *</label>
@@ -557,6 +571,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                                         onChange={(e) => updateSeedData(seed.id, 'seed_quantity', e.target.value)}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                                         required
+                                                        disabled={!isFullyEditable}
                                                     />
                                                     {errors[`seeds.${index}.seed_quantity`] && <p className="text-red-500 text-xs mt-1">{errors[`seeds.${index}.seed_quantity`]}</p>}
                                                 </div>
@@ -568,6 +583,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                                         onChange={(e) => updateSeedData(seed.id, 'unit', e.target.value)}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                                         required
+                                                        disabled={!isFullyEditable}
                                                     >
                                                         <option value="kg">kg</option>
                                                         <option value="sack">sack</option>
@@ -585,19 +601,20 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                                 </div>
                                             </div>
 
-                                            {/* Row 2: Planting & Harvest Dates */}
+                                            {/* Row 2: Planting & Harvest Dates (Editable in Partial Edit) */}
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 mb-2">Planting Date *</label>
                                                     <input
                                                         type="date"
                                                         value={seed.planting_date}
-                                                        min={data.effective_date} // Cannot plant before effective date
-                                                        max={maxHarvest} // Cannot plant after contract expiration
+                                                        min={data.effective_date} 
+                                                        max={maxHarvest} 
                                                         onChange={(e) => updateSeedData(seed.id, 'planting_date', e.target.value)}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                                         required
-                                                        disabled={!data.effective_date} // Must have effective date first
+                                                        // Editable if Full or Partial edit is allowed
+                                                        disabled={!data.effective_date || (!isFullyEditable && !contract?.can_be_partially_edited)}
                                                     />
                                                     {!data.effective_date && (<p className="text-xs text-gray-500 mt-1">Select Effective Date first.</p>)}
                                                     {errors[`seeds.${index}.planting_date`] && <p className="text-red-500 text-xs mt-1">{errors[`seeds.${index}.planting_date`]}</p>}
@@ -620,14 +637,15 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                                         onChange={(e) => updateSeedData(seed.id, 'expected_first_harvest_date', e.target.value)}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                                         required
-                                                        disabled={impossible || !seed.planting_date}
+                                                        // Editable if Full or Partial edit is allowed
+                                                        disabled={impossible || !seed.planting_date || (!isFullyEditable && !contract?.can_be_partially_edited)}
                                                     />
                                                     {impossible && (<p className="text-red-500 text-xs mt-1">Adjust dates or contract duration.</p>)}
                                                     {errors[`seeds.${index}.expected_first_harvest_date`] && <p className="text-red-500 text-xs mt-1">{errors[`seeds.${index}.expected_first_harvest_date`]}</p>}
                                                 </div>
                                             </div>
 
-                                            {/* Row 3: Cycles & Buyback */}
+                                            {/* Row 3: Cycles & Buyback (Mix of Full and Partial Edit fields) */}
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -646,7 +664,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                                         onChange={(e) => updateSeedData(seed.id, 'agreed_cycles', e.target.value)}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                                         required
-                                                        disabled={!seed.expected_first_harvest_date}
+                                                        disabled={!isFullyEditable} // ONLY editable in DRAFT/REVIEW
                                                         placeholder={seed.expected_first_harvest_date ? undefined : 'Set harvest date first'}
                                                     />
                                                     {errors[`seeds.${index}.agreed_cycles`] && <p className="text-red-500 text-xs mt-1">{errors[`seeds.${index}.agreed_cycles`]}</p>}
@@ -661,6 +679,8 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                                         onChange={(e) => updateSeedData(seed.id, 'expected_buyback_amount', e.target.value)}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                                         required
+                                                        // Editable if Full or Partial edit is allowed
+                                                        disabled={!isFullyEditable && !contract?.can_be_partially_edited}
                                                     />
                                                     {errors[`seeds.${index}.expected_buyback_amount`] && <p className="text-red-500 text-xs mt-1">{errors[`seeds.${index}.expected_buyback_amount`]}</p>}
                                                 </div>
@@ -672,6 +692,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                                         onChange={(e) => updateSeedData(seed.id, 'buyback_unit', e.target.value)}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                                         required
+                                                        disabled={!isFullyEditable} // ONLY editable in DRAFT/REVIEW
                                                     >
                                                         <option value="kg">kg</option>
                                                         <option value="ton">ton</option>
@@ -722,7 +743,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                             disabled={processing || selectedSeeds.length === 0 || validateSeed(selectedSeeds[0] || {}).length > 0}
                             className="bg-[#37692F] hover:bg-[#2a5624] text-white font-medium py-2 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {processing ? (isEditing ? 'Updating...' : 'Creating...') : (isEditing ? 'Update Contract' : 'Create Contract')}
+                            {processing ? (isEditing ? 'Saving...' : 'Creating...') : (isEditing ? 'Save Changes' : 'Create Contract')}
                         </button>
                     </div>
                 </form>
