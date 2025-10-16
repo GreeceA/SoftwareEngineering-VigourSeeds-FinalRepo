@@ -441,16 +441,16 @@ export default function Index({ auth, items, filters }) {
             {/* Modals */}
             {showArchiveModal && (
                 <ArchiveModal
-                    onConfirm={handleArchiveConfirm}
-                    onCancel={handleArchiveCancel}
+                    show={showArchiveModal}
+                    onClose={handleArchiveCancel}
                     item={selectedItem}
                 />
             )}
 
             {showActivateModal && (
                 <ActivateModal
-                    onConfirm={handleActivateConfirm}
-                    onCancel={handleActivateCancel}
+                    show={showActivateModal}
+                    onClose={handleActivateCancel}
                     item={selectedItem}
                 />
             )}

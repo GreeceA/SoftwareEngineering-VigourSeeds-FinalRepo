@@ -237,7 +237,7 @@ class ContractController extends Controller
                     'buyback_price_per_unit',
                     'contract_file',
                     'original_file_name',
-                    'seeds'
+                    'seeds', 
                 ];
                 $validated = array_intersect_key($validated, array_flip($updatableFields));
             }
@@ -265,13 +265,27 @@ class ContractController extends Controller
             }
 
             // 2. PARTIAL EDIT: Update dynamic fields only
-            if ($isPartiallyEditable && !$isFullyEditable && isset($validated['seeds'])) {
+            if ($isPartiallyEditable && !$isFullyEditable && isset($validated['seeds']) && is_array($validated['seeds'])) {
                 foreach ($validated['seeds'] as $seedData) {
-                    ContractSeedCommitment::where('id', $seedData['id'])->update([
-                        'planting_date' => $seedData['planting_date'],
-                        'expected_first_harvest_date' => $seedData['expected_first_harvest_date'],
-                        'expected_buyback_amount' => $seedData['expected_buyback_amount'] ?? ContractSeedCommitment::find($seedData['id'])->expected_buyback_amount,
-                    ]);
+                    if (empty($seedData['id'])) {
+                        continue; // skip invalid entries
+                    }
+                    $updateData = [];
+                    if (array_key_exists('planting_date', $seedData)) {
+                        $updateData['planting_date'] = $seedData['planting_date'];
+                    }
+                    if (array_key_exists('expected_first_harvest_date', $seedData)) {
+                        $updateData['expected_first_harvest_date'] = $seedData['expected_first_harvest_date'];
+                    }
+                    if (array_key_exists('expected_buyback_amount', $seedData)) {
+                        $updateData['expected_buyback_amount'] = $seedData['expected_buyback_amount'];
+                    }
+                    if (array_key_exists('agreed_cycles', $seedData)) {
+                        $updateData['agreed_cycles'] = $seedData['agreed_cycles'];
+                    }
+                    if (!empty($updateData)) {
+                        ContractSeedCommitment::where('id', $seedData['id'])->update($updateData);
+                    }
                 }
             }
 
@@ -402,5 +416,26 @@ class ContractController extends Controller
 
         return redirect()->route('partner.contracts.show', $contract->id)
             ->with('success', 'Contract verified successfully!');
+    }
+
+    public function checkNameUnique(Request $request)
+    {
+        $contractName = trim($request->contract_name);
+        $contractId = $request->contractId;
+
+        $query = \App\Models\Contract::where('contract_name', $contractName);
+
+        // Exclude current contract if editing
+        if ($contractId) {
+            $query->where('id', '!=', $contractId);
+        }
+
+        if ($query->exists()) {
+            return response()->json([
+                'message' => 'A contract with this name already exists.'
+            ], 422);
+        }
+
+        return response()->json(['unique' => true]);
     }
 }

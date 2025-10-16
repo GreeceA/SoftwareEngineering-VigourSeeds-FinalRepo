@@ -98,6 +98,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/contracts/{contract}/send-email', [ContractController::class, 'sendEmail'])->name('contracts.sendEmail');
     Route::get('/partner-portal/contracts/{id}', [ContractController::class, 'showPartner'])->name('partner.contracts.show');
     Route::post('/partner-portal/contracts/{id}/verify', [ContractController::class, 'verifyPartner'])->name('partner.contracts.verify');
+    Route::post('/contracts/check-name-unique', [ContractController::class, 'checkNameUnique'])->name('contracts.checkNameUnique');
     
     // Seeds
     Route::resource('seeds', SeedController::class);

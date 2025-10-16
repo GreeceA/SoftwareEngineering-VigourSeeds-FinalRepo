@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useForm, router, Link } from '@inertiajs/react';
 import dayjs from 'dayjs';
+import axios from 'axios'; 
 
 export default function ContractForm({ partners, seeds, contract = null }) {
     const fileInputRef = useRef();
@@ -15,7 +16,32 @@ export default function ContractForm({ partners, seeds, contract = null }) {
     const [showPartnerDropdown, setShowPartnerDropdown] = useState(false);
     const [seedSearch, setSeedSearch] = useState('');
     const [showSeedDropdown, setShowSeedDropdown] = useState(false);
-    
+    const [checkingContractName, setCheckingContractName] = useState(false);
+    const [contractNameUniqueError, setContractNameUniqueError] = useState('');
+     
+    const checkContractNameUnique = async (name) => {
+        if (!name.trim()) {
+            setContractNameUniqueError('');
+            setCheckingContractName(false);
+            return;
+        }
+        setCheckingContractName(true);
+        try {
+            await axios.post(route('contracts.checkNameUnique'), {
+                contract_name: name.trim(),
+                contractId: contract?.id, // Pass current contract id for edit
+            });
+            setContractNameUniqueError('');
+        } catch (err) {
+            if (err.response?.status === 422) {
+                setContractNameUniqueError(
+                    "A contract with this name already exists. Please enter a different contract name."
+                );
+            }
+        }
+        setCheckingContractName(false);
+    };
+
     const isEditing = !!contract;
 
     // --- FORM DATA ALIGNMENT ---
@@ -307,11 +333,17 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                             <input
                                 type="text"
                                 value={data.contract_name}
-                                onChange={(e) => setData('contract_name', e.target.value)}
+                                onChange={(e) => {
+                                    setData('contract_name', e.target.value);
+                                    checkContractNameUnique(e.target.value);
+                                }}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                 required
                                 disabled={!isFullyEditable}
                             />
+                            {contractNameUniqueError && (
+                                <p className="mt-1 text-sm text-red-600">{contractNameUniqueError}</p>
+                            )}
                             {errors.contract_name && <p className="mt-1 text-sm text-red-600">{errors.contract_name}</p>}
                         </div>
 
@@ -401,7 +433,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
 
                         {/* 4. Effective Date (Nullable in DB, but required for logistics/cycles) */}
                         <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Effective Date</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Effective Date *</label>
                             <input
                                 type="date"
                                 value={data.effective_date}
@@ -756,7 +788,8 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                         </Link>
                         <button
                             type="submit"
-                            disabled={processing || selectedSeeds.length === 0 || validateSeed(selectedSeeds[0] || {}).length > 0}
+                            disabled={processing  || validateSeed(selectedSeeds[0] || {}).length > 0 ||
+                                !!contractNameUniqueError}
                             className="bg-[#37692F] hover:bg-[#2a5624] text-white font-medium py-2 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {processing ? (isEditing ? 'Saving...' : 'Creating...') : (isEditing ? 'Save Changes' : 'Create Contract')}

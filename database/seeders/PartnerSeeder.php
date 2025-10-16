@@ -32,8 +32,8 @@ class PartnerSeeder extends Seeder
                 'reg_numbers' => [],
             ];
             
-            // Generate 18 unique partners
-            for ($i = 0; $i < 18; $i++) {
+            // Generate 48 unique partners
+            for ($i = 0; $i < 48; $i++) {
                 $partnerType = $faker->randomElement(['individual', 'organization']);
 
                 // Generate natural names based on partner type
