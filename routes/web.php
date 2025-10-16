@@ -15,6 +15,9 @@ use App\Http\Controllers\PartnerController;
 use App\Http\Controllers\ContractController;
 use App\Http\Controllers\SeedController;
 use App\Http\Controllers\ItemController;
+use App\Http\Controllers\FieldVisitController;
+use App\Http\Controllers\GrowthReportController;
+use App\Http\Controllers\DamageReportController;
 
 
 
@@ -112,8 +115,24 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/items/{item}', [ItemController::class, 'show'])->name('items.show');
         // Validation routes - Item fields
         Route::post('/check/item/name', [ItemController::class, 'checkName'])->name('items.checkName');
-    
-});
+
+    // Field Visits + Reports
+    Route::resource('field-visits', FieldVisitController::class);
+    Route::post('field-visits/{id}/complete', [FieldVisitController::class, 'complete'])
+        ->name('field-visits.complete');
+    Route::post('field-visits/{id}/cancel', [FieldVisitController::class, 'cancel'])
+        ->name('field-visits.cancel');
+    Route::post('field-visits/{id}/growth-reports', [FieldVisitController::class, 'addGrowthReport'])
+        ->name('field-visits.growth-reports.store');
+    Route::post('field-visits/{id}/damage-reports', [FieldVisitController::class, 'addDamageReport'])
+        ->name('field-visits.damage-reports.store');
+    // Growth Reports Resource Routes (limited actions)
+    Route::resource('growth-reports', GrowthReportController::class)
+        ->only(['index', 'show', 'edit', 'update', 'destroy']);
+    // Damage Reports Resource Routes (limited actions)
+    Route::resource('damage-reports', DamageReportController::class)
+        ->only(['index', 'show', 'edit', 'update', 'destroy']);
+    });
 
 // -----------------
 // Google OAuth Routes

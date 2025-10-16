@@ -167,8 +167,8 @@ export default function AuthenticatedLayout({ header, children }) {
                                     Inventory
                                 </NavLink>
                                 <NavLink
-                                    // href={route('dashboard')}
-                                    // active={route().current('dashboard')}
+                                    href={route('field-visits.index')}
+                                    active={route().current('field-visits.index')}
                                 >
                                     Field Visit
                                 </NavLink>
