@@ -145,7 +145,7 @@ class PartnerController extends Controller
     {
         $partner->update($request->validated());
 
-        // Contacts
+        // Contacts - Only delete those not in the new list
         $partner->contactPersons()->delete();
 
         if ($request->partner_type === 'organization' && $request->contact_persons) {
@@ -158,18 +158,40 @@ class PartnerController extends Controller
             }
         }
 
-        // Farms
-        $partner->farms()->delete();
-
+        // Farms - UPDATE existing farms instead of deleting them to preserve contracts
         if ($request->farms && is_array($request->farms)) {
+            $submittedFarmIds = [];
+            
             foreach ($request->farms as $farm) {
-                $partner->farms()->create([
-                    'location_name' => $farm['location_name'],
-                    'address'       => $farm['address'],
-                    'area_size'     => $farm['area_size'] ?? null,
-                    'soil_type'     => $farm['soil_type'] ?? null,
-                ]);
+                if (isset($farm['id']) && $farm['id']) {
+                    // Update existing farm
+                    $existingFarm = $partner->farms()->find($farm['id']);
+                    if ($existingFarm) {
+                        $existingFarm->update([
+                            'location_name' => $farm['location_name'],
+                            'address'       => $farm['address'],
+                            'area_size'     => $farm['area_size'] ?? null,
+                            'soil_type'     => $farm['soil_type'] ?? null,
+                        ]);
+                        $submittedFarmIds[] = $farm['id'];
+                    }
+                } else {
+                    // Create new farm
+                    $newFarm = $partner->farms()->create([
+                        'location_name' => $farm['location_name'],
+                        'address'       => $farm['address'],
+                        'area_size'     => $farm['area_size'] ?? null,
+                        'soil_type'     => $farm['soil_type'] ?? null,
+                    ]);
+                    $submittedFarmIds[] = $newFarm->id;
+                }
             }
+            
+            // Only delete farms that are NOT in the submitted list AND have NO contracts
+            $partner->farms()
+                ->whereNotIn('id', $submittedFarmIds)
+                ->whereDoesntHave('contracts')
+                ->delete();
         }
 
         return redirect()->route('partners.index')->with('success', 'Partner updated successfully.');

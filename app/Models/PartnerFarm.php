@@ -22,4 +22,10 @@ class PartnerFarm extends Model
     {
         return $this->belongsTo(Partner::class);
     }
+
+    // Relationship with contracts
+    public function contracts()
+    {
+        return $this->hasMany(Contract::class, 'farm_id');
+    }
 }
