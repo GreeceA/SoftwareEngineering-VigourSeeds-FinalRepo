@@ -249,17 +249,24 @@ export default function ContractForm({ partners, seeds, contract = null }) {
 
         console.log('Submission data:', submissionData);
 
-        // Remove contract_file if not a File (on edit)
-        if (isEditing && !(data.contract_file instanceof File)) {
-            delete submissionData.contract_file;
-        }
-
         if (isEditing) {
-            put(route('contracts.update', contract.id), {
-                data: submissionData,
+            // Prepare data for update
+            const dataToSend = {
+                ...data,
+                buyback_price_per_unit: buybackPriceValue
+            };
+            
+            // Remove contract_file if not uploading a new file
+            if (!(data.contract_file instanceof File)) {
+                delete dataToSend.contract_file;
+            }
+
+            // Use router.put to send data properly
+            router.put(route('contracts.update', contract.id), dataToSend, {
+                preserveScroll: true,
                 onSuccess: () => {
                     console.log('Edit successful');
-                    window.location.href = route('contracts.show', contract.id);
+                    router.visit(route('contracts.show', contract.id));
                 },
                 onError: (e) => {
                     console.error('Edit error:', e);
@@ -267,11 +274,17 @@ export default function ContractForm({ partners, seeds, contract = null }) {
             });
         } else {
             console.log('Posting to:', route('contracts.store'));
-            post(route('contracts.store'), {
-                data: submissionData,
+            
+            const dataToSend = {
+                ...data,
+                buyback_price_per_unit: buybackPriceValue
+            };
+
+            router.post(route('contracts.store'), dataToSend, {
+                preserveScroll: true,
                 onSuccess: () => {
                     console.log('Create successful');
-                    window.location.href = route('contracts.index');
+                    router.visit(route('contracts.index'));
                 },
                 onError: (e) => {
                     console.error('Create error:', e);
