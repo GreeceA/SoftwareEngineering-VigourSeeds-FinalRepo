@@ -122,7 +122,7 @@ export default function Show({ auth, seed }) {
                             </div>
 
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">Price per Unit</label>
+                                <label className="mb-1 block text-sm font-medium text-gray-700">Price per Kg</label>
                                 <p className="font-poppins text-sm font-normal text-gray-900">₱{seed.price_per_unit}</p>
                             </div>
                         </div>

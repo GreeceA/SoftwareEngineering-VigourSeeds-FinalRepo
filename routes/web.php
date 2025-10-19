@@ -18,6 +18,9 @@ use App\Http\Controllers\ItemController;
 use App\Http\Controllers\FieldVisitController;
 use App\Http\Controllers\GrowthReportController;
 use App\Http\Controllers\DamageReportController;
+use App\Http\Controllers\InventoryTransactionController;
+use App\Http\Controllers\PartnerOrderController;
+use App\Http\Controllers\BuybackController;
 
 
 
@@ -133,7 +136,92 @@ Route::middleware(['auth'])->group(function () {
     // Damage Reports Resource Routes (limited actions)
     Route::resource('damage-reports', DamageReportController::class)
         ->only(['index', 'show', 'edit', 'update', 'destroy']);
-    });
+
+
+    // Inventory Transactions
+    // Inventory Dashboard
+    Route::get('/inventory/dashboard', [InventoryTransactionController::class, 'dashboard'])
+        ->name('inventory.dashboard');
+    
+    // Inventory Ledger (All Transactions)
+    Route::get('/inventory/ledger', [InventoryTransactionController::class, 'index'])
+        ->name('inventory.ledger');
+    
+    // Stock-In (Inbound)
+    Route::get('/inventory/inbound', [InventoryTransactionController::class, 'createInbound'])
+        ->name('inventory.inbound.create');
+    Route::post('/inventory/inbound', [InventoryTransactionController::class, 'storeInbound'])
+        ->name('inventory.inbound.store');
+    
+    // Stock-Out (Outbound)
+    Route::get('/inventory/outbound', [InventoryTransactionController::class, 'createOutbound'])
+        ->name('inventory.outbound.create');
+    Route::post('/inventory/outbound', [InventoryTransactionController::class, 'storeOutbound'])
+        ->name('inventory.outbound.store');
+    
+    Route::get('/inventory/{productType}/{productId}', [InventoryTransactionController::class, 'show'])
+    ->name('inventory.show');
+
+    // Inventory Adjustments
+    Route::get('/inventory/adjustment/create', [InventoryTransactionController::class, 'createAdjustment'])
+        ->name('inventory.adjustment.create');  
+    Route::post('/inventory/adjustment', [InventoryTransactionController::class, 'storeAdjustment'])
+        ->name('inventory.adjustment.store');
+    
+    // ============================================
+    // PARTNER ORDERS ROUTES
+    // ============================================
+    
+    // List all partner orders
+    Route::get('/partner-orders', [PartnerOrderController::class, 'index'])
+        ->name('partner-orders.index');
+    
+    // Create new partner order
+    Route::get('/partner-orders/create', [PartnerOrderController::class, 'create'])
+        ->name('partner-orders.create');
+    Route::post('/partner-orders', [PartnerOrderController::class, 'store'])
+        ->name('partner-orders.store');
+    
+    // Generate order from contract
+    Route::post('/partner-orders/generate-from-contract', [PartnerOrderController::class, 'generateFromContract'])
+        ->name('partner-orders.generate-from-contract');
+    
+    // View specific partner order
+    Route::get('/partner-orders/{partnerOrder}', [PartnerOrderController::class, 'show'])
+        ->name('partner-orders.show');
+    
+    // Update partner order status
+    Route::put('/partner-orders/{partnerOrder}/status', [PartnerOrderController::class, 'updateStatus'])
+        ->name('partner-orders.update-status');
+    
+    // Cancel partner order
+    Route::put('/partner-orders/{partnerOrder}/cancel', [PartnerOrderController::class, 'cancel'])
+        ->name('partner-orders.cancel');
+    
+    // ============================================
+    // BUYBACK ROUTES
+    // ============================================
+    
+    // Buyback overview
+    Route::get('/buybacks', [BuybackController::class, 'index'])
+        ->name('buybacks.index');
+    
+    // Record buyback delivery
+    Route::get('/buybacks/inbound', [BuybackController::class, 'createInbound'])
+        ->name('buybacks.inbound.create');
+    Route::post('/buybacks/inbound', [BuybackController::class, 'storeInbound'])
+        ->name('buybacks.inbound.store');
+    
+    // View buyback details for contract
+    Route::get('/buybacks/contract/{contract}', [BuybackController::class, 'show'])
+        ->name('buybacks.show');
+    
+    // Get buyback history (AJAX)
+    Route::get('/buybacks/contract/{contractId}/history', [BuybackController::class, 'getContractHistory'])
+        ->name('buybacks.contract.history');
+
+
+    }); //end
 
 // -----------------
 // Google OAuth Routes

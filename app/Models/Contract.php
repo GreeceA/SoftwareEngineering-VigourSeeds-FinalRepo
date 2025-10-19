@@ -82,4 +82,68 @@ class Contract extends Model
     {
         return in_array($this->status, ['active', 'suspended']);
     }
+
+    /**
+     * Get all partner orders linked to this contract
+     */
+    public function partnerOrders()
+    {
+        return $this->hasMany(PartnerOrder::class);
+    }
+
+    /**
+     * Get all inventory transactions linked to this contract
+     */
+    public function inventoryTransactions()
+    {
+        return $this->hasMany(InventoryTransaction::class);
+    }
+
+    /**
+     * Get total expected buyback amount across all seed commitments
+     */
+    public function getTotalExpectedBuyback()
+    {
+        return $this->seedCommitments->sum('expected_buyback_amount');
+    }
+
+    /**
+     * Get total actual buyback received (corn inbound transactions)
+     */
+    public function getTotalActualBuyback()
+    {
+        return $this->inventoryTransactions()
+            ->where('transaction_type', 'inbound')
+            ->where('product_type', 'App\\Models\\CornProduct')
+            ->sum('qty');
+    }
+
+    /**
+     * Calculate buyback fulfillment percentage
+     */
+    public function getBuybackFulfillmentPercentage()
+    {
+        $expected = $this->getTotalExpectedBuyback();
+        $actual = $this->getTotalActualBuyback();
+        
+        return $expected > 0 ? ($actual / $expected) * 100 : 0;
+    }
+
+    /**
+     * Get remaining buyback quantity needed
+     */
+    public function getRemainingBuyback()
+    {
+        return $this->getTotalExpectedBuyback() - $this->getTotalActualBuyback();
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('status', 'active');
+    }
+    
+    public function seedCommitments()
+    {
+        return $this->hasMany(ContractSeedCommitment::class);
+    }
 }

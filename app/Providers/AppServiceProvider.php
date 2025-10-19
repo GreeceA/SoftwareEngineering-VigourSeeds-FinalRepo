@@ -6,6 +6,8 @@ use Illuminate\Support\Facades\Vite;
 use Illuminate\Support\ServiceProvider;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Database\Eloquent\Relations\Relation;
+
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -23,5 +25,10 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Vite::prefetch(concurrency: 3);
+
+        \Illuminate\Database\Eloquent\Relations\Relation::morphMap([
+        'seed' => \App\Models\Seed::class,
+        'item' => \App\Models\Item::class,
+    ]);
     }
 }

@@ -23,6 +23,50 @@ class Item extends Model
     ];
 
     /**
+     * Get all inventory transactions for this item
+     */
+    public function inventoryTransactions()
+    {
+        return $this->morphMany(InventoryTransaction::class, 'product');
+    }
+
+    /**
+     * Get all order lines for this item
+     */
+    public function orderLines()
+    {
+        return $this->morphMany(PartnerOrderLine::class, 'product');
+    }
+
+    /**
+     * Calculate current stock balance
+     */
+    public function getCurrentStock()
+    {
+        $inbound = $this->inventoryTransactions()
+            ->where('transaction_type', 'inbound')
+            ->sum('qty');
+        
+        $outbound = $this->inventoryTransactions()
+            ->where('transaction_type', 'outbound')
+            ->sum('qty');
+        
+        $adjustments = $this->inventoryTransactions()
+            ->where('transaction_type', 'adjustment')
+            ->sum('qty');
+        
+        return $inbound - $outbound + $adjustments;
+    }
+
+    /**
+     * Check if sufficient stock is available
+     */
+    public function hasStock($qty)
+    {
+        return $this->getCurrentStock() >= $qty;
+    }
+
+    /**
      * Scope a query to only include active items.
      */
     public function scopeActive($query)
@@ -68,5 +112,15 @@ class Item extends Model
     public function isArchived()
     {
         return $this->status === 'archived';
+    }
+
+    public function scopeFertilizers($query)
+    {
+        return $query->where('type', 'fertilizer');
+    }
+    
+    public function scopePesticides($query)
+    {
+        return $query->where('type', 'pesticide');
     }
 }

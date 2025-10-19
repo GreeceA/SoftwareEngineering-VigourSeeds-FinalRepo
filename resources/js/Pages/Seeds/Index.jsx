@@ -348,7 +348,7 @@ export default function Index({ auth, seeds, filters }) {
                                                 }).format(seed.price_per_unit)}
                                             </div>
                                             <div className="font-poppins text-[12px] font-normal text-gray-500">
-                                                per unit
+                                                per Kg
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
