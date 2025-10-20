@@ -89,8 +89,8 @@ Route::middleware(['auth'])->group(function () {
 
     // Contracts
     Route::resource('contracts', ContractController::class);
-    Route::post('contracts/{contract}/change-status', [ContractController::class, 'changeStatus'])
-        ->name('contracts.change-status');
+    Route::post('contracts/{contract}/status', [ContractController::class, 'changeStatus'])
+      ->name('contracts.change-status');
     Route::get('partners/search', [ContractController::class, 'searchPartners'])
         ->name('partners.search');
     Route::post('/contracts/{contract}/cancel', [ContractController::class, 'destroy'])->name('contracts.cancel');
@@ -98,10 +98,12 @@ Route::middleware(['auth'])->group(function () {
         // Download routes - Contract files
             Route::get('/contracts/download-pdf/{filename}', [ContractController::class, 'downloadAsPdf']);
             Route::get('/contracts/download-docx/{filename}', [ContractController::class, 'downloadAsDocx']);
-    Route::post('/contracts/{contract}/send-email', [ContractController::class, 'sendEmail'])->name('contracts.sendEmail');
+    Route::post('contracts/{contract}/email', [ContractController::class, 'sendEmail'])
+      ->name('contracts.sendEmail');
     Route::get('/partner-portal/contracts/{id}', [ContractController::class, 'showPartner'])->name('partner.contracts.show');
     Route::post('/partner-portal/contracts/{id}/verify', [ContractController::class, 'verifyPartner'])->name('partner.contracts.verify');
-    Route::post('/contracts/check-name-unique', [ContractController::class, 'checkNameUnique'])->name('contracts.checkNameUnique');
+    Route::post('contracts/check-name', [ContractController::class, 'checkNameUnique'])
+      ->name('contracts.checkNameUnique');
     
     // Seeds
     Route::resource('seeds', SeedController::class);

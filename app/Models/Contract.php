@@ -6,9 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-
-// Ensure PartnerFarm model is imported
-use App\Models\PartnerFarm; 
+use Illuminate\Database\Eloquent\Builder;
 
 class Contract extends Model
 {
@@ -16,7 +14,7 @@ class Contract extends Model
 
     protected $fillable = [
         'partner_id',
-        'farm_id', // <-- ADDED: Essential link to the planting location
+        'farm_id',
         'contract_name', 
         'contract_file',
         'original_file_name',
@@ -32,32 +30,41 @@ class Contract extends Model
         'signing_date' => 'date', 
         'effective_date' => 'date',
         'expiration_date' => 'date',
-        'buyback_price_per_unit' => 'decimal:4', 
+        'buyback_price_per_unit' => 'decimal:4',
     ];
 
+    // Relationships
     public function partner(): BelongsTo
     {
         return $this->belongsTo(Partner::class);
     }
 
-    /**
-     * Get the Farm associated with this contract.
-     */
-    public function farm(): BelongsTo // <-- ADDED: Farm relationship
+    public function farm(): BelongsTo
     {
-        return $this->belongsTo(PartnerFarm::class, 'farm_id'); // Specify foreign key if model name is different
+        return $this->belongsTo(PartnerFarm::class, 'farm_id');
     }
 
     public function contractSeedCommitments(): HasMany
     {
-        // Assumes ContractSeedCommitment model name is correct
         return $this->hasMany(ContractSeedCommitment::class);
     }
 
-    // ------------------------------------------------------------------
-    // STATUS LOGIC (No changes needed here, logic is correct)
-    // ------------------------------------------------------------------
+    public function seedCommitments(): HasMany
+    {
+        return $this->hasMany(ContractSeedCommitment::class);
+    }
 
+    public function partnerOrders(): HasMany
+    {
+        return $this->hasMany(PartnerOrder::class);
+    }
+
+    public function inventoryTransactions(): HasMany
+    {
+        return $this->hasMany(InventoryTransaction::class);
+    }
+
+    // Status Transition Logic
     public function canTransitionTo(string $newStatus): bool
     {
         $transitions = [
@@ -83,34 +90,28 @@ class Contract extends Model
         return in_array($this->status, ['active', 'suspended']);
     }
 
-    /**
-     * Get all partner orders linked to this contract
-     */
-    public function partnerOrders()
+    public function isActive(): bool
     {
-        return $this->hasMany(PartnerOrder::class);
+        return $this->status === 'active';
     }
 
-    /**
-     * Get all inventory transactions linked to this contract
-     */
-    public function inventoryTransactions()
+    public function isDraft(): bool
     {
-        return $this->hasMany(InventoryTransaction::class);
+        return $this->status === 'draft';
     }
 
-    /**
-     * Get total expected buyback amount across all seed commitments
-     */
-    public function getTotalExpectedBuyback()
+    public function isCompleted(): bool
+    {
+        return $this->status === 'completed';
+    }
+
+    // Buyback Tracking Methods
+    public function getTotalExpectedBuyback(): float
     {
         return $this->seedCommitments->sum('expected_buyback_amount');
     }
 
-    /**
-     * Get total actual buyback received (corn inbound transactions)
-     */
-    public function getTotalActualBuyback()
+    public function getTotalActualBuyback(): float
     {
         return $this->inventoryTransactions()
             ->where('transaction_type', 'inbound')
@@ -118,32 +119,115 @@ class Contract extends Model
             ->sum('qty');
     }
 
-    /**
-     * Calculate buyback fulfillment percentage
-     */
-    public function getBuybackFulfillmentPercentage()
+    public function getBuybackFulfillmentPercentage(): float
     {
         $expected = $this->getTotalExpectedBuyback();
         $actual = $this->getTotalActualBuyback();
         
-        return $expected > 0 ? ($actual / $expected) * 100 : 0;
+        return $expected > 0 ? round(($actual / $expected) * 100, 2) : 0;
     }
 
-    /**
-     * Get remaining buyback quantity needed
-     */
-    public function getRemainingBuyback()
+    public function getRemainingBuyback(): float
     {
-        return $this->getTotalExpectedBuyback() - $this->getTotalActualBuyback();
+        return max(0, $this->getTotalExpectedBuyback() - $this->getTotalActualBuyback());
     }
 
-    public function scopeActive($query)
+    public function isBuybackComplete(): bool
+    {
+        return $this->getRemainingBuyback() <= 0;
+    }
+
+    // Date Validation Methods
+    public function isExpired(): bool
+    {
+        return $this->expiration_date && $this->expiration_date->isPast();
+    }
+
+    public function isEffective(): bool
+    {
+        return $this->effective_date && 
+               $this->effective_date->isPast() && 
+               (!$this->expiration_date || $this->expiration_date->isFuture());
+    }
+
+    public function getDaysUntilExpiration(): ?int
+    {
+        if (!$this->expiration_date) {
+            return null;
+        }
+        return max(0, now()->diffInDays($this->expiration_date, false));
+    }
+
+    // Query Scopes
+    public function scopeActive(Builder $query): Builder
     {
         return $query->where('status', 'active');
     }
-    
-    public function seedCommitments()
+
+    public function scopeDraft(Builder $query): Builder
     {
-        return $this->hasMany(ContractSeedCommitment::class);
+        return $query->where('status', 'draft');
+    }
+
+    public function scopeUnderReview(Builder $query): Builder
+    {
+        return $query->where('status', 'under_review');
+    }
+
+    public function scopeExpiringSoon(Builder $query, int $days = 30): Builder
+    {
+        return $query->where('status', 'active')
+            ->whereDate('expiration_date', '<=', now()->addDays($days))
+            ->whereDate('expiration_date', '>=', now());
+    }
+
+    public function scopeByPartner(Builder $query, int $partnerId): Builder
+    {
+        return $query->where('partner_id', $partnerId);
+    }
+
+    public function scopeSearch(Builder $query, string $search): Builder
+    {
+        return $query->where(function ($q) use ($search) {
+            $q->where('contract_name', 'like', "%{$search}%")
+              ->orWhereHas('partner', function ($q) use ($search) {
+                  $q->where('name', 'like', "%{$search}%");
+              })
+              ->orWhereHas('seedCommitments.seed', function ($q) use ($search) {
+                  $q->where('seed_variety', 'like', "%{$search}%");
+              });
+        });
+    }
+
+    // Accessors
+    public function getStatusLabelAttribute(): string
+    {
+        return ucwords(str_replace('_', ' ', $this->status));
+    }
+
+    public function getContractDurationAttribute(): ?int
+    {
+        if (!$this->effective_date || !$this->expiration_date) {
+            return null;
+        }
+        return $this->effective_date->diffInDays($this->expiration_date);
+    }
+
+    // Boot Method for Model Events
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($contract) {
+            // Ensure draft status if not set
+            if (!$contract->status) {
+                $contract->status = 'draft';
+            }
+        });
+
+        static::deleting(function ($contract) {
+            // Cascade delete commitments
+            $contract->contractSeedCommitments()->delete();
+        });
     }
 }

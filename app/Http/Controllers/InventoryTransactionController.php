@@ -21,31 +21,81 @@ class InventoryTransactionController extends Controller
      */
     public function index(Request $request)
     {
-        $query = InventoryTransaction::with(['product', 'contract', 'partnerOrder', 'creator'])
+        $query = InventoryTransaction::with(['contract', 'partnerOrder', 'creator'])          
             ->orderBy('created_at', 'desc');
 
         // Filter by product type
-        if ($request->has('product_type') && $request->product_type) {
+        if ($request->filled('product_type')) {
             $query->where('product_type', $request->product_type);
         }
 
         // Filter by transaction type
-        if ($request->has('transaction_type') && $request->transaction_type) {
+        if ($request->filled('transaction_type')) {
             $query->where('transaction_type', $request->transaction_type);
         }
 
         // Filter by date range
-        if ($request->has('date_from') && $request->date_from) {
+        if ($request->filled('date_from')) {
             $query->whereDate('created_at', '>=', $request->date_from);
         }
-        if ($request->has('date_to') && $request->date_to) {
+        if ($request->filled('date_to')) {
             $query->whereDate('created_at', '<=', $request->date_to);
         }
 
-        $transactions = $query->paginate(50);
+        // Search filter - search by product name
+        if ($request->filled('search')) {
+            $searchTerm = $request->search;
+            
+            // Get seed IDs that match the search
+            $seedIds = Seed::where('seed_variety', 'LIKE', "%{$searchTerm}%")->pluck('id');
+            
+            // Get item IDs that match the search
+            $itemIds = Item::where('name', 'LIKE', "%{$searchTerm}%")->pluck('id');
+            
+            // Filter transactions by matching product IDs
+            $query->where(function($q) use ($seedIds, $itemIds) {
+                $q->where(function($subQ) use ($seedIds) {
+                    $subQ->where('product_type', 'Seed')
+                         ->whereIn('product_id', $seedIds);
+                })
+                ->orWhere(function($subQ) use ($itemIds) {
+                    $subQ->where('product_type', 'item')
+                         ->whereIn('product_id', $itemIds);
+                });
+            });
+        }
+
+        $transactions = $query->paginate(10)->withQueryString();
+
+        // Transform transactions to include product names and user names
+        $transactions->getCollection()->transform(function ($txn) {
+            if ($txn->product_type === 'Seed' || $txn->product_type === 'seed') {
+                $seed = Seed::find($txn->product_id);
+                $txn->product_name = $seed ? $seed->seed_variety : '-';
+            } elseif ($txn->product_type === 'item') {
+                $item = Item::find($txn->product_id);
+                $txn->product_name = $item ? $item->name : '-';
+            } else {
+                $txn->product_name = '-';
+            }
+            
+            // Attach user name
+            $txn->user_name = $txn->creator
+                ? trim(($txn->creator->first_name ?? '') . ' ' . ($txn->creator->last_name ?? ''))
+                : '-';
+
+            return $txn;
+        });
 
         return Inertia::render('Inventory/Ledger', [
             'transactions' => $transactions,
+            'filters' => [
+                'product_type' => $request->product_type,
+                'transaction_type' => $request->transaction_type,
+                'date_from' => $request->date_from,
+                'date_to' => $request->date_to,
+                'search' => $request->search,
+            ],
         ]);
     }
 
@@ -80,6 +130,7 @@ class InventoryTransactionController extends Controller
             'products.*.qty' => 'required|numeric|min:0.01',
             'products.*.unit' => 'required|in:kg,liter,sack,ton',
             'products.*.notes' => 'nullable|string',
+            'products.*.receipt_date' => 'required|date', // <-- ADD THIS
         ]);
 
         DB::beginTransaction();
@@ -92,6 +143,7 @@ class InventoryTransactionController extends Controller
                     'qty' => $product['qty'],
                     'unit' => $product['unit'],
                     'notes' => $product['notes'] ?? null,
+                    'receipt_date' => $product['receipt_date'], // <-- ADD THIS
                     'created_by' => Auth::id(),
                 ]);
             }
@@ -117,7 +169,6 @@ class InventoryTransactionController extends Controller
             ->whereIn('status', ['pending', 'partially_fulfilled'])
             ->get();
 
-        // return view('inventory.outbound', compact('seeds', 'items', 'partnerOrders'));
         return Inertia::render('Inventory/Outbound');
     }
 
@@ -184,9 +235,9 @@ class InventoryTransactionController extends Controller
         $validated = $request->validate([
             'product_type' => 'required|string',
             'product_id' => 'required|integer',
-            'qty' => 'required|numeric', // Can be positive or negative
+            'qty' => 'required|numeric',
             'unit' => 'required|in:kg,liter,sack,ton',
-            'notes' => 'required|string', // Adjustment reason must be documented
+            'notes' => 'required|string',
         ]);
 
         DB::beginTransaction();
@@ -218,31 +269,43 @@ class InventoryTransactionController extends Controller
     public function dashboard()
     {
         $seeds = Seed::active()->get()->map(function ($seed) {
+            $hasTransaction = InventoryTransaction::where('product_type', 'Seed')
+                ->where('product_id', $seed->id)
+                ->exists();
+            $currentStock = $hasTransaction ? $seed->getCurrentStock() : null;
+
             return [
                 'id' => $seed->id,
                 'name' => $seed->seed_variety,
                 'type' => 'Seed',
-                'current_stock' => $seed->getCurrentStock(),
+                'current_stock' => $currentStock,
                 'unit' => 'kg',
-                'status' => $seed->getCurrentStock() > 0 ? 'good' : 'critical',
+                'status' => $hasTransaction ? $this->determineStockStatus($currentStock) : null,
             ];
         });
 
         $items = Item::active()->get()->map(function ($item) {
+            $hasTransaction = InventoryTransaction::where('product_type', 'item')
+                ->where('product_id', $item->id)
+                ->exists();
+            $currentStock = $hasTransaction ? $item->getCurrentStock() : null;
+
             return [
                 'id' => $item->id,
                 'name' => $item->name,
                 'type' => $item->type,
-                'current_stock' => $item->getCurrentStock(),
+                'current_stock' => $currentStock,
                 'unit' => $item->base_unit,
-                'status' => $item->getCurrentStock() > 0 ? 'good' : 'critical',
+                'status' => $hasTransaction ? $this->determineStockStatus($currentStock) : null,
             ];
         });
 
-        // Only merge seeds and items, NOT cornProducts
         $inventory = collect()
             ->merge($seeds)
             ->merge($items)
+            ->unique(function ($item) {
+                return $item['type'] . '-' . $item['id'];
+            })
             ->values();
 
         return Inertia::render('Inventory/Dashboard', [
@@ -250,10 +313,8 @@ class InventoryTransactionController extends Controller
         ]);
     }
 
-
     public function show($productType, $productId)
     {
-        // Determine the model based on product type
         $product = null;
         
         if ($productType === 'Seed') {
@@ -264,7 +325,7 @@ class InventoryTransactionController extends Controller
                 'type' => 'Seed',
                 'current_stock' => $product->getCurrentStock(),
                 'unit' => 'kg',
-                'status' => $this->determineStockStatus($product->getCurrentStock(), $product->reorder_level ?? 0),
+                'status' => $this->determineStockStatus($product->getCurrentStock()),
             ];
         } elseif (in_array($productType, ['fertilizer', 'pesticide'])) {
             $product = Item::where('type', $productType)->findOrFail($productId);
@@ -274,25 +335,22 @@ class InventoryTransactionController extends Controller
                 'type' => $product->type,
                 'current_stock' => $product->getCurrentStock(),
                 'unit' => $product->base_unit,
-                'status' => $this->determineStockStatus($product->getCurrentStock(), $product->reorder_level ?? 0),
+                'status' => $this->determineStockStatus($product->getCurrentStock()),
             ];
         } else {
             abort(404, 'Invalid product type');
         }
 
-        // Get all transactions for this product with running balance
         $transactions = InventoryTransaction::with(['creator', 'contract', 'partnerOrder'])
             ->where('product_type', $productType)
             ->where('product_id', $productId)
             ->orderBy('created_at', 'desc')
             ->get();
 
-        // Calculate running balance for each transaction
         $runningBalance = $productData['current_stock'];
         $transactionsWithBalance = $transactions->map(function ($transaction) use (&$runningBalance) {
             $transaction->running_balance = $runningBalance;
             
-            // Calculate previous balance (reverse the transaction)
             if ($transaction->transaction_type === 'inbound') {
                 $runningBalance -= $transaction->qty;
             } elseif ($transaction->transaction_type === 'outbound') {
@@ -314,8 +372,6 @@ class InventoryTransactionController extends Controller
 
     public function createAdjustment()
     {
-        \Log::info('Adjustment route hit!');
-        
         $seeds = Seed::active()->get()->map(function ($seed) {
             return [
                 'id' => $seed->id,
@@ -342,11 +398,11 @@ class InventoryTransactionController extends Controller
         ]);
     }
 
-    private function determineStockStatus($currentStock, $reorderLevel = 0)
+    private function determineStockStatus($currentStock)
     {
-        if ($currentStock <= 0) {
+        if ($currentStock < 200) {
             return 'critical';
-        } elseif ($currentStock <= $reorderLevel) {
+        } elseif ($currentStock < 700) {
             return 'low';
         } else {
             return 'good';

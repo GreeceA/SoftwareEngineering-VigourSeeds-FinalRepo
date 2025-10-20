@@ -1,16 +1,23 @@
-import React, { useState } from 'react';
 import { ArrowDownCircle, Package, AlertCircle, CheckCircle, Plus, Trash2 } from 'lucide-react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { usePage, Link, router } from '@inertiajs/react';
 import Select from 'react-select';
+import React, { useState } from 'react';
 
 const StockInboundForm = () => {
   const { errors } = usePage().props;
   const { auth, seeds, items } = usePage().props;
+  
+  const getMinExpirationDate = (manufactureDate) => {
+    if (!manufactureDate) return '';
+    const date = new Date(manufactureDate);
+    date.setDate(date.getDate() + 1);
+    return date.toISOString().split('T')[0];
+  };
 
   // Array of products for this stock-in
   const [products, setProducts] = useState([
-    { product_type: '', product_id: '', qty: '', unit: 'kg', notes: '' }
+    { product_type: '', product_id: '', qty: '', unit: 'kg', notes: '', receipt_date: '', manufacture_date: '', expiration_date: '' }
   ]);
   const [showSuccess, setShowSuccess] = useState(false);
 
@@ -34,7 +41,15 @@ const StockInboundForm = () => {
               [field]: value,
               // Reset product_id and unit if type changes
               ...(field === 'product_type'
-                ? { product_id: '', unit: value === 'seed' ? 'kg' : '' }
+                ? {
+                    product_id: '',
+                    qty: '',
+                    unit: value === 'seed' ? 'kg' : '',
+                    notes: '',
+                    receipt_date: '',
+                    manufacture_date: '',
+                    expiration_date: ''
+                  }
                 : {}),
               // Set unit if product_id changes
               ...(field === 'product_id'
@@ -51,15 +66,15 @@ const StockInboundForm = () => {
   };
 
   const addProductRow = () => {
-    setProducts([...products, { product_type: '', product_id: '', qty: '', unit: 'kg', notes: '' }]);
+    setProducts([...products, { product_type: '', product_id: '', qty: '', unit: 'kg', notes: '', receipt_date: '', manufacture_date: '', expiration_date: '' }]);
   };
-
+  
   const removeProductRow = (idx) => {
     setProducts(products => products.filter((_, i) => i !== idx));
   };
 
   const isFormValid = products.every(
-    p => p.product_type && p.product_id && p.qty > 0
+    p => p.product_type && p.product_id && p.qty > 0 && p.receipt_date
   );
 
   const handleSubmit = (e) => {
@@ -69,7 +84,7 @@ const StockInboundForm = () => {
         setShowSuccess(true);
         setTimeout(() => {
           setShowSuccess(false);
-          setProducts([{ product_type: '', product_id: '', qty: '', unit: 'kg', notes: '' }]);
+          setProducts([{ product_type: '', product_id: '', qty: '', unit: 'kg', notes: '', receipt_date: '', manufacture_date: '', expiration_date: '' }]);
         }, 2000);
       }
     });
@@ -226,6 +241,51 @@ const StockInboundForm = () => {
                     </div>
                   </div>
                 )}
+                {/* Dates */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Receipt Date <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={product.receipt_date || ''}
+                      onChange={e => handleProductChange(idx, 'receipt_date', e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                      required
+                      max={new Date().toISOString().split('T')[0]} // disables future dates
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Actual day the stock was delivered and received.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Manufacture Date <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={product.manufacture_date || ''}
+                      onChange={e => handleProductChange(idx, 'manufacture_date', e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                      required
+                      max={product.receipt_date || new Date().toISOString().split('T')[0]}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Expiration Date <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="date"
+                      value={product.expiration_date || ''}
+                      onChange={e => handleProductChange(idx, 'expiration_date', e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                      required
+                      min={getMinExpirationDate(product.manufacture_date)}
+                    />
+                  </div>
+                </div>
                 {/* Notes */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -249,6 +309,9 @@ const StockInboundForm = () => {
                       handleProductChange(idx, 'qty', '');
                       handleProductChange(idx, 'unit', 'kg');
                       handleProductChange(idx, 'notes', '');
+                      handleProductChange(idx, 'receipt_date', '');
+                      handleProductChange(idx, 'manufacture_date', '');
+                      handleProductChange(idx, 'expiration_date', '');
                     }}
                     className="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition"
                   >

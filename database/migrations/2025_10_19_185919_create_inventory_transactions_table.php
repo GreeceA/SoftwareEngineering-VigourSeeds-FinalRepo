@@ -13,28 +13,37 @@ return new class extends Migration
     {
         Schema::create('inventory_transactions', function (Blueprint $table) {
             $table->id();
-            
-            // Polymorphic relationship to product (Seed, Item, or CornProduct)
-            $table->string('product_type'); // e.g., 'App\Models\Seed'
+
+            // Product Link
+            $table->string('product_type');
             $table->unsignedBigInteger('product_id');
-            
-            // Transaction details
+
+            // Transaction Details
             $table->enum('transaction_type', ['inbound', 'outbound', 'adjustment']);
             $table->decimal('qty', 10, 2);
             $table->enum('unit', ['kg', 'liter', 'sack', 'ton']);
             
-            // Optional links to contract and partner orders
+            // User-Selected Receipt Date (For financial accuracy)
+            $table->date('receipt_date')->comment('The actual date the stock was physically received, used for inventory valuation.');
+            
+            // Quality Control Fields
+            $table->date('manufacture_date')->nullable()->comment('Date product was manufactured/processed.');
+            $table->date('expiration_date')->nullable()->comment('Date product expires. Conditional for inbound items.');
+
+            // Optional Links
             $table->foreignId('contract_id')->nullable()->constrained()->onDelete('set null');
             $table->foreignId('partner_order_id')->nullable()->constrained()->onDelete('set null');
-            
-            // Audit fields
+
+            // Audit Fields
             $table->text('notes')->nullable();
             $table->foreignId('created_by')->nullable()->constrained('users')->onDelete('set null');
-            
-            $table->timestamps();
-            
-            // Index for polymorphic relationship
+            // The 'created_at' timestamp (system entry time) is provided by $table->timestamps()
+
+            $table->timestamps(); 
+
+            // Indexes for speed and retrieval
             $table->index(['product_type', 'product_id']);
+            $table->index(['receipt_date', 'transaction_type']);
         });
     }
 

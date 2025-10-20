@@ -15,6 +15,9 @@ class InventoryTransaction extends Model
         'transaction_type',
         'qty',
         'unit',
+        'receipt_date',
+        'manufacture_date',
+        'expiration_date',
         'contract_id',
         'partner_order_id',
         'notes',
@@ -23,6 +26,9 @@ class InventoryTransaction extends Model
 
     protected $casts = [
         'qty' => 'decimal:2',
+        'receipt_date' => 'date',
+        'manufacture_date' => 'date',
+        'expiration_date' => 'date',
     ];
 
     /**

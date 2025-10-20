@@ -47,19 +47,28 @@ class Seed extends Model
 
     public function getCurrentStock()
     {
-        $inbound = $this->inventoryTransactions()
-            ->where('transaction_type', 'inbound')
-            ->sum('qty');
-        
-        $outbound = $this->inventoryTransactions()
-            ->where('transaction_type', 'outbound')
-            ->sum('qty');
-        
-        $adjustments = $this->inventoryTransactions()
-            ->where('transaction_type', 'adjustment')
-            ->sum('qty');
-        
-        return $inbound - $outbound + $adjustments;
+        $transactions = \App\Models\InventoryTransaction::where('product_type', 'Seed')
+            ->where('product_id', $this->id)
+            ->get();
+
+        $stock = 0;
+        foreach ($transactions as $txn) {
+            $qty = $txn->qty;
+            // Convert to kg if needed
+            if ($txn->unit === 'sack') {
+                $qty = $qty * 50;
+            } elseif ($txn->unit === 'ton') {
+                $qty = $qty * 1000;
+            }
+            if ($txn->transaction_type === 'inbound') {
+                $stock += $qty;
+            } elseif ($txn->transaction_type === 'outbound') {
+                $stock -= $qty;
+            } elseif ($txn->transaction_type === 'adjustment') {
+                $stock += $qty;
+            }
+        }
+        return $stock; // in kg
     }
     
     /**

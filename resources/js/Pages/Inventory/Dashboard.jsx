@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Package, TrendingUp, TrendingDown, AlertTriangle, Plus, ArrowRight, ChevronLeft, ChevronRight, Edit3 } from 'lucide-react';
+import { Package, TrendingUp, TrendingDown, AlertTriangle, Plus, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { usePage, Link } from '@inertiajs/react';
 
@@ -7,15 +7,41 @@ const InventoryDashboard = () => {
   const { auth, inventory } = usePage().props;
 
   const [filter, setFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [search, setSearch] = useState('');
+  const [sortOrder, setSortOrder] = useState('desc');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Only allow 'all', 'seed', 'fertilizer', 'pesticide' filters
-  const filterOptions = ['all', 'Seed', 'fertilizer', 'pesticide'];
+  // Deduplicate inventory by type-id
+  const dedupedInventory = Array.from(
+    new Map(inventory.map(item => [`${item.type}-${item.id}`, item])).values()
+  );
 
-  const filteredInventory = filter === 'all'
-    ? inventory.filter(item => item.type.toLowerCase() !== 'corn')
-    : inventory.filter(item => item.type.toLowerCase() === filter.toLowerCase());
+  // Only allow 'all', 'Seed', 'fertilizer', 'pesticide' filters
+  const filterOptions = ['all', 'Seed', 'fertilizer', 'pesticide'];
+  const statusOptions = ['all', 'good', 'low', 'critical'];
+
+  // Filtering logic
+  let filteredInventory = dedupedInventory.filter(item => item.type.toLowerCase() !== 'corn');
+  if (filter !== 'all') {
+    filteredInventory = filteredInventory.filter(item => item.type.toLowerCase() === filter.toLowerCase());
+  }
+  if (statusFilter !== 'all') {
+    filteredInventory = filteredInventory.filter(item => item.status === statusFilter);
+  }
+  if (search.trim() !== '') {
+    filteredInventory = filteredInventory.filter(item =>
+      item.name.toLowerCase().includes(search.trim().toLowerCase())
+    );
+  }
+
+  // Sorting logic
+  filteredInventory = filteredInventory.sort((a, b) =>
+    sortOrder === 'asc'
+      ? (a.current_stock ?? 0) - (b.current_stock ?? 0)
+      : (b.current_stock ?? 0) - (a.current_stock ?? 0)
+  );
 
   // Pagination calculations
   const totalPages = Math.ceil(filteredInventory.length / itemsPerPage);
@@ -82,13 +108,6 @@ const InventoryDashboard = () => {
                 <ArrowRight size={20} />
                 Stock Out
               </Link>
-              <Link
-                href={route('inventory.adjustment.create')}
-                className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
-              >
-                <Edit3 size={20} />
-                Adjust Stock
-              </Link>
             </div>
           </div>
 
@@ -99,7 +118,7 @@ const InventoryDashboard = () => {
                 <div>
                   <p className="text-gray-600 text-sm">Total Products</p>
                   <p className="text-3xl font-bold text-gray-900 mt-1">
-                    {inventory.filter(i => i.type.toLowerCase() !== 'corn').length}
+                    {dedupedInventory.filter(i => i.type.toLowerCase() !== 'corn').length}
                   </p>
                 </div>
                 <div className="bg-blue-100 p-3 rounded-full">
@@ -113,7 +132,7 @@ const InventoryDashboard = () => {
                 <div>
                   <p className="text-gray-600 text-sm">Good Stock</p>
                   <p className="text-3xl font-bold text-gray-900 mt-1">
-                    {inventory.filter(i => i.status === 'good' && i.type.toLowerCase() !== 'corn').length}
+                    {dedupedInventory.filter(i => i.status === 'good' && i.type.toLowerCase() !== 'corn').length}
                   </p>
                 </div>
                 <div className="bg-green-100 p-3 rounded-full">
@@ -127,7 +146,7 @@ const InventoryDashboard = () => {
                 <div>
                   <p className="text-gray-600 text-sm">Low Stock</p>
                   <p className="text-3xl font-bold text-gray-900 mt-1">
-                    {inventory.filter(i => i.status === 'low' && i.type.toLowerCase() !== 'corn').length}
+                    {dedupedInventory.filter(i => i.status === 'low' && i.type.toLowerCase() !== 'corn').length}
                   </p>
                 </div>
                 <div className="bg-yellow-100 p-3 rounded-full">
@@ -141,7 +160,7 @@ const InventoryDashboard = () => {
                 <div>
                   <p className="text-gray-600 text-sm">Critical Stock</p>
                   <p className="text-3xl font-bold text-gray-900 mt-1">
-                    {inventory.filter(i => i.status === 'critical' && i.type.toLowerCase() !== 'corn').length}
+                    {dedupedInventory.filter(i => i.status === 'critical' && i.type.toLowerCase() !== 'corn').length}
                   </p>
                 </div>
                 <div className="bg-red-100 p-3 rounded-full">
@@ -151,22 +170,61 @@ const InventoryDashboard = () => {
             </div>
           </div>
 
-          {/* Filter Tabs */}
-          <div className="bg-white rounded-lg shadow mb-6">
-            <div className="flex border-b">
+          {/* Filter Controls */}
+          <div className="flex flex-wrap gap-4 mb-4 items-center">
+            {/* Type Filter */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mr-2">Type:</label>
               {filterOptions.map((f) => (
                 <button
                   key={f}
                   onClick={() => handleFilterChange(f)}
-                  className={`px-6 py-3 font-medium capitalize transition ${
+                  className={`px-3 py-1 rounded-lg font-medium capitalize transition mr-1 ${
                     filter === f
-                      ? 'border-b-2 border-blue-600 text-blue-600'
-                      : 'text-gray-600 hover:text-gray-900'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-blue-50'
                   }`}
                 >
                   {f}
                 </button>
               ))}
+            </div>
+            {/* Status Filter */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mr-2">Status:</label>
+              {statusOptions.map((s) => (
+                <button
+                  key={s}
+                  onClick={() => { setStatusFilter(s); setCurrentPage(1); }}
+                  className={`px-3 py-1 rounded-lg font-medium capitalize transition mr-1 ${
+                    statusFilter === s
+                      ? 'bg-green-600 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-green-50'
+                  }`}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+            {/* Name Search */}
+            <div>
+              <input
+                type="text"
+                value={search}
+                onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
+                placeholder="Search product name..."
+                className="px-3 py-1 rounded-lg border border-gray-300"
+              />
+            </div>
+            {/* Sort Order */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mr-2">Sort by Stock:</label>
+              <button
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                className="px-3 py-1 rounded-lg font-medium transition bg-gray-100 text-gray-700 hover:bg-gray-200"
+              >
+                {sortOrder === 'asc' ? 'Lowest First' : 'Highest First'}
+              </button>
             </div>
           </div>
 
@@ -195,7 +253,7 @@ const InventoryDashboard = () => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {paginatedInventory.length > 0 ? (
                   paginatedInventory.map((item) => (
-                    <tr key={item.id} className="hover:bg-gray-50 transition">
+                    <tr key={`${item.type}-${item.id}`} className="hover:bg-gray-50 transition">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <span className="text-2xl mr-3">{getTypeIcon(item.type)}</span>
@@ -212,13 +270,21 @@ const InventoryDashboard = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-semibold text-gray-900">
-                          {item.current_stock.toLocaleString()} {item.unit}
+                          {item.current_stock === null || item.current_stock === undefined
+                            ? '-' 
+                            : `${item.current_stock.toLocaleString()} ${item.unit}`}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-3 py-1 text-xs font-medium rounded-full border capitalize ${getStatusColor(item.status)}`}>
-                          {item.status}
-                        </span>
+                        {item.status ? (
+                          <span className={`px-3 py-1 text-xs font-medium rounded-full border capitalize ${getStatusColor(item.status)}`}>
+                            {item.status}
+                          </span>
+                        ) : (
+                          <span className="px-3 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-400 border-gray-200">
+                            -
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <Link
