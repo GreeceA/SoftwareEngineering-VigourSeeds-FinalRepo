@@ -4,7 +4,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { usePage, Link } from '@inertiajs/react';
 
 const InventoryDashboard = () => {
-  const { auth, inventory } = usePage().props;
+  const { auth, inventory, shortfalls } = usePage().props;
 
   const [filter, setFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -111,6 +111,66 @@ const InventoryDashboard = () => {
             </div>
           </div>
 
+          {/* Stock Shortfall Widget - Redesigned */}
+          {shortfalls && shortfalls.length > 0 && (
+            <div className="mb-8 bg-gradient-to-r from-red-50 to-orange-50 border-l-4 border-red-500 rounded-lg shadow-sm">
+              <div className="p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="bg-red-100 p-2 rounded-full">
+                    <AlertTriangle className="text-red-600" size={24} />
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-red-800">Stock Shortfall Alert</h2>
+                    <p className="text-red-600 text-sm">Immediate action required for these items</p>
+                  </div>
+                  <div className="ml-auto bg-red-500 text-white px-3 py-1 rounded-full text-sm font-medium">
+                    {shortfalls.length} Item{shortfalls.length > 1 ? 's' : ''}
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {shortfalls.map((item) => (
+                    <div key={`${item.type}-${item.id}`} className="bg-white rounded-lg border border-red-200 p-4 hover:shadow-md transition-shadow">
+                      <div className="flex items-start justify-between mb-3">
+                        <h3 className="font-semibold text-gray-900 text-sm">{item.name}</h3>
+                        <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full font-medium">
+                          {item.type}
+                        </span>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-gray-600">Shortfall:</span>
+                          <span className="font-bold text-red-700">{item.shortfall.toLocaleString()} {item.unit}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-gray-600">On Hand:</span>
+                          <span className="font-medium text-gray-700">{item.on_hand.toLocaleString()} {item.unit}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-gray-600">Committed:</span>
+                          <span className="font-medium text-gray-700">{item.committed.toLocaleString()} {item.unit}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-3 pt-3 border-t border-gray-100">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-red-600 font-medium">Action Required</span>
+                          <Link
+                            href={route('inventory.inbound.create')}
+                            className="text-blue-600 hover:text-blue-800 font-medium"
+                          >
+                            Restock →
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
@@ -170,6 +230,7 @@ const InventoryDashboard = () => {
             </div>
           </div>
 
+          {/* Rest of the component remains exactly the same */}
           {/* Filter Controls */}
           <div className="flex flex-wrap gap-4 mb-4 items-center">
             {/* Type Filter */}
@@ -288,7 +349,10 @@ const InventoryDashboard = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <Link
-                            href={route('inventory.show', [item.type, item.id])}
+                            href={route('inventory.show', [
+                                item.type === 'Seed' ? 'seed' : 'item',
+                                item.id
+                            ])}
                             className="text-blue-600 hover:text-blue-900 font-medium"
                         >
                             View Details

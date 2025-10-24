@@ -9,6 +9,7 @@ use App\Models\Partner;
 use App\Models\Seed;
 use App\Models\Item;
 use App\Models\ContractSeedCommitment;
+use App\Http\Requests\StorePartnerOrderRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -21,8 +22,12 @@ class PartnerOrderController extends Controller
      */
     public function index(Request $request)
     {
-        $query = PartnerOrder::with(['partner', 'contract', 'lines.product'])
-            ->orderBy('created_at', 'desc');
+        $query = PartnerOrder::with([
+            'partner',
+            'contract',
+            'lines.product',
+            'buyback_transactions'
+        ])->orderBy('created_at', 'desc');
 
         // Filter by status
         if ($request->has('status') && $request->status) {
@@ -37,8 +42,47 @@ class PartnerOrderController extends Controller
         $orders = $query->paginate(20);
         $partners = Partner::all();
 
+        // Map paginated items for frontend
+        $orders->getCollection()->transform(function ($order) {
+            return [
+                'id' => $order->id,
+                'order_number' => $order->order_number,
+                'order_date' => $order->order_date,
+                'status' => $order->status,
+                'partner' => $order->partner,
+                'contract' => $order->contract,
+                'notes' => $order->notes,
+                'fulfillment_percentage' => $order->getFulfillmentPercentage(),
+                'lines' => $order->lines->map(function ($line) {
+                    $availableStock = 0;
+                    if ($line->product) {
+                        if (method_exists($line->product, 'getCurrentStock')) {
+                            $availableStock = $line->product->getCurrentStock();
+                        } elseif (property_exists($line->product, 'available_stock')) {
+                            $availableStock = $line->product->available_stock;
+                        }
+                    }
+                    return [
+                        'id' => $line->id,
+                        'product_id' => $line->product_id,
+                        'product_type' => $line->product_type,
+                        'qty' => $line->qty,
+                        'unit' => $line->unit,
+                        'price_per_unit' => $line->price_per_unit,
+                        'product' => [
+                            'id' => $line->product?->id,
+                            'name' => $line->product?->name ?? $line->product?->seed_variety ?? '',
+                            'available_stock' => $availableStock,
+                        ],
+                    ];
+                }),
+            ];
+        });
+
         return Inertia::render('PartnerOrders/Index', [
+            'orders' => $orders,
             'partnerOrders' => $orders,
+            'partners' => $partners,
         ]);
     }
 
@@ -52,31 +96,54 @@ class PartnerOrderController extends Controller
         $seeds = Seed::active()->get();
         $items = Item::active()->get();
 
+        $fertilizers = Item::where('type', 'fertilizer')
+            ->where('status', 'active')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'unit' => $item->base_unit,
+                    'price' => $item->price_per_unit,
+                    'available_stock' => $item->getCurrentStock(),
+                ];
+            })
+            ->filter(function ($item) {
+                return $item['available_stock'] > 0;
+            })
+            ->values();
+
+        $pesticides = Item::where('type', 'pesticide')
+            ->where('status', 'active')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'unit' => $item->base_unit,
+                    'price' => $item->price_per_unit,
+                    'available_stock' => $item->getCurrentStock(),
+                ];
+            })
+            ->filter(function ($item) {
+                return $item['available_stock'] > 0;
+            })
+            ->values();
+
         return Inertia::render('PartnerOrders/Create', [
             'partners' => $partners,
             'contracts' => $contracts,
-            'seeds' => $seeds,
-            'items' => $items,
-        ]);    
+            'fertilizers' => $fertilizers,
+            'pesticides' => $pesticides,
+        ]);
     }
 
     /**
      * Store new partner order
      */
-    public function store(Request $request)
+    public function store(StorePartnerOrderRequest $request)
     {
-        $validated = $request->validate([
-            'partner_id' => 'required|exists:partners,id',
-            'contract_id' => 'nullable|exists:contracts,id',
-            'order_date' => 'required|date',
-            'notes' => 'nullable|string',
-            'lines' => 'required|array|min:1',
-            'lines.*.product_type' => 'required|string',
-            'lines.*.product_id' => 'required|integer',
-            'lines.*.qty' => 'required|numeric|min:0.01',
-            'lines.*.unit' => 'required|in:kg,liter,sack,ton',
-            'lines.*.price_per_unit' => 'required|numeric|min:0',
-        ]);
+        $validated = $request->validated();
 
         DB::beginTransaction();
         try {
@@ -94,7 +161,7 @@ class PartnerOrderController extends Controller
             foreach ($validated['lines'] as $line) {
                 PartnerOrderLine::create([
                     'partner_order_id' => $order->id,
-                    'product_type' => $line['product_type'],
+                    'product_type' => Item::class,
                     'product_id' => $line['product_id'],
                     'qty' => $line['qty'],
                     'unit' => $line['unit'],
@@ -113,7 +180,6 @@ class PartnerOrderController extends Controller
                 ->with('error', 'Failed to create order: ' . $e->getMessage());
         }
     }
-
     /**
      * Auto-generate partner order from contract seed commitments
      */
@@ -147,6 +213,7 @@ class PartnerOrderController extends Controller
                     'partner_order_id' => $order->id,
                     'product_type' => 'App\\Models\\Seed',
                     'product_id' => $commitment->seed_id,
+                    'product_name' => $line->product?->name ?? '',
                     'qty' => $commitment->seed_quantity,
                     'unit' => $commitment->unit,
                     'price_per_unit' => $commitment->seed_price_at_contract,
@@ -169,15 +236,115 @@ class PartnerOrderController extends Controller
      */
     public function show($id)
     {
-        // $partnerOrder->load([
-        //     'partner',
-        //     'contract',
-        //     'lines.product',
-        //     'inventoryTransactions.product',
-        //     'creator'
-        // ]);
+        $partnerOrder = PartnerOrder::with([
+            'partner',
+            'contract',
+            'lines.product',
+            'inventoryTransactions.product',
+            'creator'
+        ])->findOrFail($id);
 
-        return Inertia::render('PartnerOrders/Show');
+        $deliveryTransactions = \App\Models\InventoryTransaction::with(['creator', 'seed', 'item'])
+            ->where('partner_order_id', $partnerOrder->id)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($tx) use ($partnerOrder) {
+                // Get product name
+                $productName = '-';
+                if ($tx->product_type === 'seed' || $tx->product_type === 'App\\Models\\Seed') {
+                    $productName = $tx->seed?->seed_variety ?? '-';
+                } elseif ($tx->product_type === 'item' || $tx->product_type === 'App\\Models\\Item') {
+                    $productName = $tx->item?->name ?? '-';
+                }
+
+                // Convert quantity to base unit (kg/liter)
+                $qtyBase = abs($tx->qty);
+                if ($tx->unit === 'sack') {
+                    $qtyBase = $qtyBase * 50;
+                } elseif ($tx->unit === 'ton') {
+                    $qtyBase = $qtyBase * 1000;
+                }
+
+                // Find the matching order line for this transaction
+                $orderLine = $partnerOrder->lines
+                    ->where('product_id', $tx->product_id)
+                    ->where('product_type', $tx->product_type)
+                    ->first();
+
+                $pricePerUnit = $orderLine ? $orderLine->price_per_unit : 0;
+
+                // Calculate value
+                $value = $qtyBase * $pricePerUnit;
+
+                return [
+                    'id' => $tx->id,
+                    'product_name' => $productName,
+                    'transaction_type' => $tx->transaction_type,
+                    'quantity' => abs($tx->qty),
+                    'unit' => $tx->unit,
+                    'date' => $tx->created_at->format('Y-m-d H:i'),
+                    'notes' => $tx->notes,
+                    'delivered_by' => $tx->creator
+                        ? trim(($tx->creator->first_name ?? '') . ' ' . ($tx->creator->last_name ?? ''))
+                        : '-',
+                    'value' => $value,
+                ];
+            });
+
+        return Inertia::render('PartnerOrders/Show', [
+            'auth' => ['user' => auth()->user()],
+            'partnerOrder' => [
+                'id' => $partnerOrder->id,
+                'order_number' => $partnerOrder->order_number ?? 'PO-' . $partnerOrder->id,
+                'order_date' => $partnerOrder->order_date->format('Y-m-d'),
+                'status' => $partnerOrder->status,
+                'notes' => $partnerOrder->notes,
+                'partner' => [
+                    'id' => $partnerOrder->partner->id,
+                    'name' => $partnerOrder->partner->name,
+                    'contact' => $partnerOrder->partner->phone,
+                ],
+                'contract' => $partnerOrder->contract ? [
+                    'id' => $partnerOrder->contract->id,
+                    'contract_name' => $partnerOrder->contract->contract_name,
+                    'contract_number' => $partnerOrder->contract->contract_number,
+                    'buyback_price_per_unit' => $partnerOrder->contract->buyback_price_per_unit,
+                    'farm_name' => $partnerOrder->contract->farm?->location_name,
+                    'farm_location' => $partnerOrder->contract->farm?->address,
+                    'effective_date' => $partnerOrder->contract->effective_date?->format('Y-m-d'),
+                    'expiration_date' => $partnerOrder->contract->expiration_date?->format('Y-m-d'),
+                ] : null,
+                'lines' => $partnerOrder->lines->map(function ($line) {
+                    // Get available stock from product
+                    $availableStock = 0;
+                    if ($line->product) {
+                        if (method_exists($line->product, 'getCurrentStock')) {
+                            $availableStock = $line->product->getCurrentStock();
+                        } elseif (property_exists($line->product, 'available_stock')) {
+                            $availableStock = $line->product->available_stock;
+                        }
+                    }
+                    return [
+                        'id' => $line->id,
+                        'product_type' => $line->product_type === 'App\\Models\\Item'
+                            ? (Item::find($line->product_id)?->type ?? 'item')
+                            : $line->product_type,
+                        'product_name' => ($line->product_type === 'seed' || $line->product_type === 'App\\Models\\Seed')
+                            ? ($line->product?->seed_variety ?? '')
+                            : ($line->product?->name ?? ''),
+                        'qty' => $line->qty,
+                        'unit' => $line->unit,
+                        'delivered_qty' => $line->delivered_qty,
+                        'price_per_unit' => $line->price_per_unit,
+                        'total_value' => $line->getTotalValue(),
+                        'available_stock' => $availableStock, // <-- Pass available stock!
+                    ];
+                }),
+                'fulfillment_percentage' => $partnerOrder->getFulfillmentPercentage(),
+                'total_value' => $partnerOrder->getTotalValue(),
+                'buyback_transactions' => $deliveryTransactions,
+            ],
+        ]);
     }
 
     /**

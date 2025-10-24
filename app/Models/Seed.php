@@ -63,7 +63,7 @@ class Seed extends Model
             if ($txn->transaction_type === 'inbound') {
                 $stock += $qty;
             } elseif ($txn->transaction_type === 'outbound') {
-                $stock -= $qty;
+                $stock -= abs($qty);
             } elseif ($txn->transaction_type === 'adjustment') {
                 $stock += $qty;
             }

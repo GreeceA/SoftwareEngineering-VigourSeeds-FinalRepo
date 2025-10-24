@@ -4,10 +4,15 @@ import { usePage, Link, router } from '@inertiajs/react';
 import Select from 'react-select';
 import React, { useState } from 'react';
 
+// Helper for date validation
+const getToday = () => {
+  return new Date().toISOString().split('T')[0];
+}
+
 const StockInboundForm = () => {
-  const { errors } = usePage().props;
+  const { errors: backendErrors } = usePage().props;
   const { auth, seeds, items } = usePage().props;
-  
+
   const getMinExpirationDate = (manufactureDate) => {
     if (!manufactureDate) return '';
     const date = new Date(manufactureDate);
@@ -15,10 +20,22 @@ const StockInboundForm = () => {
     return date.toISOString().split('T')[0];
   };
 
+  // Initial state for a single product's errors
+  const initialErrorState = {
+    qty: '',
+    receipt_date: '',
+    manufacture_date: '',
+    expiration_date: ''
+  };
+
   // Array of products for this stock-in
   const [products, setProducts] = useState([
     { product_type: '', product_id: '', qty: '', unit: 'kg', notes: '', receipt_date: '', manufacture_date: '', expiration_date: '' }
   ]);
+
+  // State to hold client-side validation errors
+  const [fieldErrors, setFieldErrors] = useState([initialErrorState]);
+  
   const [showSuccess, setShowSuccess] = useState(false);
 
   const productTypes = [
@@ -32,59 +49,257 @@ const StockInboundForm = () => {
     return [];
   };
 
+  // Central validation function for a single product
+  const validateProduct = (product) => {
+    const errors = { ...initialErrorState };
+    
+    // 1. Stop if no product type is selected
+    if (!product.product_type) {
+      return errors;
+    }
+
+    // 2. Validate Product ID first.
+    if (!product.product_id) {
+      errors.product_id = 'Product is required.';
+      // As requested: "only show the required error for the Select Product field"
+      // By returning here, we don't validate qty or dates.
+      return errors;
+    }
+
+    // --- Product ID is present, so we can validate the rest ---
+
+    // 3. Quantity Validation (gt:0, lt:100000)
+    const numQty = parseFloat(product.qty);
+    if (!product.qty) errors.qty = 'Quantity is required.';
+    else if (isNaN(numQty)) errors.qty = 'Must be a valid number.';
+    else if (numQty <= 0) errors.qty = 'Quantity must be greater than 0.';
+    else if (numQty >= 100000) errors.qty = 'Quantity must be less than 100,000.';
+    
+    // 4. Receipt Date Validation (required, before_or_equal:today)
+    if (!product.receipt_date) errors.receipt_date = 'Receipt date is required.';
+    else if (product.receipt_date > getToday()) {
+      errors.receipt_date = 'Receipt date cannot be in the future.';
+    }
+
+    // 5. Manufacture Date Validation (required, before_or_equal:receipt_date)
+    if (!product.manufacture_date) errors.manufacture_date = 'Manufacture date is required.';
+    else if (product.receipt_date && product.manufacture_date > product.receipt_date) {
+      errors.manufacture_date = 'Must be on or before the receipt date.';
+    }
+
+    // 6. Expiration Date Validation (required, after:manufacture_date)
+    if (!product.expiration_date) errors.expiration_date = 'Expiration date is required.';
+    else if (product.manufacture_date && product.expiration_date <= product.manufacture_date) {
+      errors.expiration_date = 'Must be after the manufacture date.';
+    }
+
+    return errors;
+  };
+
+  const handleQuantityChange = (idx, e) => {
+  let value = e.target.value.replace(/,/g, '');
+
+  // Only allow numbers and dot
+  value = value.replace(/[^0-9.]/g, '');
+
+  // Only one dot
+  const parts = value.split('.');
+  if (parts.length > 2) {
+    value = parts[0] + '.' + parts.slice(1).join('');
+  }
+  // Only two decimals
+  if (parts[1]?.length > 2) {
+    value = parts[0] + '.' + parts[1].slice(0, 2);
+  }
+
+  // Prevent negative
+  let numericValue = parseFloat(value);
+  if (numericValue < 0) value = '0';
+
+  // Allow up to 99,999.99
+  if (numericValue > 99999.99) value = '99999.99';
+
+  // Format with commas (even for 4 or 5 digits)
+  if (value !== '') {
+    const [integerPart, decimalPart] = value.split('.');
+    // Pad with zeros if needed to allow typing up to 99999 before formatting
+    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    let formatted = formattedInteger;
+    if (decimalPart !== undefined) {
+      formatted += '.' + decimalPart;
+    }
+    value = formatted;
+  }
+
+  handleProductChange(idx, 'qty', value);
+};
+
+  // Updated handler to manage state and trigger validation
   const handleProductChange = (idx, field, value) => {
-    setProducts(products =>
-      products.map((p, i) =>
-        i === idx
-          ? {
-              ...p,
-              [field]: value,
-              // Reset product_id and unit if type changes
-              ...(field === 'product_type'
-                ? {
-                    product_id: '',
-                    qty: '',
-                    unit: value === 'seed' ? 'kg' : '',
-                    notes: '',
-                    receipt_date: '',
-                    manufacture_date: '',
-                    expiration_date: ''
-                  }
-                : {}),
-              // Set unit if product_id changes
-              ...(field === 'product_id'
-                ? {
-                    unit:
-                      getCurrentProducts(p.product_type).find(prod => prod.id === parseInt(value))?.unit ||
-                      (p.product_type === 'seed' ? 'kg' : '')
-                  }
-                : {})
-            }
-          : p
+  const newProducts = products.map((p, i) => {
+    if (i !== idx) return p;
+
+    let updatedProduct = { ...p, [field]: value };
+
+    if (field === 'qty') {
+      // STRIP COMMAS BEFORE VALIDATION
+      const cleanValue = value.replace(/,/g, '');
+
+      // Allow empty string (for clearing the field)
+      if (cleanValue === '') {
+        updatedProduct.qty = '';
+      } else {
+        // 1. Check for invalid characters
+        if (!/^\d*\.?\d*$/.test(cleanValue)) {
+          return p; // Revert to old state
+        }
+        
+        // 2. Check for more than 2 decimal places
+        const decimalParts = cleanValue.split('.');
+        if (decimalParts[1] && decimalParts[1].length > 2) {
+          return p; // Revert to old state
+        }
+
+        // 3. Check for max value (NOW WITH CLEAN VALUE)
+        const numValue = parseFloat(cleanValue);
+        if (numValue > 99999.99) {
+           return p; // Revert to old state
+        }
+        
+        // 4. Check for negatives
+        if (numValue < 0) {
+          return p; // Revert
+        }
+      }
+    }
+
+    // Reset logic when product_type changes
+    if (field === 'product_type') {
+      updatedProduct = {
+        ...p,
+        product_type: value,
+        product_id: '',
+        qty: '',
+        unit: value === 'seed' ? 'kg' : '',
+        notes: '',
+        receipt_date: '',
+        manufacture_date: '',
+        expiration_date: ''
+      };
+    }
+
+    // Auto-set unit when product_id changes
+    if (field === 'product_id') {
+      updatedProduct.unit = 
+        getCurrentProducts(p.product_type).find(prod => prod.id === parseInt(value))?.unit ||
+        (p.product_type === 'seed' ? 'kg' : '');
+    }
+
+    // Clear dependent dates if a parent date makes them invalid
+    if (field === 'receipt_date' && updatedProduct.manufacture_date > value) {
+      updatedProduct.manufacture_date = '';
+      updatedProduct.expiration_date = '';
+    }
+    if (field === 'manufacture_date' && updatedProduct.expiration_date <= value) {
+      updatedProduct.expiration_date = '';
+    }
+
+    return updatedProduct;
+  });
+
+  setProducts(newProducts);
+
+  const newFieldErrors = newProducts.map(p => validateProduct(p));
+  setFieldErrors(newFieldErrors);
+};
+
+  const addProductRow = () => {
+    setProducts([...products, { product_type: '', product_id: '', qty: '', unit: 'kg', notes: '', receipt_date: '', manufacture_date: '', expiration_date: '' }]);
+    // Add a corresponding error object
+    setFieldErrors([...fieldErrors, initialErrorState]);
+    setFieldTouched(prev => [...prev, initialTouchedState]);
+  };
+
+  const removeProductRow = (idx) => {
+    setProducts(products => products.filter((_, i) => i !== idx));
+    // Remove the corresponding error object
+    setFieldErrors(errors => errors.filter((_, i) => i !== idx));
+    setFieldTouched(touched => touched.filter((_, i) => i !== idx));
+  };
+
+  // Check if all required fields are filled AND if all client-side error states are empty
+  const isFormValid = products.every(
+    (p, idx) =>
+      p.product_type &&
+      p.product_id &&
+      p.qty &&
+      p.receipt_date &&
+      p.manufacture_date &&
+      p.expiration_date &&
+      fieldErrors[idx] &&
+      Object.values(fieldErrors[idx]).every(err => err === '')
+  );
+
+  const initialTouchedState = {
+    product_type: false,
+    product_id: false,
+    qty: false,
+    unit: false,
+    receipt_date: false,
+    manufacture_date: false,
+    expiration_date: false,
+  };
+
+  const handleBlur = (idx, field) => {
+    setFieldTouched(prev => 
+      prev.map((row, i) => 
+        i === idx ? { ...row, [field]: true } : row
       )
     );
   };
 
-  const addProductRow = () => {
-    setProducts([...products, { product_type: '', product_id: '', qty: '', unit: 'kg', notes: '', receipt_date: '', manufacture_date: '', expiration_date: '' }]);
-  };
+  const [fieldTouched, setFieldTouched] = useState([initialTouchedState]);
   
-  const removeProductRow = (idx) => {
-    setProducts(products => products.filter((_, i) => i !== idx));
-  };
-
-  const isFormValid = products.every(
-    p => p.product_type && p.product_id && p.qty > 0 && p.receipt_date
-  );
-
   const handleSubmit = (e) => {
     e.preventDefault();
-    router.post(route('inventory.inbound.store'), { products }, {
+    
+    // NEW: Mark all fields as touched to show all errors on submit
+    setFieldTouched(products.map(() => ({
+      product_type: true,
+      product_id: true,
+      qty: true,
+      unit: true,
+      receipt_date: true,
+      manufacture_date: true,
+      expiration_date: true,
+    })));
+    
+    // Final validation check (this is your existing logic)
+    const finalErrors = products.map(p => validateProduct(p));
+    setFieldErrors(finalErrors);
+    
+    const hasErrors = finalErrors.some(rowErrors => 
+      Object.values(rowErrors).some(err => err !== '')
+    );
+    
+    if (hasErrors || !isFormValid) {
+      console.log("Form has errors, not submitting.");
+      return;
+    }
+
+    const cleanedProducts = products.map(p => ({
+      ...p,
+      qty: p.qty ? parseFloat(String(p.qty).replace(/,/g, '')) : 0
+    }));
+    
+    router.post(route('inventory.inbound.store'), { products: cleanedProducts }, {
       onSuccess: () => {
         setShowSuccess(true);
         setTimeout(() => {
           setShowSuccess(false);
           setProducts([{ product_type: '', product_id: '', qty: '', unit: 'kg', notes: '', receipt_date: '', manufacture_date: '', expiration_date: '' }]);
+          setFieldErrors([initialErrorState]);
+          setFieldTouched([initialTouchedState]); // Reset touched state
         }, 2000);
       }
     });
@@ -155,9 +370,9 @@ const StockInboundForm = () => {
                     ))}
                   </div>
                 </div>
-                {errors && errors[`products.${idx}.product_type`] && (
+                {backendErrors && backendErrors[`products.${idx}.product_type`] && (
                   <div className="text-red-500 text-xs mb-1">
-                    {errors[`products.${idx}.product_type`]}
+                    {backendErrors[`products.${idx}.product_type`]}
                   </div>
                 )}
                 {/* Product Selection */}
@@ -180,18 +395,21 @@ const StockInboundForm = () => {
                       }
                       onChange={opt => {
                         if (!opt) {
-                          // If cleared, reset product_id and unit to default for type
                           handleProductChange(idx, 'product_id', '');
                           handleProductChange(idx, 'unit', product.product_type === 'seed' ? 'kg' : '');
                         } else {
                           handleProductChange(idx, 'product_id', opt.value);
                         }
                       }}
+                      onBlur={() => handleBlur(idx, 'product_id')} // ADD THIS
                       placeholder="Search or select product..."
                       isClearable
                       className="react-select-container"
                       classNamePrefix="react-select"
                     />
+                    { (fieldErrors[idx]?.product_id && fieldTouched[idx]?.product_id) && (
+                      <p className="text-red-500 text-xs mt-1">{fieldErrors[idx].product_id}</p>
+                    )}
                   </div>
                 )}
                 {/* Quantity and Unit */}
@@ -202,15 +420,28 @@ const StockInboundForm = () => {
                         Quantity <span className="text-red-500">*</span>
                       </label>
                       <input
-                        type="number"
-                        step="0.01"
-                        min="0.01"
+                        type="text"
+                        inputMode="decimal"
                         value={product.qty}
-                        onChange={e => handleProductChange(idx, 'qty', e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        onBlur={() => handleBlur(idx, 'qty')}
+                        onChange={e => handleQuantityChange(idx, e)}
+                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:border-transparent ${
+                          fieldTouched[idx]?.qty && fieldErrors[idx]?.qty
+                            ? 'border-red-500 focus:ring-red-500'
+                            : 'border-gray-300 focus:ring-blue-500'
+                        }`}
                         placeholder="Enter quantity"
                         required
                       />
+                      <span className="text-xs text-gray-500 block mt-1">Valid range: ₱0.01–₱99,999.99</span>
+                      {/* Error Display */}
+                      {fieldTouched[idx]?.qty && fieldErrors[idx]?.qty && (
+                        <p className="text-red-500 text-xs mt-1">{fieldErrors[idx].qty}</p>
+                      )}
+                      {/* Keep backend error display */}
+                      {backendErrors && backendErrors[`products.${idx}.qty`] && (
+                        <p className="text-red-500 text-xs mt-1">{backendErrors[`products.${idx}.qty`]}</p>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -228,7 +459,6 @@ const StockInboundForm = () => {
                           <option value="ton">Ton</option>
                         </select>
                       ) : (
-                        // For item, prefill and lock the unit
                         <input
                           type="text"
                           value={
@@ -250,14 +480,27 @@ const StockInboundForm = () => {
                     <input
                       type="date"
                       value={product.receipt_date || ''}
+                      onBlur={() => handleBlur(idx, 'receipt_date')} // ADD THIS
                       onChange={e => handleProductChange(idx, 'receipt_date', e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                      className={`w-full px-4 py-2 border rounded-lg ${
+                        fieldTouched[idx]?.receipt_date && fieldErrors[idx]?.receipt_date
+                          ? 'border-red-500'
+                          : 'border-gray-300'
+                      }`}
                       required
-                      max={new Date().toISOString().split('T')[0]} // disables future dates
+                      max={getToday()}
                     />
                     <p className="text-xs text-gray-500 mt-1">
                       Actual day the stock was delivered and received.
                     </p>
+                    {/* MODIFIED Error Display */}
+                    { (fieldErrors[idx]?.receipt_date && fieldTouched[idx]?.receipt_date) && (
+                      <p className="text-red-500 text-xs mt-1">{fieldErrors[idx].receipt_date}</p>
+                    )}
+                    {/* Keep backend error display */}
+                    {backendErrors && backendErrors[`products.${idx}.receipt_date`] && (
+                      <p className="text-red-500 text-xs mt-1">{backendErrors[`products.${idx}.receipt_date`]}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -266,11 +509,30 @@ const StockInboundForm = () => {
                     <input
                       type="date"
                       value={product.manufacture_date || ''}
+                      onBlur={() => handleBlur(idx, 'manufacture_date')}
                       onChange={e => handleProductChange(idx, 'manufacture_date', e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                      className={`w-full px-4 py-2 border rounded-lg ${
+                        fieldTouched[idx]?.manufacture_date && fieldErrors[idx]?.manufacture_date
+                          ? 'border-red-500'
+                          : 'border-gray-300'
+                      }`}
                       required
-                      max={product.receipt_date || new Date().toISOString().split('T')[0]}
+                      max={product.receipt_date || getToday()}
+                      disabled={!product.receipt_date}
                     />
+                    {!product.receipt_date && (
+                      <p className="text-xs text-amber-600 mt-1">
+                        Please enter receipt date first.
+                      </p>
+                    )}
+                    {/* Error Display */}
+                    { (fieldErrors[idx]?.manufacture_date && fieldTouched[idx]?.manufacture_date) && (
+                      <p className="text-red-500 text-xs mt-1">{fieldErrors[idx].manufacture_date}</p>
+                    )}
+                    {/* Keep backend error display */}
+                    {backendErrors && backendErrors[`products.${idx}.manufacture_date`] && (
+                      <p className="text-red-500 text-xs mt-1">{backendErrors[`products.${idx}.manufacture_date`]}</p>
+                    )}
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -279,11 +541,30 @@ const StockInboundForm = () => {
                     <input
                       type="date"
                       value={product.expiration_date || ''}
+                      onBlur={() => handleBlur(idx, 'expiration_date')}
                       onChange={e => handleProductChange(idx, 'expiration_date', e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                      className={`w-full px-4 py-2 border rounded-lg ${
+                        fieldTouched[idx]?.expiration_date && fieldErrors[idx]?.expiration_date
+                          ? 'border-red-500'
+                          : 'border-gray-300'
+                      }`}
                       required
                       min={getMinExpirationDate(product.manufacture_date)}
+                      disabled={!product.manufacture_date}
                     />
+                    {!product.manufacture_date && (
+                      <p className="text-xs text-amber-600 mt-1">
+                        Please enter manufacture date first.
+                      </p>
+                    )}
+                    {/* Error Display */}
+                    { (fieldErrors[idx]?.expiration_date && fieldTouched[idx]?.expiration_date) && (
+                      <p className="text-red-500 text-xs mt-1">{fieldErrors[idx].expiration_date}</p>
+                    )}
+                    {/* Keep backend error display */}
+                    {backendErrors && backendErrors[`products.${idx}.expiration_date`] && (
+                      <p className="text-red-500 text-xs mt-1">{backendErrors[`products.${idx}.expiration_date`]}</p>
+                    )}
                   </div>
                 </div>
                 {/* Notes */}
@@ -304,14 +585,17 @@ const StockInboundForm = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      handleProductChange(idx, 'product_type', '');
-                      handleProductChange(idx, 'product_id', '');
-                      handleProductChange(idx, 'qty', '');
-                      handleProductChange(idx, 'unit', 'kg');
-                      handleProductChange(idx, 'notes', '');
-                      handleProductChange(idx, 'receipt_date', '');
-                      handleProductChange(idx, 'manufacture_date', '');
-                      handleProductChange(idx, 'expiration_date', '');
+                      // Clear the product row
+                      setProducts(products => products.map((p, i) => 
+                        i === idx ? { product_type: '', product_id: '', qty: '', unit: 'kg', notes: '', receipt_date: '', manufacture_date: '', expiration_date: '' } : p
+                      ));
+                      // Clear the corresponding errors
+                      setFieldErrors(errors => errors.map((e, i) => 
+                        i === idx ? initialErrorState : e
+                      ));
+                      setFieldTouched(touched => touched.map((t, i) => 
+                        i === idx ? initialTouchedState : t
+                      ));
                     }}
                     className="px-4 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition"
                   >

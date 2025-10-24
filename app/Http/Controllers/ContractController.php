@@ -84,10 +84,11 @@ class ContractController extends Controller
     {
         $partners = Partner::with('farms:id,partner_id,location_name,soil_type,area_size,address')
             ->select('id', 'name', 'email', 'phone')
+            ->where('status', 'active')
             ->orderBy('name')
             ->get();
         
-        $seeds = Seed::select('id', 'seed_variety', 'price_per_unit', 'growth_cycle', 'soil_type')
+        $seeds = Seed::select('id', 'seed_variety', 'price_per_unit', 'growth_cycle', 'soil_type', 'status')
             ->orderBy('seed_variety')
             ->get();
 
@@ -170,6 +171,56 @@ class ContractController extends Controller
     {
         $contract->load(['partner.farms', 'farm', 'contractSeedCommitments.seed']);
 
+        // Get partner orders for this contract (excluding cancelled)
+        $partnerOrders = \App\Models\PartnerOrder::with(['lines.product', 'creator'])
+            ->where('contract_id', $contract->id)
+            ->whereIn('status', ['pending', 'partially_fulfilled', 'fulfilled'])
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($order) {
+                return [
+                    'id' => $order->id,
+                    'order_number' => $order->order_number ?? 'PO-' . $order->id,
+                    'order_date' => $order->order_date->format('Y-m-d'),
+                    'status' => $order->status,
+                    'fulfillment_percentage' => $order->getFulfillmentPercentage(),
+                    'total_value' => $order->getTotalValue(),
+                    'notes' => $order->notes,
+                    'lines' => $order->lines->map(function ($line) {
+                        return [
+                            'id' => $line->id,
+                            'product_name' => ($line->product_type === 'seed' || $line->product_type === 'App\\Models\\Seed')
+                                ? ($line->product?->seed_variety ?? '')
+                                : ($line->product?->name ?? ''),
+                            'qty' => $line->qty,
+                            'unit' => $line->unit,
+                            'delivered_qty' => $line->delivered_qty,
+                            'price_per_unit' => $line->price_per_unit,
+                        ];
+                    }),
+                ];
+            });
+
+        $fieldVisits = \App\Models\FieldVisit::with(['assignee:id,first_name,last_name'])
+            ->where('contract_ID', $contract->id)
+            ->whereIn('status', ['ongoing', 'completed'])
+            ->orderBy('date_visit', 'desc')
+            ->get()
+            ->map(function ($visit) {
+                return [
+                    'id' => $visit->field_visit_ID,
+                    'date_visit' => $visit->date_visit,
+                    'status' => $visit->status,
+                    'remarks' => $visit->remarks,
+                    'assignee' => $visit->assignee ? [
+                        'id' => $visit->assignee->id,
+                        'name' => $visit->assignee->first_name . ' ' . $visit->assignee->last_name,
+                    ] : null,
+                    'growth_reports_count' => $visit->growthReports()->count(),
+                    'damage_reports_count' => $visit->damageReports()->count(),
+                ];
+            });
+
         return Inertia::render('Contracts/Show', [
             'auth' => ['user' => auth()->user()],
             'contract' => [
@@ -219,6 +270,8 @@ class ContractController extends Controller
                     'total_buyback_value' => $item->getTotalBuybackValue(),
                     'profit_margin_estimate' => $item->getProfitMarginEstimate(),
                 ]),
+                'partner_orders' => $partnerOrders, // Add this line
+                'field_visits' => $fieldVisits,
                 'can_be_edited' => $contract->canBeEdited(),
                 'can_be_partially_edited' => $contract->canBePartiallyEdited(),
                 'available_transitions' => $this->getAvailableTransitions($contract),
@@ -288,7 +341,7 @@ class ContractController extends Controller
                 ->select('id', 'name', 'email')
                 ->orderBy('name')
                 ->get(),
-            'seeds' => Seed::select('id', 'seed_variety', 'price_per_unit', 'growth_cycle', 'soil_type')
+            'seeds' => Seed::select('id', 'seed_variety', 'price_per_unit', 'growth_cycle', 'soil_type', 'status')
                 ->orderBy('seed_variety')
                 ->get(),
         ]);
@@ -472,6 +525,24 @@ class ContractController extends Controller
             ]);
         }
 
+        if ($status === 'completed') {
+            // Check for at least one completed field visit
+            $hasCompletedFieldVisit = \App\Models\FieldVisit::where('contract_ID', $contract->id)
+                ->where('status', 'completed')
+                ->exists();
+
+            // Check all partner orders (except cancelled) are fulfilled
+            $unfulfilledOrders = \App\Models\PartnerOrder::where('contract_id', $contract->id)
+                ->whereNotIn('status', ['cancelled', 'fulfilled'])
+                ->count();
+
+            if (!$hasCompletedFieldVisit || $unfulfilledOrders > 0) {
+                return redirect()->back()->withErrors([
+                    'error' => 'Cannot complete contract: You must have at least one completed field visit and all partner orders must be fulfilled.'
+                ]);
+            }
+        }
+
         // File requirement check for active/under_review statuses
         if (in_array($status, ['active', 'under_review']) && !$contract->contract_file) {
             return redirect()->back()->withErrors([
@@ -482,6 +553,35 @@ class ContractController extends Controller
         try {
             $oldStatus = $contract->status;
             $contract->update(['status' => $status]);
+
+            if ($status === 'active') {
+            // Check if an order already exists for this contract
+            $existingOrder = \App\Models\PartnerOrder::where('contract_id', $contract->id)->first();
+            if (!$existingOrder) {
+                $order = \App\Models\PartnerOrder::create([
+                    'partner_id' => $contract->partner_id,
+                    'contract_id' => $contract->id,
+                    'order_date' => now(),
+                    'status' => 'pending',
+                    'notes' => "Auto-generated partner order for seed fulfillment (Contract: {$contract->contract_name}). Deliver seed commitments as specified in the contract.",
+                    'created_by' => auth()->id(),
+                ]);
+
+                // Add seed commitments as order lines
+                foreach ($contract->contractSeedCommitments as $commitment) {
+                    \App\Models\PartnerOrderLine::create([
+                        'partner_order_id' => $order->id,
+                        'product_type' => 'seed',
+                        'product_id' => $commitment->seed_id,
+                        'product_name' => $commitment->seed->seed_variety, // <-- Add this line
+                        'qty' => $commitment->seed_quantity,
+                        'unit' => $commitment->unit,
+                        'price_per_unit' => $commitment->seed_price_at_contract,
+                        'delivered_qty' => 0,
+                    ]);
+                }
+            }
+        }
 
             Log::info("Contract status changed", [
                 'contract_id' => $contract->id,
@@ -590,5 +690,59 @@ class ContractController extends Controller
         ];
 
         return $transitions[$contract->status] ?? [];
+    }
+
+    public function showPartner($id)
+    {
+        $contract = Contract::with(['partner', 'farm', 'contractSeedCommitments.seed'])->findOrFail($id);
+
+        // You can pass any extra info needed for the partner portal here
+        return view('partner.contracts.show', [
+            'contract' => $contract,
+        ]);
+    }
+
+    public function verifyPartner($id)
+    {
+        $contract = Contract::with('contractSeedCommitments.seed')->findOrFail($id);
+
+        // Only allow verification if contract is under_review
+        if ($contract->status !== 'under_review') {
+            return redirect()->back()->with('error', 'Contract cannot be verified in its current status.');
+        }
+
+        // Change status to active
+        $contract->status = 'active';
+        $contract->save();
+
+        // Check if an order already exists for this contract
+        $existingOrder = \App\Models\PartnerOrder::where('contract_id', $contract->id)->first();
+        if (!$existingOrder) {
+            $order = \App\Models\PartnerOrder::create([
+                'partner_id' => $contract->partner_id,
+                'contract_id' => $contract->id,
+                'order_date' => now(),
+                'status' => 'pending',
+                'notes' => "Auto-generated partner order for seed fulfillment (Contract: {$contract->contract_name}). Deliver seed commitments as specified in the contract.",
+                'created_by' => auth()->id(),
+            ]);
+
+            // Add seed commitments as order lines
+            foreach ($contract->contractSeedCommitments as $commitment) {
+                \App\Models\PartnerOrderLine::create([
+                    'partner_order_id' => $order->id,
+                    'product_type' => 'seed',
+                    'product_id' => $commitment->seed_id,
+                    'product_name' => $commitment->seed->seed_variety,
+                    'qty' => $commitment->seed_quantity,
+                    'unit' => $commitment->unit,
+                    'price_per_unit' => $commitment->seed_price_at_contract,
+                    'delivered_qty' => 0,
+                ]);
+            }
+        }
+
+        return redirect()->route('partner.contracts.show', $contract->id)
+            ->with('success', 'Contract verified and activated successfully!');
     }
 }

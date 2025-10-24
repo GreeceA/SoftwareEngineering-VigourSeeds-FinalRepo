@@ -270,18 +270,19 @@ const InventoryLedger = () => {
                             {txn.qty > 0 ? '+' : ''}{parseFloat(txn.qty).toLocaleString()} {txn.unit}
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {txn.contract?.contract_no && (
-                            <span className="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded">
-                              {txn.contract.contract_no}
-                            </span>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          {txn.partner_order_id && (
+                            <Link
+                              href={route('partner-orders.show', txn.partner_order_id)}
+                              className="text-blue-600 hover:text-blue-800"
+                            >
+                              Order #{txn.partner_order_id}
+                            </Link>
                           )}
-                          {txn.partner_order?.order_no && (
-                            <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded ml-1">
-                              {txn.partner_order.order_no}
-                            </span>
+                          {txn.contract_id && !txn.partner_order_id && (
+                            <span className="text-gray-600">Contract #{txn.contract_id}</span>
                           )}
-                          {!txn.contract?.contract_no && !txn.partner_order?.order_no && (
+                          {!txn.partner_order_id && !txn.contract_id && (
                             <span className="text-gray-400">-</span>
                           )}
                         </td>

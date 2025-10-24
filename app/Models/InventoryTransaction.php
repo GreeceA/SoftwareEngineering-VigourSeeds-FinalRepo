@@ -94,4 +94,15 @@ class InventoryTransaction extends Model
     {
         return $query->where('product_type', $type);
     }
+
+    public function seed() {
+        return $this->belongsTo(Seed::class, 'product_id');
+    }
+    public function item() {
+        return $this->belongsTo(Item::class, 'product_id');
+    }
+    public function partnerOrderLine() {
+        return $this->belongsTo(PartnerOrderLine::class, 'partner_order_line_id');
+    }
+    
 }

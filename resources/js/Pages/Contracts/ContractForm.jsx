@@ -1,52 +1,34 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useForm, router, Link } from '@inertiajs/react';
 import dayjs from 'dayjs';
-import axios from 'axios'; 
+import axios from 'axios';
 
 export default function ContractForm({ partners, seeds, contract = null }) {
+
+    // --- PRIMARY STATE & REFS ---
+
     const fileInputRef = useRef();
-    
-    const initialSeeds = contract?.contractSeedCommitments ? contract.contractSeedCommitments.map(item => ({
-        ...item.seed,
-        ...item,     
-    })) : [];
-    
-    const [selectedSeeds, setSelectedSeeds] = useState(initialSeeds);
-    const [partnerSearch, setPartnerSearch] = useState(contract?.partner?.name || '');
-    const [showPartnerDropdown, setShowPartnerDropdown] = useState(false);
-    const [seedSearch, setSeedSearch] = useState('');
-    const [showSeedDropdown, setShowSeedDropdown] = useState(false);
-    const [checkingContractName, setCheckingContractName] = useState(false);
-    const [contractNameUniqueError, setContractNameUniqueError] = useState('');
-     
-    const checkContractNameUnique = async (name) => {
-        if (!name.trim()) {
-            setContractNameUniqueError('');
-            setCheckingContractName(false);
-            return;
-        }
-        setCheckingContractName(true);
-        try {
-            await axios.post(route('contracts.checkNameUnique'), {
-                contract_name: name.trim(),
-                contractId: contract?.id, // Pass current contract id for edit
-            });
-            setContractNameUniqueError('');
-        } catch (err) {
-            if (err.response?.status === 422) {
-                setContractNameUniqueError(
-                    "A contract with this name already exists. Please enter a different contract name."
-                );
-            }
-        }
-        setCheckingContractName(false);
-    };
 
-    const isEditing = !!contract;
+    const initialSeeds = contract?.contractSeedCommitments
+        ? contract.contractSeedCommitments.map(item => ({
+            seed_id: item.seed_id, // always use commitment's seed_id
+            seed_variety: item.seed.seed_variety,
+            growth_cycle: item.seed.growth_cycle,
+            price_per_unit: item.seed.price_per_unit,
+            seed_quantity: item.seed_quantity,
+            unit: item.unit,
+            seed_price_at_contract: item.seed_price_at_contract,
+            planting_date: item.planting_date,
+            expected_first_harvest_date: item.expected_first_harvest_date,
+            agreed_cycles: item.agreed_cycles,
+            expected_buyback_amount: item.expected_buyback_amount,
+            buyback_unit: item.buyback_unit,
+            id: item.id,
+        }))
+        : [];
 
-    // --- FORM DATA ALIGNMENT ---
     const { data, setData, post, put, processing, errors } = useForm({
-        contract_name: contract?.contract_name || '', 
+        contract_name: contract?.contract_name || '',
         partner_id: contract?.partner_id || '',
         farm_id: contract?.farm_id || '',
         signing_date: contract?.signing_date || dayjs().format('YYYY-MM-DD'),
@@ -55,75 +37,108 @@ export default function ContractForm({ partners, seeds, contract = null }) {
         buyback_price_per_unit: contract?.buyback_price_per_unit || '',
         notes: contract?.notes || '',
         contract_file: null,
-        seeds: initialSeeds, 
+        seeds: initialSeeds,
     });
 
-    // --- EFFECTS ---
-    useEffect(() => {
-        const updatedSeeds = selectedSeeds.map(seed => {
-            const maxCycles = getMaxCycles(seed);
-            let cycles = Number(seed.agreed_cycles) || 1; 
-            if (cycles > maxCycles) cycles = maxCycles > 0 ? maxCycles : 1;
+    // --- UI STATE (useState) ---
 
-            return { 
-                ...seed, 
-                agreed_cycles: cycles,
-            };
-        });
-        setSelectedSeeds(updatedSeeds);
-        updateFormSeeds(updatedSeeds);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [data.effective_date, data.expiration_date]);
+    const [selectedSeeds, setSelectedSeeds] = useState(initialSeeds);
+    const [partnerSearch, setPartnerSearch] = useState(contract?.partner?.name || '');
+    const [showPartnerDropdown, setShowPartnerDropdown] = useState(false);
+    const [seedSearch, setSeedSearch] = useState('');
+    const [showSeedDropdown, setShowSeedDropdown] = useState(false);
 
+    const [checkingContractName, setCheckingContractName] = useState(false);
+    const [contractNameUniqueError, setContractNameUniqueError] = useState('');
 
-    // --- UTILITY FUNCTIONS ---
-    const formatPrice = (price) => {
-        if (!price) return '0.00';
-        return parseFloat(price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    }
+    const [fieldErrors, setFieldErrors] = useState({
+        contract_name: '',
+        partner_id: '',
+        farm_id: '',
+        signing_date: '',
+        effective_date: '',
+        expiration_date: '',
+        contract_file: '',
+    });
+
+    const [seedSelectionError, setSeedSelectionError] = useState('');
+    const [seedQuantityErrors, setSeedQuantityErrors] = useState({});
+    const [expectedBuybackErrors, setExpectedBuybackErrors] = useState({});
+    const [buybackPriceError, setBuybackPriceError] = useState('');
+
+    // --- DERIVED STATE & MEMOS ---
+
+    const isEditing = !!contract;
+
+    const selectedFarm = React.useMemo(() => {
+        const partner = partners.find(p => p.id === Number(data.partner_id));
+        return partner?.farms?.find(f => f.id === Number(data.farm_id));
+    }, [partners, data.partner_id, data.farm_id]);
 
     const filteredPartners = partners.filter(partner =>
         partner.name.toLowerCase().includes(partnerSearch.toLowerCase())
     );
 
     const filteredSeeds = seeds.filter(seed =>
-        selectedSeeds.length === 0 &&
+        selectedFarm &&
+        seed.soil_type === selectedFarm.soil_type &&
+        seed.status?.toLowerCase() === 'active' &&
         seed.seed_variety.toLowerCase().includes(seedSearch.toLowerCase())
     );
 
-    const handlePartnerSelect = (partner) => {
-        setData('partner_id', partner.id);
-        setPartnerSearch(partner.name);
-        setShowPartnerDropdown(false);
-    };
+    // Date Limits
+    const today = dayjs().format('YYYY-MM-DD');
+    const oneWeekAgo = dayjs().subtract(7, 'day').format('YYYY-MM-DD');
+    let effectiveMin = data.signing_date || '';
+    let expirationMin = '';
+    if (data.effective_date) {
+        expirationMin = dayjs(data.effective_date).add(1, 'day').format('YYYY-MM-DD');
+    }
 
-    const handleSeedSelection = (seed) => {
-        if (selectedSeeds.length >= 1) return; 
+    // Edit Permissions
+    const isDraft = isEditing && contract?.status === 'draft';
+    const isFullyEditable = !isEditing || isDraft || contract?.can_be_edited;
+    const isPartiallyEditable = isEditing && contract?.status === 'under_review' && contract?.can_be_partially_edited;
 
-        const newSeed = {
-            ...seed,
-            seed_quantity: 1, 
-            unit: 'kg', 
-            seed_price_at_contract: seed.price_per_unit, 
-            expected_buyback_amount: 1,
-            buyback_unit: 'kg', 
-            
-            planting_date: data.effective_date || '',
-            expected_first_harvest_date: '',
-            agreed_cycles: 1, 
-        };
+    // Form State Booleans
+    const requiredContractFieldsFilled =
+        data.contract_name.trim() &&
+        data.partner_id &&
+        data.farm_id &&
+        data.signing_date &&
+        data.effective_date &&
+        data.expiration_date &&
+        data.buyback_price_per_unit &&
+        (isEditing || data.contract_file);
 
-        const updatedSeeds = [newSeed];
+    const canAddSeeds = requiredContractFieldsFilled;
+
+    // --- EFFECTS (useEffect) ---
+
+    useEffect(() => {
+        const updatedSeeds = selectedSeeds.map(seed => {
+            const maxCycles = getMaxCycles(seed);
+            let cycles = Number(seed.agreed_cycles) || 1;
+            if (cycles > maxCycles) cycles = maxCycles > 0 ? maxCycles : 1;
+
+            return {
+                ...seed,
+                agreed_cycles: cycles,
+            };
+        });
         setSelectedSeeds(updatedSeeds);
         updateFormSeeds(updatedSeeds);
-    };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [data.effective_date, data.expiration_date]);
 
-    const removeSeed = () => { 
-        setSelectedSeeds([]);
-        updateFormSeeds([]);
-    };
     
-    // --- SEED RULES LOGIC ---
+    // --- HELPER/UTILITY FUNCTIONS ---
+
+    const formatPrice = (price) => {
+        if (!price) return '0.00';
+        return parseFloat(price).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
     const getHarvestMin = (seed) => {
         if (!seed.planting_date || !seed.growth_cycle) return '';
         const minDate = dayjs(seed.planting_date).add(Number(seed.growth_cycle), 'day');
@@ -132,7 +147,14 @@ export default function ContractForm({ partners, seeds, contract = null }) {
 
     const getHarvestMax = () => {
         if (!data.expiration_date) return '';
-        return dayjs(data.expiration_date).format('YYYY-MM-DD'); 
+        return dayjs(data.expiration_date).format('YYYY-MM-DD');
+    };
+
+    const getHarvestMaxForSeed = (seed) => {
+        if (!seed.planting_date || !seed.growth_cycle) return '';
+        const minDate = dayjs(seed.planting_date).add(Number(seed.growth_cycle), 'day');
+        const maxDate = minDate.add(14, 'day'); // 2 weeks after earliest possible
+        return maxDate.format('YYYY-MM-DD');
     };
 
     const getMaxCycles = (seed) => {
@@ -143,10 +165,10 @@ export default function ContractForm({ partners, seeds, contract = null }) {
         const expirationDate = dayjs(data.expiration_date);
 
         if (expirationDate.isBefore(plantingDate)) return 1;
-        
+
         const totalDays = expirationDate.diff(plantingDate, 'day');
         const maxCycles = Math.floor(totalDays / growthCycle);
-        
+
         return maxCycles > 0 ? maxCycles : 1;
     };
 
@@ -173,34 +195,172 @@ export default function ContractForm({ partners, seeds, contract = null }) {
         }
         return errors;
     };
-    // --- End Seed Rules Logic ---
+
+    const isLocked = (field) => {
+        // Always lock core fields in under_review
+        if (isEditing && contract?.status === 'under_review') {
+            const lockedFields = [
+                'contract_name',
+                'partner_id',
+                'farm_id',
+                'signing_date',
+                'seed_variety'
+            ];
+            if (lockedFields.includes(field)) return true;
+        }
+        if (!isPartiallyEditable) return false;
+        const editableFields = [
+            'effective_date',
+            'expiration_date',
+            'buyback_price_per_unit',
+            'contract_file',
+            'notes',
+            'planting_date',
+            'expected_first_harvest_date',
+            'expected_buyback_amount',
+            'agreed_cycles',
+            'seed_quantity',
+        ];
+        return !editableFields.includes(field);
+    };
+
+    // --- EVENT HANDLERS & ASYNC FUNCTIONS ---
+
+    const checkContractNameUnique = async (name) => {
+        if (!name.trim()) {
+            setContractNameUniqueError('');
+            setCheckingContractName(false);
+            return;
+        }
+        setCheckingContractName(true);
+        try {
+            await axios.post(route('contracts.checkNameUnique'), {
+                contract_name: name.trim(),
+                contractId: contract?.id,
+            });
+            setContractNameUniqueError('');
+        } catch (err) {
+            if (err.response?.status === 422) {
+                setContractNameUniqueError(
+                    "A contract with this name already exists. Please enter a different contract name."
+                );
+            }
+        }
+        setCheckingContractName(false);
+    };
+
+    const handleBlur = (field, value) => {
+        setFieldErrors(prev => ({
+            ...prev,
+            [field]: !value || value === '' ? 'This field is required.' : ''
+        }));
+    };
+
+    const handlePartnerSelect = (partner) => {
+        setData('partner_id', partner.id);
+        setPartnerSearch(partner.name);
+        setShowPartnerDropdown(false);
+        setFieldErrors(prev => ({
+            ...prev,
+            partner_id: '', // Clear required error immediately
+        }));
+    };
+
+    const handleSeedSelection = (seed) => {
+        setSeedSelectionError('');
+
+        if (selectedSeeds.length >= 1) return;
+
+        if (!data.effective_date || !data.expiration_date) {
+            setSeedSelectionError("Please select both Effective Date and Expiration Date before choosing a seed.");
+            return;
+        }
+        
+        const earliestPlantingDate = dayjs(data.effective_date).add(1, 'day');
+        const expirationDate = dayjs(data.expiration_date);
+        const availableGrowthDays = expirationDate.diff(earliestPlantingDate, 'day');
+        const growthCycle = Number(seed.growth_cycle);
+
+        if (availableGrowthDays < growthCycle) {
+            setSeedSelectionError(
+                `${growthCycle}-day growth cycle exceeds ${availableGrowthDays} available days. Please adjust dates or select another seed.`
+            );
+            return;
+        }
+
+        // Prefill planting date and expected harvest date
+        const plantingDate = earliestPlantingDate.format('YYYY-MM-DD');
+        const expectedHarvestDate = earliestPlantingDate.add(growthCycle, 'day').format('YYYY-MM-DD');
+
+        const newSeed = {
+            seed_id: seed.id,
+            seed_variety: seed.seed_variety,
+            growth_cycle: seed.growth_cycle,
+            price_per_unit: seed.price_per_unit,
+            seed_quantity: '',
+            unit: 'kg',
+            seed_price_at_contract: seed.price_per_unit,
+            planting_date: plantingDate,
+            expected_first_harvest_date: expectedHarvestDate,
+            agreed_cycles: 1,
+            expected_buyback_amount: '',
+            buyback_unit: 'kg',
+        };
+
+        const updatedSeeds = [newSeed];
+        setSelectedSeeds(updatedSeeds);
+        updateFormSeeds(updatedSeeds);
+    };
+
+    const removeSeed = () => {
+        setSelectedSeeds([]);
+        updateFormSeeds([]);
+    };
+
+    const updateFormSeeds = (seedsArray) => {
+        setData('seeds', seedsArray.map(seed => ({
+            seed_id: seed.seed_id, 
+            seed_quantity: Number(String(seed.seed_quantity).replace(/,/g, '')),
+            unit: seed.unit,
+            seed_price_at_contract: seed.seed_price_at_contract,
+            planting_date: seed.planting_date,
+            expected_first_harvest_date: seed.expected_first_harvest_date,
+            agreed_cycles: seed.agreed_cycles,
+            expected_buyback_amount: Number(String(seed.expected_buyback_amount).replace(/,/g, '')),
+            buyback_unit: seed.buyback_unit,
+        })));
+    };
 
     const updateSeedData = (seedId, field, value) => {
         const updatedSeeds = selectedSeeds.map(seed => {
             if (seed.id === seedId) {
                 let updatedSeed = { ...seed, [field]: value };
 
-                // Auto-calculate Harvest Date when Planting Date changes
-                if (field === 'planting_date' && value) {
+                // Prefill expected harvest date if planting date changes
+                if (field === 'planting_date' && value && seed.growth_cycle) {
                     const minHarvestDate = dayjs(value).add(Number(seed.growth_cycle), 'day');
-                    updatedSeed.expected_first_harvest_date = minHarvestDate.format('YYYY-MM-DD');
+                    const maxHarvestDate = minHarvestDate.add(14, 'day');
+                    // If not set or out of range, prefill to min
+                    if (
+                        !seed.expected_first_harvest_date ||
+                        dayjs(seed.expected_first_harvest_date).isBefore(minHarvestDate) ||
+                        dayjs(seed.expected_first_harvest_date).isAfter(maxHarvestDate)
+                    ) {
+                        updatedSeed.expected_first_harvest_date = minHarvestDate.format('YYYY-MM-DD');
+                    }
                 }
 
-                // Recalculate Max Cycles and clamp agreed_cycles
+                // Agreed cycles logic
                 if (field === 'planting_date' || field === 'expected_first_harvest_date' || field === 'agreed_cycles') {
                     const maxCycles = getMaxCycles(updatedSeed);
                     if (field !== 'agreed_cycles') {
-                         updatedSeed.agreed_cycles = maxCycles; 
+                        updatedSeed.agreed_cycles = maxCycles;
                     } else {
                         const intValue = parseInt(value) || 1;
                         if (intValue > maxCycles) updatedSeed.agreed_cycles = maxCycles;
                         else if (intValue < 1 || isNaN(intValue)) updatedSeed.agreed_cycles = 1;
                         else updatedSeed.agreed_cycles = intValue;
                     }
-                }
-                
-                if (['seed_quantity', 'expected_buyback_amount', 'agreed_cycles'].includes(field)) {
-                    updatedSeed[field] = Number(value);
                 }
 
                 return updatedSeed;
@@ -211,45 +371,248 @@ export default function ContractForm({ partners, seeds, contract = null }) {
         updateFormSeeds(updatedSeeds);
     };
 
-    const updateFormSeeds = (seedsArray) => {
-        setData('seeds', seedsArray.map(seed => ({
-            seed_id: seed.id,
-            seed_quantity: seed.seed_quantity,
-            unit: seed.unit,
-            seed_price_at_contract: seed.seed_price_at_contract,
-            planting_date: seed.planting_date,
-            expected_first_harvest_date: seed.expected_first_harvest_date,
-            agreed_cycles: seed.agreed_cycles,
-            expected_buyback_amount: seed.expected_buyback_amount,
-            buyback_unit: seed.buyback_unit,
-        })));
+    const handleSeedQuantityChange = (seedId, value) => {
+        let raw = value.replace(/,/g, '');
+
+        if (raw === '.') raw = '0.';
+        raw = raw.replace(/[^0-9.]/g, '');
+
+        const parts = raw.split('.');
+        if (parts.length > 2) {
+            raw = parts[0] + '.' + parts.slice(1).join('');
+        }
+        if (parts[1]?.length > 2) {
+            raw = parts[0] + '.' + parts[1].slice(0, 2);
+        }
+
+        let numericValue = parseFloat(raw);
+        if (numericValue > 999999.99) {
+            raw = '999999.99';
+        }
+
+        // Comma formatting
+        const [integerPart, decimalPart] = raw.split('.');
+        const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        let formatted = formattedInteger;
+        if (decimalPart !== undefined) {
+            formatted += '.' + decimalPart;
+        }
+
+        updateSeedData(seedId, 'seed_quantity', formatted);
+
+        // Real-time validation
+        setSeedQuantityErrors(prev => ({
+            ...prev,
+            [seedId]: raw === ''
+                ? 'Seed quantity is required.'
+                : (isNaN(numericValue) || numericValue <= 0)
+                    ? 'Seed quantity must be greater than 0.'
+                    : ''
+        }));
     };
 
-    // --- SUBMISSION ---
+    const handleSeedQuantityBlur = (seedId, value) => {
+        let raw = value.replace(/,/g, '');
+
+        if (!raw || raw.trim() === '') {
+            setSeedQuantityErrors(prev => ({
+                ...prev,
+                [seedId]: 'Seed quantity is required.'
+            }));
+            updateSeedData(seedId, 'seed_quantity', '');
+            return;
+        }
+
+        let numericValue = parseFloat(raw);
+
+        if (isNaN(numericValue) || numericValue <= 0) {
+            setSeedQuantityErrors(prev => ({
+                ...prev,
+                [seedId]: 'Seed quantity must be greater than 0.'
+            }));
+            updateSeedData(seedId, 'seed_quantity', '');
+            return;
+        }
+
+        if (numericValue > 999999.99) {
+            numericValue = 999999.99;
+        }
+
+        let formatted = numericValue.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        });
+
+        updateSeedData(seedId, 'seed_quantity', formatted);
+        setSeedQuantityErrors(prev => ({
+            ...prev,
+            [seedId]: ''
+        }));
+    };
+
+    const handleExpectedBuybackAmountChange = (seedId, value) => {
+        // Remove non-digits
+        let raw = value.replace(/[^0-9]/g, '');
+
+        // Remove leading zeros
+        raw = raw.replace(/^0+/, '');
+
+        let numericValue = raw === '' ? NaN : parseInt(raw, 10);
+
+        // Enforce valid range
+        if (numericValue > 999999) {
+            raw = '999999';
+            numericValue = 999999;
+        }
+
+        // Comma formatting
+        const formatted = raw ? raw.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : '';
+
+        // Always store/display formatted value
+        updateSeedData(seedId, 'expected_buyback_amount', formatted);
+
+        setExpectedBuybackErrors(prev => ({
+            ...prev,
+            [seedId]: raw === ''
+                ? 'Expected buyback quantity is required.'
+                : (isNaN(numericValue) || numericValue < 1)
+                    ? 'Valid range: 1–999,999'
+                    : ''
+        }));
+    };
+
+    const handleExpectedBuybackAmountBlur = (seedId, value) => {
+        let raw = value.replace(/[^0-9]/g, '');
+
+        if (!raw || raw.trim() === '') {
+            setExpectedBuybackErrors(prev => ({
+                ...prev,
+                [seedId]: 'Expected buyback quantity is required.'
+            }));
+            updateSeedData(seedId, 'expected_buyback_amount', '');
+            return;
+        }
+
+        let numericValue = parseInt(raw, 10);
+
+        if (isNaN(numericValue) || numericValue < 1) {
+            setExpectedBuybackErrors(prev => ({
+                ...prev,
+                [seedId]: 'Valid range: 1–999,999'
+            }));
+            updateSeedData(seedId, 'expected_buyback_amount', '');
+            return;
+        }
+
+        if (numericValue > 999999) {
+            numericValue = 999999;
+        }
+
+        // Format with commas for display
+        let formatted = numericValue.toLocaleString('en-US');
+
+        updateSeedData(seedId, 'expected_buyback_amount', formatted);
+        setExpectedBuybackErrors(prev => ({
+            ...prev,
+            [seedId]: ''
+        }));
+    };
+
+    const handleBuybackPriceChange = (e) => {
+        let value = e.target.value.replace(/,/g, '');
+
+        if (value === '.') value = '0.';
+        value = value.replace(/[^0-9.]/g, '');
+
+        const parts = value.split('.');
+        if (parts.length > 2) {
+            value = parts[0] + '.' + parts.slice(1).join('');
+        }
+        if (parts[1]?.length > 2) {
+            value = parts[0] + '.' + parts[1].slice(0, 2);
+        }
+
+        let numericValue = parseFloat(value);
+        if (numericValue > 999999.99) {
+            value = '999999.99';
+        }
+
+        const [integerPart, decimalPart] = value.split('.');
+        const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        let formatted = formattedInteger;
+        if (decimalPart !== undefined) {
+            formatted += '.' + decimalPart;
+        }
+
+        setData('buyback_price_per_unit', formatted);
+
+        // Real-time validation
+        if (value === '') {
+            setBuybackPriceError('Buyback price is required.');
+        } else if (isNaN(numericValue) || numericValue <= 0) {
+            setBuybackPriceError('Price must be greater than 0.');
+        } else {
+            setBuybackPriceError('');
+        }
+    };
+
+    const handleBuybackPriceBlur = (e) => {
+        let value = e.target.value.replace(/,/g, '');
+
+        if (!value || value.trim() === '') {
+            setBuybackPriceError('Buyback price is required.');
+            setData('buyback_price_per_unit', '');
+            return;
+        }
+
+        let numericValue = parseFloat(value);
+
+        if (isNaN(numericValue) || numericValue <= 0) {
+            setBuybackPriceError('Price must be greater than 0.');
+            setData('buyback_price_per_unit', '');
+            return;
+        }
+
+        if (numericValue > 999999.99) {
+            numericValue = 999999.99;
+        }
+
+        let formatted = numericValue.toLocaleString('en-US', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        });
+
+        setData('buyback_price_per_unit', formatted);
+        setBuybackPriceError('');
+    };
 
     const submit = (e) => {
         e.preventDefault();
 
+
+        if (selectedSeeds.length === 0) {
+            setSeedSelectionError('Selecting a seed variety is required.');
+            return;
+        }
+
         let cleanBuybackPrice = String(data.buyback_price_per_unit)
-            .replace(/[^0-9.]/g, '')
+            .replace(/,/g, '')
             .trim();
         let buybackPriceValue = cleanBuybackPrice === '' ? 0 : parseFloat(cleanBuybackPrice);
 
-        // Prepare submission data (NO status field—it defaults to 'draft')
         const submissionData = {
             ...data,
             buyback_price_per_unit: buybackPriceValue,
             _method: isEditing ? 'put' : 'post',
         };
 
-        // Remove contract_file if not a File (on edit)
         if (isEditing && !(data.contract_file instanceof File)) {
             delete submissionData.contract_file;
         }
 
         if (isEditing) {
             router.post(route('contracts.update', contract.id), submissionData, {
-                onSuccess: () => router.visit(route('contracts.show', contract.id)), // Redirect to SHOW page for next action
+                onSuccess: () => router.visit(route('contracts.show', contract.id)),
                 onError: (e) => console.error(e)
             });
         } else {
@@ -260,54 +623,10 @@ export default function ContractForm({ partners, seeds, contract = null }) {
         }
     };
 
-    // --- DATE LIMITS ---
-    const today = dayjs().format('YYYY-MM-DD');
-    const oneWeekAgo = dayjs().subtract(7, 'day').format('YYYY-MM-DD');
-
-    let effectiveMin = data.signing_date || '';
-
-    let expirationMin = '';
-    if (data.effective_date) {
-        expirationMin = dayjs(data.effective_date).add(1, 'day').format('YYYY-MM-DD');
-    }
-
-    // Determine edit permissions
-    const isDraft = isEditing && contract?.status === 'draft';
-    const isFullyEditable = !isEditing || isDraft || contract?.can_be_edited;
-    const isPartiallyEditable = isEditing && contract?.status === 'under_review' && contract?.can_be_partially_edited;
-    
-    const isLocked = (field) => {
-        if (!isPartiallyEditable) return false; // Only lock if partial edit
-        // Editable fields in under_review
-        const editableFields = [
-            'expiration_date',
-            'buyback_price_per_unit',
-            'contract_file',
-            'notes',
-            'planting_date',
-            'expected_first_harvest_date',
-            'expected_buyback_amount',
-        ];
-        return !editableFields.includes(field);
-    };
-    
-    // Check if required fields for commitment are filled (used for disabling seed selector)
-    const requiredContractFieldsFilled = 
-        data.contract_name.trim() &&
-        data.partner_id &&
-        data.farm_id && // Include farm_id check
-        data.signing_date &&
-        data.effective_date &&
-        data.expiration_date &&
-        data.buyback_price_per_unit && 
-        (isEditing || data.contract_file);
-
-    const canAddSeeds = requiredContractFieldsFilled;
-
+    // --- RENDER ---
 
     return (
         <div className="p-6">
-            {/* Breadcrumb remains the same */}
             <div className="px-6 pt-6">
                 <nav className="text-sm text-gray-600">
                     <Link
@@ -327,7 +646,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
 
                 <form onSubmit={submit} className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* 1. Contract Name (Title) */}
+                        {/* 1. Contract Name */}
                         <div className="md:col-span-2">
                             <label className="block text-sm font-medium text-gray-700 mb-2">Contract Name *</label>
                             <input
@@ -336,18 +655,27 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                 onChange={(e) => {
                                     setData('contract_name', e.target.value);
                                     checkContractNameUnique(e.target.value);
+                                    setFieldErrors(prev => ({
+                                        ...prev,
+                                        contract_name: '', // Clear required error immediately
+                                    }));
                                 }}
+                                onBlur={e => handleBlur('contract_name', e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                 required
-                                disabled={!isFullyEditable}
+                                disabled={isLocked('contract_name')}
+
                             />
+                            {fieldErrors.contract_name && (
+                                <p className="mt-1 text-sm text-red-600">{fieldErrors.contract_name}</p>
+                            )}
                             {contractNameUniqueError && (
                                 <p className="mt-1 text-sm text-red-600">{contractNameUniqueError}</p>
                             )}
                             {errors.contract_name && <p className="mt-1 text-sm text-red-600">{errors.contract_name}</p>}
                         </div>
 
-                        {/* 2. Partner (Search remains the same) */}
+                        {/* 2. Partner */}
                         <div className="relative">
                             <label className="block text-sm font-medium text-gray-700 mb-2">Partner *</label>
                             <div className="relative">
@@ -365,12 +693,18 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                         if (!e.target.value) setData('partner_id', '');
                                     }}
                                     onFocus={() => setShowPartnerDropdown(true)}
-                                    onBlur={() => setTimeout(() => setShowPartnerDropdown(false), 150)}
+                                    onBlur={e => {
+                                        setTimeout(() => setShowPartnerDropdown(false), 150);
+                                        handleBlur('partner_id', data.partner_id);
+                                    }}
                                     className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                     placeholder="Search by partner's name..."
                                     required
-                                    disabled={!isFullyEditable}
+                                    disabled={isLocked('partner_id')}
                                 />
+                                {fieldErrors.partner_id && (
+                                    <p className="mt-1 text-sm text-red-600">{fieldErrors.partner_id}</p>
+                                )}
                                 {showPartnerDropdown && filteredPartners.length > 0 && (
                                     <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                                         {filteredPartners.map(partner => (
@@ -394,10 +728,19 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                             <label className="block text-sm font-medium text-gray-700 mb-2">Farm *</label>
                             <select
                                 value={data.farm_id}
-                                onChange={e => setData('farm_id', e.target.value)}
+                                onChange={e => {
+                                    setData('farm_id', e.target.value);
+                                    setSelectedSeeds([]);
+                                    updateFormSeeds([]);
+                                    setFieldErrors(prev => ({
+                                        ...prev,
+                                        farm_id: '', // Clear required error immediately
+                                    }));
+                                }}
+                                onBlur={e => handleBlur('farm_id', e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                 required
-                                disabled={!data.partner_id || !isFullyEditable}
+                                disabled={!data.partner_id || isLocked('farm_id')}
                             >
                                 <option value="" disabled>Select a farm...</option>
                                 {partners
@@ -408,10 +751,13 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                         </option>
                                     ))}
                             </select>
+                            {fieldErrors.farm_id && (
+                                <p className="mt-1 text-sm text-red-600">{fieldErrors.farm_id}</p>
+                            )}
                             {errors.farm_id && <p className="mt-1 text-sm text-red-600">{errors.farm_id}</p>}
                         </div>
 
-                        {/* 3. Signing Date (Contract Date) */}
+                        {/* 3. Signing Date */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Signing Date *</label>
                             <input
@@ -422,16 +768,20 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                     setData('effective_date', '');
                                     setData('expiration_date', '');
                                 }}
+                                onBlur={e => handleBlur('signing_date', e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                 required
                                 max={today}
                                 min={oneWeekAgo}
-                                disabled={!isFullyEditable}
+                                disabled={isLocked('signing_date')}
                             />
+                            {fieldErrors.signing_date && (
+                                <p className="mt-1 text-sm text-red-600">{fieldErrors.signing_date}</p>
+                            )}
                             {errors.signing_date && <p className="mt-1 text-sm text-red-600">{errors.signing_date}</p>}
                         </div>
 
-                        {/* 4. Effective Date (Nullable in DB, but required for logistics/cycles) */}
+                        {/* 4. Effective Date */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Effective Date *</label>
                             <input
@@ -441,30 +791,38 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                     setData('effective_date', e.target.value);
                                     setData('expiration_date', '');
                                 }}
+                                onBlur={e => handleBlur('effective_date', e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                 min={effectiveMin}
                                 disabled={!data.signing_date || !isFullyEditable}
                             />
+                            {fieldErrors.effective_date && (
+                                <p className="mt-1 text-sm text-red-600">{fieldErrors.effective_date}</p>
+                            )}
                             {!data.signing_date && (<span className="text-xs text-gray-500 block">Select Signing Date first.</span>)}
                             {errors.effective_date && <p className="mt-1 text-sm text-red-600">{errors.effective_date}</p>}
                         </div>
 
-                        {/* 5. Expiration Date (Nullable in DB, but required for logistics/cycles) */}
+                        {/* 5. Expiration Date */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Expiration Date</label>
                             <input
                                 type="date"
                                 value={data.expiration_date}
                                 onChange={(e) => setData('expiration_date', e.target.value)}
+                                onBlur={e => handleBlur('expiration_date', e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                 min={expirationMin}
                                 disabled={!data.effective_date || isLocked('expiration_date')}
                             />
+                            {fieldErrors.expiration_date && (
+                                <p className="mt-1 text-sm text-red-600">{fieldErrors.expiration_date}</p>
+                            )}
                             {!data.effective_date && (<span className="text-xs text-gray-500 block">Select Effective Date first.</span>)}
                             {errors.expiration_date && <p className="mt-1 text-sm text-red-600">{errors.expiration_date}</p>}
                         </div>
 
-                        {/* 6. Buyback Price Per Unit (REQUIRED) */}
+                        {/* 6. Buyback Price Per Unit */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">Buyback Price (₱/kg) *</label>
                             <div className="relative">
@@ -473,33 +831,62 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                     type="text"
                                     inputMode="decimal"
                                     value={data.buyback_price_per_unit}
-                                    onChange={(e) => setData('buyback_price_per_unit', e.target.value)}
+                                    onChange={handleBuybackPriceChange}
+                                    onBlur={handleBuybackPriceBlur}
                                     className="w-full px-3 py-2 pl-8 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
-                                    placeholder="0.0001"
+                                    placeholder="0.00"
                                     required
                                     disabled={isLocked('buyback_price_per_unit')}
                                 />
+                                <span className="text-xs text-gray-500 block mt-1">Valid range: ₱0.01–₱999,999.99</span>
+                                {buybackPriceError && (
+                                    <p className="mt-1 text-sm text-red-600">{buybackPriceError}</p>
+                                )}
                             </div>
                             {errors.buyback_price_per_unit && <p className="mt-1 text-sm text-red-600">{errors.buyback_price_per_unit}</p>}
                         </div>
-                        
-                        {/* 7. Contract File (REQUIRED) */}
+
+                        {/* 7. Contract File */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Contract File {isEditing && contract.contract_file ? '' : '*'}
                             </label>
+
+                            {/* --- ADD THIS BLOCK --- */}
+                            {isEditing && contract.original_file_name && (
+                                <div className="mb-2 p-3 bg-gray-100 border border-gray-300 rounded-lg">
+                                    <p className="text-sm font-medium text-gray-800">
+                                        Current File: 
+                                        <span className="font-bold ml-1">{contract.original_file_name}</span>
+                                    </p>
+                                    <p className="text-xs text-gray-600 mt-1">
+                                        To replace this file, choose a new one below.
+                                    </p>
+                                </div>
+                            )}
+                            {/* --- END OF ADDED BLOCK --- */}
+
                             <input
                                 type="file"
                                 ref={fileInputRef}
-                                onChange={(e) => setData('contract_file', e.target.files[0])}
+                                onChange={(e) => {
+                                    setData('contract_file', e.target.files[0]);
+                                    setFieldErrors(prev => ({
+                                        ...prev,
+                                        contract_file: '', // Clear required error immediately
+                                    }));
+                                }}
+                                onBlur={e => handleBlur('contract_file', data.contract_file)}
                                 accept=".pdf,.doc,.docx"
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
-                                required={!isEditing || !contract.contract_file}
+                                required={!isEditing || !contract.contract_file} // This logic seems correct
                                 disabled={isLocked('contract_file')}
                             />
-                            {isEditing && contract.contract_file && (
-                                <p className="text-xs text-gray-500 mt-1">Current File: {contract.original_file_name || 'Attached'}</p>
+
+                            {fieldErrors.contract_file && (
+                                <p className="mt-1 text-sm text-red-600">{fieldErrors.contract_file}</p>
                             )}
+
                             {errors.contract_file && <p className="mt-1 text-sm text-red-600">{errors.contract_file}</p>}
                         </div>
 
@@ -517,13 +904,18 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                         </div>
                     </div>
 
-                    {/* Seeds Selection - IMPROVED DESIGN */}
+                    {/* Seeds Selection */}
                     <div className="mt-8 pt-6 border-t border-gray-200">
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="text-lg font-medium text-gray-900">Seed Variety Commitment</h3>
                             <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">1 required</span>
                         </div>
-                        
+                        {seedSelectionError && (
+                            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                                <p className="text-red-600 text-sm">{seedSelectionError}</p>
+                            </div>
+                        )}
+
                         {/* Seed Selector */}
                         <div className="mb-6 relative">
                             <div className="relative">
@@ -569,14 +961,14 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                             )}
                         </div>
 
-                        {/* Selected Seeds Commitment Details - IMPROVED LAYOUT */}
+                        {/* Selected Seeds Commitment Details */}
                         <div className="space-y-6">
                             {selectedSeeds.map((seed, index) => {
                                 const minHarvest = getHarvestMin(seed);
-                                const maxHarvest = getHarvestMax();
+                                const maxHarvest = data.expiration_date ? dayjs(data.expiration_date).format('YYYY-MM-DD') : '';
                                 const minHarvestDayjs = minHarvest ? dayjs(minHarvest) : null;
                                 const maxHarvestDayjs = maxHarvest ? dayjs(maxHarvest) : null;
-                                
+
                                 const impossible = minHarvest && maxHarvest && minHarvestDayjs.isAfter(maxHarvestDayjs);
 
                                 return (
@@ -595,32 +987,37 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                                     <span>Base Price: <strong>₱{formatPrice(seed.price_per_unit)}</strong></span>
                                                 </div>
                                             </div>
-                                            <button
-                                                type="button"
-                                                onClick={() => removeSeed()}
-                                                className="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded-lg transition-colors"
-                                                disabled={!isFullyEditable}
-                                            >
-                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                            </button>
+                                            {!isLocked('seed_variety') && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeSeed()}
+                                                    className="text-red-600 hover:text-red-800 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                                                >
+                                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                                </button>
+                                            )}
                                         </div>
-                                        
-                                        {/* Commitment Fields - IMPROVED GRID LAYOUT */}
+
+                                        {/* Commitment Fields */}
                                         <div className="space-y-6">
-                                            {/* Row 1: Seed Details (Disabled if not full edit) */}
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 mb-2">Seed Quantity *</label>
                                                     <input
-                                                        type="number"
-                                                        min="0.01"
-                                                        step="0.01"
+                                                        type="text"
+                                                        inputMode="decimal"
                                                         value={seed.seed_quantity}
-                                                        onChange={(e) => updateSeedData(seed.id, 'seed_quantity', e.target.value)}
+                                                        onChange={e => handleSeedQuantityChange(seed.id, e.target.value)}
+                                                        onBlur={e => handleSeedQuantityBlur(seed.id, e.target.value)}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                                         required
                                                         disabled={!isFullyEditable}
+                                                        placeholder="Enter seed quantity"
                                                     />
+                                                    <span className="text-xs text-gray-500 block mt-1">Valid range: 0.01–999,999.99</span>
+                                                    {seedQuantityErrors[seed.id] && (
+                                                        <p className="text-red-500 text-xs mt-1">{seedQuantityErrors[seed.id]}</p>
+                                                    )}
                                                     {errors[`seeds.${index}.seed_quantity`] && <p className="text-red-500 text-xs mt-1">{errors[`seeds.${index}.seed_quantity`]}</p>}
                                                 </div>
 
@@ -639,7 +1036,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                                     </select>
                                                     {errors[`seeds.${index}.unit`] && <p className="text-red-500 text-xs mt-1">{errors[`seeds.${index}.unit`]}</p>}
                                                 </div>
-                                                
+
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 mb-2">Seed Price Locked</label>
                                                     <div className="w-full px-3 py-2 border border-gray-200 bg-gray-50 rounded-lg text-sm text-gray-600">
@@ -649,19 +1046,17 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                                 </div>
                                             </div>
 
-                                            {/* Row 2: Planting & Harvest Dates (Editable in Partial Edit) */}
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 mb-2">Planting Date *</label>
                                                     <input
                                                         type="date"
                                                         value={seed.planting_date}
-                                                        min={data.effective_date} 
-                                                        max={maxHarvest} 
+                                                        min={data.effective_date ? dayjs(data.effective_date).add(1, 'day').format('YYYY-MM-DD') : ''}
+                                                        max={maxHarvest}
                                                         onChange={(e) => updateSeedData(seed.id, 'planting_date', e.target.value)}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                                         required
-                                                        // Editable if Full or Partial edit is allowed
                                                         disabled={!data.effective_date || isLocked('planting_date')}
                                                     />
                                                     {!data.effective_date && (<p className="text-xs text-gray-500 mt-1">Select Effective Date first.</p>)}
@@ -679,21 +1074,19 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                                     </label>
                                                     <input
                                                         type="date"
-                                                        value={seed.expected_first_harvest_date}
+                                                        value={seed.expected_first_harvest_date || ''}
                                                         min={getHarvestMin(seed)}
-                                                        max={getHarvestMax()}
-                                                        onChange={(e) => updateSeedData(seed.id, 'expected_first_harvest_date', e.target.value)}
+                                                        max={getHarvestMaxForSeed(seed)}
+                                                        onChange={e => updateSeedData(seed.id, 'expected_first_harvest_date', e.target.value)}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                                         required
-                                                        // Editable if Full or Partial edit is allowed
-                                                        disabled={impossible || !seed.planting_date || isLocked('expected_first_harvest_date')}
+                                                        disabled={impossible || !seed.planting_date || isLocked('expected_first_harvest_date') || !data.effective_date}
                                                     />
                                                     {impossible && (<p className="text-red-500 text-xs mt-1">Adjust dates or contract duration.</p>)}
                                                     {errors[`seeds.${index}.expected_first_harvest_date`] && <p className="text-red-500 text-xs mt-1">{errors[`seeds.${index}.expected_first_harvest_date`]}</p>}
                                                 </div>
                                             </div>
 
-                                            {/* Row 3: Cycles & Buyback (Mix of Full and Partial Edit fields) */}
                                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -712,27 +1105,36 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                                         onChange={(e) => updateSeedData(seed.id, 'agreed_cycles', e.target.value)}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                                         required
-                                                        disabled={!isFullyEditable} // ONLY editable in DRAFT/REVIEW
+                                                        disabled={!isFullyEditable}
                                                         placeholder={seed.expected_first_harvest_date ? undefined : 'Set harvest date first'}
                                                     />
                                                     {errors[`seeds.${index}.agreed_cycles`] && <p className="text-red-500 text-xs mt-1">{errors[`seeds.${index}.agreed_cycles`]}</p>}
                                                 </div>
-                                                
+
                                                 <div>
+                                                    {/* Expected Buyback Amount */}
                                                     <label className="block text-sm font-medium text-gray-700 mb-2">Expected Buyback Quantity *</label>
                                                     <input
-                                                        type="number"
-                                                        min="1"
+                                                        type="text"
+                                                        inputMode="numeric"
                                                         value={seed.expected_buyback_amount}
-                                                        onChange={(e) => updateSeedData(seed.id, 'expected_buyback_amount', e.target.value)}
+                                                        onChange={e => handleExpectedBuybackAmountChange(seed.id, e.target.value)}
+                                                        onBlur={e => handleExpectedBuybackAmountBlur(seed.id, e.target.value)}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                                         required
-                                                        // Editable if Full or Partial edit is allowed
                                                         disabled={isLocked('expected_buyback_amount')}
+                                                        placeholder="Enter Buyback quantity"
                                                     />
+                                                    <span className="text-xs text-gray-500 block mt-1">Valid range: 1–999,999</span>
+                                                    {expectedBuybackErrors[seed.id] && (
+                                                        <p className="text-red-500 text-xs mt-1">{expectedBuybackErrors[seed.id]}</p>
+                                                    )}
+                                                    {seedQuantityErrors[`expected_buyback_amount_${seed.id}`] && (
+                                                        <p className="text-red-500 text-xs mt-1">{seedQuantityErrors[`expected_buyback_amount_${seed.id}`]}</p>
+                                                    )}
                                                     {errors[`seeds.${index}.expected_buyback_amount`] && <p className="text-red-500 text-xs mt-1">{errors[`seeds.${index}.expected_buyback_amount`]}</p>}
                                                 </div>
-                                                
+
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 mb-2">Buyback Unit *</label>
                                                     <select
@@ -740,9 +1142,10 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                                         onChange={(e) => updateSeedData(seed.id, 'buyback_unit', e.target.value)}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                                         required
-                                                        disabled={!isFullyEditable} // ONLY editable in DRAFT/REVIEW
+                                                        disabled={!isFullyEditable}
                                                     >
                                                         <option value="kg">kg</option>
+                                                        <option value="sack">sack</option>
                                                         <option value="ton">ton</option>
                                                     </select>
                                                     {errors[`seeds.${index}.buyback_unit`] && <p className="text-red-500 text-xs mt-1">{errors[`seeds.${index}.buyback_unit`]}</p>}
@@ -750,7 +1153,6 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                             </div>
                                         </div>
 
-                                        {/* Validation Errors */}
                                         <div className="mt-4">
                                             {validateSeed(seed).map((err, idx) => (
                                                 <p key={idx} className="text-red-500 text-sm mt-1 flex items-center gap-2">
@@ -763,7 +1165,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                 );
                             })}
                         </div>
-                        
+
                         {errors.seeds && (
                             <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
                                 <p className="text-red-600 text-sm">{errors.seeds}</p>
@@ -775,10 +1177,8 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                 <p className="text-gray-500 text-sm">Please select one seed variety to continue</p>
                             </div>
                         )}
-                        
                     </div>
 
-                    {/* Form Actions */}
                     <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
                         <Link
                             href={route('contracts.index')}
@@ -788,8 +1188,17 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                         </Link>
                         <button
                             type="submit"
-                            disabled={processing  || validateSeed(selectedSeeds[0] || {}).length > 0 ||
-                                !!contractNameUniqueError}
+                            disabled={
+                                processing ||
+                                selectedSeeds.length === 0 ||
+                                validateSeed(selectedSeeds[0] || {}).length > 0 ||
+                                !!contractNameUniqueError ||
+                                !!buybackPriceError ||
+                                !data.buyback_price_per_unit ||
+                                Object.values(fieldErrors).some(err => !!err) ||
+                                Object.values(seedQuantityErrors).some(err => !!err) ||
+                                Object.values(expectedBuybackErrors).some(err => !!err)
+                            }
                             className="bg-[#37692F] hover:bg-[#2a5624] text-white font-medium py-2 px-6 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             {processing ? (isEditing ? 'Saving...' : 'Creating...') : (isEditing ? 'Save Changes' : 'Create Contract')}

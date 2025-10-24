@@ -64,10 +64,20 @@ class FieldVisitController extends Controller
 
     public function create()
     {
-        return Inertia::render('FieldVisits/Create', [
-            // eager-load full farm relation (don't request farm_name column explicitly)
-            'contracts' => Contract::with('farm')->select('id', 'contract_name', 'farm_id')->get(),
-            'users' => User::select('id', 'first_name', 'last_name')->get(),
+        // Only show active contracts
+        $contracts = Contract::with(['partner', 'farm'])
+            ->where('status', 'active')
+            ->orderBy('contract_name')
+            ->get();
+
+        $users = User::select('id', 'first_name', 'last_name', 'email')
+            ->orderBy('first_name')
+            ->get();
+
+        return Inertia::render('FieldVisits/FieldVisitForm', [
+            'auth' => ['user' => auth()->user()],
+            'contracts' => $contracts,
+            'users' => $users,
         ]);
     }
 

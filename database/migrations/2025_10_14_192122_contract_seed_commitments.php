@@ -35,7 +35,7 @@ return new class extends Migration
             
             // Buyback forecast (what company expects to buy back)
             $table->integer('expected_buyback_amount')->unsigned();
-            $table->enum('buyback_unit', ['kg', 'ton']);
+            $table->enum('buyback_unit', ['kg', 'sack', 'ton']);
             
             $table->timestamps();
             

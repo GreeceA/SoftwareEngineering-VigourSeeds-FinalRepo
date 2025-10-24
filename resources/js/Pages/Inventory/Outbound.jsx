@@ -2,10 +2,13 @@ import React, { useState } from 'react';
 import { ArrowUpCircle, AlertTriangle, CheckCircle, Package } from 'lucide-react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { usePage, Link } from '@inertiajs/react'; // Add this import
+import Select from 'react-select';
+import { router } from '@inertiajs/react'; // Update import
 
 
 const StockOutboundForm = () => {
-  const { auth } = usePage().props;
+  const { auth, partnerOrders } = usePage().props;
+
   const [formData, setFormData] = useState({
     partner_order_id: '',
     partner_order_line_id: '',
@@ -17,28 +20,21 @@ const StockOutboundForm = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [selectedLine, setSelectedLine] = useState(null);
 
-  // Sample data
-  const partnerOrders = [
-    {
-      id: 1,
-      order_number: 'PO-2024-001',
-      partner_name: 'Partner Farm A',
-      status: 'pending',
-      lines: [
-        { id: 1, product_name: 'White Corn Seeds', qty: 500, delivered_qty: 200, unit: 'kg', available_stock: 1250 },
-        { id: 2, product_name: 'NPK Fertilizer', qty: 300, delivered_qty: 0, unit: 'kg', available_stock: 340 }
-      ]
-    },
-    {
-      id: 2,
-      order_number: 'PO-2024-002',
-      partner_name: 'Partner Farm B',
-      status: 'partially_fulfilled',
-      lines: [
-        { id: 3, product_name: 'Yellow Corn Seeds', qty: 400, delivered_qty: 150, unit: 'kg', available_stock: 850 }
-      ]
+  const convertToBaseUnit = (qty, unit) => {
+    if (unit === 'ton') return qty * 1000;
+    if (unit === 'sack') return qty * 50;
+    return qty; // kg, liter
+  };
+
+  const convertFromBaseUnit = (qtyInBase, targetUnit, baseUnit) => {
+    if (baseUnit === 'kg' || baseUnit === 'liter') {
+      if (targetUnit === 'ton') return qtyInBase / 1000;
+      if (targetUnit === 'sack') return qtyInBase / 50;
     }
-  ];
+    return qtyInBase; // Same unit
+  };
+
+  
 
   const handleOrderChange = (orderId) => {
     const order = partnerOrders.find(o => o.id === parseInt(orderId));
@@ -62,6 +58,12 @@ const StockOutboundForm = () => {
     });
   };
 
+
+  const getAvailableStockInOrderUnit = () => {
+    if (!selectedLine) return 0;
+    return convertFromBaseUnit(selectedLine.available_stock, selectedLine.unit, selectedLine.base_unit);
+  };
+
   const getRemainingQty = () => {
     if (!selectedLine) return 0;
     return selectedLine.qty - selectedLine.delivered_qty;
@@ -69,7 +71,8 @@ const StockOutboundForm = () => {
 
   const hasStockIssue = () => {
     if (!selectedLine || !formData.qty) return false;
-    return parseFloat(formData.qty) > selectedLine.available_stock;
+    const qtyInBaseUnit = convertToBaseUnit(parseFloat(formData.qty), selectedLine.unit);
+    return qtyInBaseUnit > selectedLine.available_stock;
   };
 
   const exceedsOrder = () => {
@@ -88,19 +91,27 @@ const StockOutboundForm = () => {
       return;
     }
     
-    console.log('Submitting:', formData);
-    setShowSuccess(true);
-    setTimeout(() => {
-      setShowSuccess(false);
-      setFormData({
-        partner_order_id: '',
-        partner_order_line_id: '',
-        qty: '',
-        notes: ''
-      });
-      setSelectedOrder(null);
-      setSelectedLine(null);
-    }, 2000);
+    // FIXED: Use Inertia router to POST to backend
+    router.post(route('inventory.outbound.store'), formData, {
+      onSuccess: () => {
+        setShowSuccess(true);
+        setTimeout(() => {
+          setShowSuccess(false);
+          setFormData({
+            partner_order_id: '',
+            partner_order_line_id: '',
+            qty: '',
+            notes: ''
+          });
+          setSelectedOrder(null);
+          setSelectedLine(null);
+        }, 2000);
+      },
+      onError: (errors) => {
+        console.error('Submission errors:', errors);
+        alert('Failed to deliver stock: ' + (errors.message || 'Unknown error'));
+      }
+    });
   };
 
   const isFormValid = formData.partner_order_id && formData.partner_order_line_id && 
@@ -143,22 +154,46 @@ const StockOutboundForm = () => {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Select Partner Order <span className="text-red-500">*</span>
             </label>
-            <select
-              value={formData.partner_order_id}
-              onChange={(e) => handleOrderChange(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">Choose an order...</option>
-              {partnerOrders.map((order) => (
-                <option key={order.id} value={order.id}>
-                  {order.order_number} - {order.partner_name} ({order.status})
-                </option>
-              ))}
-            </select>
+            <Select
+              options={partnerOrders.map(order => ({
+                value: order.id,
+                label: `PO-${order.contract_name}-${order.id} (${order.partner_name})`
+              }))}
+              value={
+                formData.partner_order_id
+                  ? partnerOrders.map(order => ({
+                      value: order.id,
+                      label: `PO-${order.contract_name}-${order.id} (${order.partner_name})`
+                    })).find(opt => opt.value === parseInt(formData.partner_order_id))
+                  : null
+              }
+              onChange={opt => handleOrderChange(opt ? opt.value : '')}
+              placeholder="Search or select partner order..."
+              isClearable
+              className="react-select-container"
+              classNamePrefix="react-select"
+            />
           </div>
 
           {selectedOrder && (
             <div className="mb-6">
+              <div className="mb-6 bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <div className="mb-2">
+                  <span className="text-xs text-gray-500 font-semibold">Farm Location</span>
+                  <div className="font-medium text-gray-900">
+                    {selectedOrder.farm_name}
+                  </div>
+                  <div className="text-sm text-gray-600">
+                    {selectedOrder.farm_location}
+                  </div>
+                </div>
+                {selectedOrder.notes && (
+                  <div className="mt-2">
+                    <span className="text-xs text-gray-500 font-semibold">Order Notes:</span>
+                    <div className="text-sm text-gray-800">{selectedOrder.notes}</div>
+                  </div>
+                )}
+              </div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Select Product Line <span className="text-red-500">*</span>
               </label>
@@ -166,17 +201,28 @@ const StockOutboundForm = () => {
                 {selectedOrder.lines.map((line) => {
                   const remaining = line.qty - line.delivered_qty;
                   const progress = (line.delivered_qty / line.qty) * 100;
+                  const availableInOrderUnit = convertFromBaseUnit(line.available_stock, line.unit, line.base_unit);
                   
                   return (
                     <div
                       key={line.id}
                       onClick={() => handleLineChange(line.id)}
-                      className={`p-4 border-2 rounded-lg cursor-pointer transition ${
-                        formData.partner_order_line_id === String(line.id)
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
+                      className={`p-4 border-2 rounded-lg cursor-pointer transition relative
+                        ${formData.partner_order_line_id === String(line.id)
+                          ? 'border-4 border-green-600 bg-green-50 shadow-lg ring-2 ring-green-300'
+                          : 'border-gray-200 hover:border-blue-400 hover:bg-blue-50'}
+                      `}
+                      style={{
+                        boxShadow: formData.partner_order_line_id === String(line.id)
+                          ? '0 0 0 2px #22c55e, 0 2px 8px rgba(34,197,94,0.08)'
+                          : undefined
+                      }}
                     >
+                      {formData.partner_order_line_id === String(line.id) && (
+                        <span className="absolute top-2 right-2 px-2 py-1 bg-green-600 text-white text-xs rounded font-bold shadow">
+                          SELECTED
+                        </span>
+                      )}
                       <div className="flex justify-between items-start mb-2">
                         <div>
                           <p className="font-medium text-gray-900">{line.product_name}</p>
@@ -187,7 +233,7 @@ const StockOutboundForm = () => {
                         <span className={`px-2 py-1 text-xs rounded-full ${
                           remaining === 0 ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                         }`}>
-                          {remaining} {line.unit} remaining
+                          {remaining.toFixed(2)} {line.unit} remaining
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2">
@@ -197,7 +243,7 @@ const StockOutboundForm = () => {
                         />
                       </div>
                       <p className="text-xs text-gray-500 mt-2">
-                        Available Stock: {line.available_stock} {line.unit}
+                        Available Stock: {availableInOrderUnit.toFixed(2)} {line.unit} ({line.available_stock} {line.base_unit})
                       </p>
                     </div>
                   );
@@ -210,14 +256,14 @@ const StockOutboundForm = () => {
             <>
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Delivery Quantity <span className="text-red-500">*</span>
+                  Delivery Quantity ({selectedLine.unit}) <span className="text-red-500">*</span>
                 </label>
                 <div className="relative">
                   <input
                     type="number"
                     step="0.01"
                     min="0.01"
-                    max={Math.min(getRemainingQty(), selectedLine.available_stock)}
+                    max={Math.max(0.01, Math.min(getRemainingQty() || 0, getAvailableStockInOrderUnit()))}
                     value={formData.qty}
                     onChange={(e) => setFormData({...formData, qty: e.target.value})}
                     className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
@@ -233,7 +279,7 @@ const StockOutboundForm = () => {
                 {hasStockIssue() && (
                   <div className="mt-2 flex items-center gap-2 text-red-600 text-sm">
                     <AlertTriangle size={16} />
-                    <span>Insufficient stock! Only {selectedLine.available_stock} {selectedLine.unit} available</span>
+                    <span>Insufficient stock! Only {getAvailableStockInOrderUnit().toFixed(2)} {selectedLine.unit} available</span>
                   </div>
                 )}
                 {exceedsOrder() && (
@@ -246,7 +292,7 @@ const StockOutboundForm = () => {
                 <div className="mt-3 flex gap-2">
                   <button
                     type="button"
-                    onClick={() => setFormData({...formData, qty: Math.min(getRemainingQty(), selectedLine.available_stock)})}
+                    onClick={() => setFormData({...formData, qty: Math.min(getRemainingQty(), getAvailableStockInOrderUnit())})}
                     className="text-xs px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition"
                   >
                     Fill Max Available
@@ -281,7 +327,7 @@ const StockOutboundForm = () => {
                   </p>
                 </div>
               </div>
-            </>
+              </>
           )}
 
           <div className="mb-6">

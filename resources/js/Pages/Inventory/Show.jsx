@@ -26,6 +26,18 @@ const Show = () => {
     setCurrentPage(1);
   };
 
+  const totalInbound = transactions.data
+    .filter(t => t.transaction_type === 'inbound')
+    .reduce((sum, t) => sum + parseFloat(t.qty_converted ?? t.qty), 0);
+
+  const totalOutbound = transactions.data
+    .filter(t => t.transaction_type === 'outbound')
+    .reduce((sum, t) => sum + parseFloat(t.qty_converted ?? t.qty), 0);
+
+  const totalAdjustments = transactions.data
+    .filter(t => t.transaction_type === 'adjustment')
+    .reduce((sum, t) => sum + parseFloat(t.qty_converted ?? t.qty), 0);
+
   const getTransactionIcon = (type) => {
     switch(type) {
       case 'inbound': return <TrendingUp className="text-green-600" size={20} />;
@@ -63,18 +75,6 @@ const Show = () => {
     });
   };
 
-  // Calculate summary stats
-  const totalInbound = transactions.data
-    .filter(t => t.transaction_type === 'inbound')
-    .reduce((sum, t) => sum + parseFloat(t.qty), 0);
-  
-  const totalOutbound = transactions.data
-    .filter(t => t.transaction_type === 'outbound')
-    .reduce((sum, t) => sum + parseFloat(t.qty), 0);
-  
-  const totalAdjustments = transactions.data
-    .filter(t => t.transaction_type === 'adjustment')
-    .reduce((sum, t) => sum + parseFloat(t.qty), 0);
 
   return (
     <AuthenticatedLayout
@@ -229,25 +229,24 @@ const Show = () => {
                             'text-blue-600'
                           }`}>
                             {transaction.transaction_type === 'inbound' ? '+' : 
-                             transaction.transaction_type === 'outbound' ? '-' : ''}
-                            {parseFloat(transaction.qty).toLocaleString()} {transaction.unit}
+                            transaction.transaction_type === 'outbound' ? '-' : ''}
+                            {parseFloat(transaction.qty_converted ?? transaction.qty).toLocaleString()} {transaction.unit_converted ?? product.unit}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="text-sm font-semibold text-gray-900">
-                            {parseFloat(transaction.running_balance).toLocaleString()} {transaction.unit}
+                            {parseFloat(transaction.running_balance).toLocaleString()} {transaction.unit_converted ?? product.unit}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm text-gray-900">
+                            {formatDate(transaction.created_at)}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-1 text-sm text-gray-600">
-                            <Calendar size={14} />
-                            {formatDate(transaction.created_at)}
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center gap-1 text-sm text-gray-600">
                             <User size={14} />
-                            {transaction.creator?.name || 'System'}
+                            {transaction.user_name || 'System'}
                           </div>
                         </td>
                         <td className="px-6 py-4">

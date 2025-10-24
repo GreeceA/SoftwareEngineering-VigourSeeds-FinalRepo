@@ -27,7 +27,8 @@ class Item extends Model
      */
     public function inventoryTransactions()
     {
-        return $this->morphMany(InventoryTransaction::class, 'product');
+        return $this->hasMany(InventoryTransaction::class, 'product_id')
+            ->where('product_type', $this->type);
     }
 
     /**
@@ -43,19 +44,22 @@ class Item extends Model
      */
     public function getCurrentStock()
     {
-        $inbound = $this->inventoryTransactions()
+        $inbound = InventoryTransaction::where('product_type', 'item')
+            ->where('product_id', $this->id)
             ->where('transaction_type', 'inbound')
             ->sum('qty');
-        
-        $outbound = $this->inventoryTransactions()
+
+        $outbound = InventoryTransaction::where('product_type', 'item')
+            ->where('product_id', $this->id)
             ->where('transaction_type', 'outbound')
             ->sum('qty');
-        
-        $adjustments = $this->inventoryTransactions()
+
+        $adjustments = InventoryTransaction::where('product_type', 'item')
+            ->where('product_id', $this->id)
             ->where('transaction_type', 'adjustment')
             ->sum('qty');
         
-        return $inbound - $outbound + $adjustments;
+        return $inbound - abs($outbound) + $adjustments;
     }
 
     /**

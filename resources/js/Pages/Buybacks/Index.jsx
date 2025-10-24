@@ -4,62 +4,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { usePage, Link } from '@inertiajs/react'; // Add this import
 
 const BuybackOverview = () => {
-  const { auth } = usePage().props;
-
-  const contracts = [
-    {
-      id: 1,
-      contract_number: 'CNT-2024-001',
-      partner_name: 'Partner Farm A',
-      farm_name: 'Main Farm',
-      expected_buyback: 5000,
-      actual_buyback: 3200,
-      unit: 'kg',
-      buyback_price: 25.50,
-      status: 'active',
-      planting_date: '2024-06-15',
-      expected_harvest: '2024-10-15'
-    },
-    {
-      id: 2,
-      contract_number: 'CNT-2024-002',
-      partner_name: 'Partner Farm B',
-      farm_name: 'North Field',
-      expected_buyback: 8000,
-      actual_buyback: 8000,
-      unit: 'kg',
-      buyback_price: 26.00,
-      status: 'active',
-      planting_date: '2024-05-20',
-      expected_harvest: '2024-09-20'
-    },
-    {
-      id: 3,
-      contract_number: 'CNT-2024-003',
-      partner_name: 'Partner Farm C',
-      farm_name: 'Valley Farm',
-      expected_buyback: 6500,
-      actual_buyback: 2100,
-      unit: 'kg',
-      buyback_price: 25.00,
-      status: 'active',
-      planting_date: '2024-07-01',
-      expected_harvest: '2024-11-01'
-    },
-    {
-      id: 4,
-      contract_number: 'CNT-2024-004',
-      partner_name: 'Partner Farm D',
-      farm_name: 'East Side',
-      expected_buyback: 4000,
-      actual_buyback: 500,
-      unit: 'kg',
-      buyback_price: 25.75,
-      status: 'active',
-      planting_date: '2024-08-10',
-      expected_harvest: '2024-12-10'
-    }
-  ];
+  const { auth, contracts } = usePage().props;
 
   const totalExpected = contracts.reduce((sum, c) => sum + c.expected_buyback, 0);
   const totalActual = contracts.reduce((sum, c) => sum + c.actual_buyback, 0);

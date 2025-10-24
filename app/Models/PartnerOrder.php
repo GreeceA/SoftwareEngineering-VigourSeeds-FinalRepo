@@ -68,7 +68,7 @@ class PartnerOrder extends Model
     public function getTotalValue()
     {
         return $this->lines->sum(function ($line) {
-            return $line->qty * $line->price_per_unit;
+            return $line->getTotalValue();
         });
     }
 
@@ -127,5 +127,10 @@ class PartnerOrder extends Model
     public function scopeFulfilled($query)
     {
         return $query->where('status', 'fulfilled');
+    }
+
+    public function buyback_transactions()
+    {
+        return $this->hasMany(\App\Models\InventoryTransaction::class, 'partner_order_id');
     }
 }

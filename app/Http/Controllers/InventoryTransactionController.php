@@ -121,17 +121,9 @@ class InventoryTransactionController extends Controller
     /**
      * Store inbound transaction (stock-in)
      */
-    public function storeInbound(Request $request)
+    public function storeInbound(\App\Http\Requests\StoreInboundRequest $request)
     {
-        $validated = $request->validate([
-            'products' => 'required|array|min:1',
-            'products.*.product_type' => 'required|string',
-            'products.*.product_id' => 'required|integer',
-            'products.*.qty' => 'required|numeric|min:0.01',
-            'products.*.unit' => 'required|in:kg,liter,sack,ton',
-            'products.*.notes' => 'nullable|string',
-            'products.*.receipt_date' => 'required|date', // <-- ADD THIS
-        ]);
+        $validated = $request->validated();
 
         DB::beginTransaction();
         try {
@@ -143,7 +135,9 @@ class InventoryTransactionController extends Controller
                     'qty' => $product['qty'],
                     'unit' => $product['unit'],
                     'notes' => $product['notes'] ?? null,
-                    'receipt_date' => $product['receipt_date'], // <-- ADD THIS
+                    'receipt_date' => $product['receipt_date'],
+                    'manufacture_date' => $product['manufacture_date'],
+                    'expiration_date' => $product['expiration_date'],
                     'created_by' => Auth::id(),
                 ]);
             }
@@ -161,71 +155,151 @@ class InventoryTransactionController extends Controller
     /**
      * Show form for creating outbound transaction
      */
-    public function createOutbound()
-    {
-        $seeds = Seed::active()->get();
-        $items = Item::active()->get();
-        $partnerOrders = PartnerOrder::with(['partner', 'lines.product'])
-            ->whereIn('status', ['pending', 'partially_fulfilled'])
-            ->get();
+public function createOutbound()
+{
+    $partnerOrders = \App\Models\PartnerOrder::with(['partner', 'lines.seed', 'lines.item', 'contract.farm'])
+        ->whereIn('status', ['pending', 'partially_fulfilled'])
+        ->orderBy('created_at', 'desc')
+        ->get()
+        ->map(function ($order) {
+            return [
+                'id' => $order->id,
+                'contract_name' => $order->contract ? $order->contract->contract_name : '',
+                'partner_name' => $order->partner ? ($order->partner->name ?? $order->partner->partner_name ?? '') : '',
+                'status' => $order->status,
+                'lines' => $order->lines->map(function ($line) {
+                    // Get product based on type
+                    $product = null;
+                    $productName = '-';
+                    $availableStockInBaseUnit = 0;
+                    $baseUnit = 'kg'; // Default base unit
+                    
+                    if ($line->product_type === 'seed' || $line->product_type === 'Seed' || $line->product_type === 'App\\Models\\Seed') {
+                        $product = $line->seed;
+                        $productName = $product ? $product->seed_variety : '-';
+                        $baseUnit = 'kg';
+                    } else {
+                        $product = $line->item;
+                        $productName = $product ? $product->name : '-';
+                        $baseUnit = $product ? ($product->base_unit ?? 'kg') : 'kg';
+                    }
+                    
+                    if ($product && method_exists($product, 'getCurrentStock')) {
+                        $availableStockInBaseUnit = $product->getCurrentStock();
+                    }
+                    
+                    return [
+                        'id' => $line->id,
+                        'product_name' => $productName,
+                        'qty' => $line->qty,
+                        'unit' => $line->unit,
+                        'delivered_qty' => $line->delivered_qty,
+                        'available_stock' => round($availableStockInBaseUnit, 2),
+                        'base_unit' => $baseUnit, // Pass base unit to frontend
+                    ];
+                }),
+                'farm_name' => $order->contract && $order->contract->farm ? $order->contract->farm->location_name : '',
+                'farm_location' => $order->contract && $order->contract->farm ? $order->contract->farm->address : '',
+                'notes' => $order->notes ?? '',
+            ];
+        });
 
-        return Inertia::render('Inventory/Outbound');
-    }
+    return Inertia::render('Inventory/Outbound', [
+        'partnerOrders' => $partnerOrders,
+    ]);
+}
 
     /**
      * Store outbound transaction (stock-out)
      */
-    public function storeOutbound(Request $request)
-    {
-        $validated = $request->validate([
-            'partner_order_id' => 'required|exists:partner_orders,id',
-            'partner_order_line_id' => 'required|exists:partner_order_lines,id',
-            'qty' => 'required|numeric|min:0.01',
-            'notes' => 'nullable|string',
+public function storeOutbound(Request $request)
+{
+    $validated = $request->validate([
+        'partner_order_id' => 'required|exists:partner_orders,id',
+        'partner_order_line_id' => 'required|exists:partner_order_lines,id',
+        'qty' => 'required|numeric|min:0.01',
+        'notes' => 'nullable|string',
+    ]);
+
+    DB::beginTransaction();
+    try {
+        $orderLine = PartnerOrderLine::with(['seed', 'item', 'partnerOrder.contract'])
+            ->findOrFail($validated['partner_order_line_id']);
+        
+        // Helper function to convert to base unit (kg/liter)
+        $convertToBaseUnit = function($qty, $unit) {
+            if ($unit === 'ton') return $qty * 1000;
+            if ($unit === 'sack') return $qty * 50;
+            return $qty; // kg, liter
+        };
+        
+        // Validate remaining quantity
+        $remainingQty = $orderLine->qty - $orderLine->delivered_qty;
+        if ($validated['qty'] > $remainingQty) {
+            throw new \Exception("Delivery quantity ({$validated['qty']}) exceeds remaining quantity ({$remainingQty} {$orderLine->unit})");
+        }
+
+        // Get product and check stock availability
+        $product = null;
+        if ($orderLine->product_type === 'seed' || $orderLine->product_type === 'Seed' || $orderLine->product_type === 'App\\Models\\Seed') {
+            $product = $orderLine->seed;
+        } else {
+            $product = $orderLine->item;
+        }
+        
+        if (!$product) {
+            throw new \Exception("Product not found");
+        }
+        
+        // Convert delivery qty to base unit for stock check
+        $qtyInBaseUnit = $convertToBaseUnit($validated['qty'], $orderLine->unit);
+        $availableStock = $product->getCurrentStock();
+        
+        if ($qtyInBaseUnit > $availableStock) {
+            $baseUnit = ($orderLine->product_type === 'seed' || $orderLine->product_type === 'Seed') ? 'kg' : ($product->base_unit ?? 'kg');
+            throw new \Exception("Insufficient stock. Available: {$availableStock} {$baseUnit}");
+        }
+
+        // Create outbound transaction (negative qty for outbound)
+        $transaction = InventoryTransaction::create([
+            'product_type' => $orderLine->product_type,
+            'product_id' => $orderLine->product_id,
+            'transaction_type' => 'outbound',
+            'qty' => -$qtyInBaseUnit, // Store negative qty in base unit
+            'unit' => ($orderLine->product_type === 'seed' || $orderLine->product_type === 'Seed') ? 'kg' : ($product->base_unit ?? 'kg'),
+            'contract_id' => $orderLine->partnerOrder->contract_id,
+            'partner_order_id' => $orderLine->partner_order_id,
+            'partner_order_line_id' => $orderLine->id,
+            'notes' => $validated['notes'] ?? null,
+            'created_by' => Auth::id(),
         ]);
 
-        DB::beginTransaction();
-        try {
-            $orderLine = PartnerOrderLine::with(['product', 'partnerOrder'])->findOrFail($validated['partner_order_line_id']);
-            
-            // Validate remaining quantity
-            $remainingQty = $orderLine->getRemainingQty();
-            if ($validated['qty'] > $remainingQty) {
-                throw new \Exception("Delivery quantity ({$validated['qty']}) exceeds remaining quantity ({$remainingQty})");
-            }
-
-            // Check stock availability
-            $product = $orderLine->product;
-            if (!$product->hasStock($validated['qty'])) {
-                throw new \Exception("Insufficient stock. Available: {$product->getCurrentStock()} {$orderLine->unit}");
-            }
-
-            // Create outbound transaction
-            $transaction = InventoryTransaction::create([
-                'product_type' => $orderLine->product_type,
-                'product_id' => $orderLine->product_id,
-                'transaction_type' => 'outbound',
-                'qty' => $validated['qty'],
-                'unit' => $orderLine->unit,
-                'contract_id' => $orderLine->partnerOrder->contract_id,
-                'partner_order_id' => $orderLine->partner_order_id,
-                'notes' => $validated['notes'] ?? null,
-                'created_by' => Auth::id(),
-            ]);
-
-            // Update delivered quantity on order line
-            $orderLine->addDelivery($validated['qty']);
-
-            DB::commit();
-
-            return redirect()->route('partner-orders.show', $orderLine->partner_order_id)
-                ->with('success', 'Stock delivered successfully');
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->withInput()
-                ->with('error', 'Failed to deliver stock: ' . $e->getMessage());
+        // Update delivered quantity on order line
+        $orderLine->delivered_qty += $validated['qty'];
+        $orderLine->save();
+        
+        // Update partner order status
+        $partnerOrder = $orderLine->partnerOrder;
+        $totalQty = $partnerOrder->lines->sum('qty');
+        $totalDelivered = $partnerOrder->lines->sum('delivered_qty');
+        
+        if ($totalDelivered >= $totalQty) {
+            $partnerOrder->status = 'fulfilled';
+        } elseif ($totalDelivered > 0) {
+            $partnerOrder->status = 'partially_fulfilled';
         }
+        $partnerOrder->save();
+
+        DB::commit();
+
+        return redirect()->route('partner-orders.show', $orderLine->partner_order_id)
+            ->with('success', 'Stock delivered successfully');
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return back()->withInput()
+            ->with('error', 'Failed to deliver stock: ' . $e->getMessage());
     }
+}
 
     /**
      * Store adjustment transaction
@@ -266,98 +340,193 @@ class InventoryTransactionController extends Controller
     /**
      * Show inventory dashboard with stock overview
      */
-    public function dashboard()
-    {
-        $seeds = Seed::active()->get()->map(function ($seed) {
-            $hasTransaction = InventoryTransaction::where('product_type', 'Seed')
-                ->where('product_id', $seed->id)
-                ->exists();
-            $currentStock = $hasTransaction ? $seed->getCurrentStock() : null;
+public function dashboard()
+{
+    // Get all products (Seeds and Items)
+    $seeds = Seed::all();
+    $items = Item::all();
 
-            return [
+    // Get all pending order lines
+    $pendingOrderLines = PartnerOrderLine::whereHas('partnerOrder', function ($q) {
+        $q->whereIn('status', ['pending', 'partially_fulfilled']);
+    })->get();
+
+    // Build shortfall list
+    $shortfalls = [];
+
+    // Helper function to convert to kg
+    $convertToKg = function($qty, $unit) {
+        if ($unit === 'ton') return $qty * 1000;
+        if ($unit === 'sack') return $qty * 50;
+        return $qty; // kg, liter
+    };
+
+    // For Seeds
+    foreach ($seeds as $seed) {
+        $committedKg = $pendingOrderLines
+            ->where('product_type', 'seed')
+            ->where('product_id', $seed->id)
+            ->sum(function($line) use ($convertToKg) {
+                return $convertToKg($line->qty - $line->delivered_qty, $line->unit);
+            });
+        
+        $availableKg = $seed->getCurrentStock(); // Already in kg
+        $shortfallKg = $committedKg - $availableKg;
+        
+        if ($shortfallKg > 0) {
+            $shortfalls[] = [
+                'type' => 'Seed',
                 'id' => $seed->id,
                 'name' => $seed->seed_variety,
-                'type' => 'Seed',
-                'current_stock' => $currentStock,
                 'unit' => 'kg',
-                'status' => $hasTransaction ? $this->determineStockStatus($currentStock) : null,
+                'on_hand' => round($availableKg, 2),
+                'committed' => round($committedKg, 2),
+                'shortfall' => round($shortfallKg, 2),
             ];
-        });
+        }
+    }
 
-        $items = Item::active()->get()->map(function ($item) {
-            $hasTransaction = InventoryTransaction::where('product_type', 'item')
-                ->where('product_id', $item->id)
-                ->exists();
-            $currentStock = $hasTransaction ? $item->getCurrentStock() : null;
-
-            return [
+    // For Items (fertilizer, pesticide, etc.)
+    foreach ($items as $item) {
+        $committedInBaseUnit = $pendingOrderLines
+            ->where('product_type', 'App\\Models\\Item')
+            ->where('product_id', $item->id)
+            ->sum(function($line) use ($convertToKg) {
+                return $convertToKg($line->qty - $line->delivered_qty, $line->unit);
+            });
+        
+        $availableInBaseUnit = $item->getCurrentStock(); // Already in base unit (kg/liter)
+        $shortfallInBaseUnit = $committedInBaseUnit - $availableInBaseUnit;
+        
+        if ($shortfallInBaseUnit > 0) {
+            $shortfalls[] = [
+                'type' => $item->type,
                 'id' => $item->id,
                 'name' => $item->name,
-                'type' => $item->type,
-                'current_stock' => $currentStock,
-                'unit' => $item->base_unit,
-                'status' => $hasTransaction ? $this->determineStockStatus($currentStock) : null,
+                'unit' => $item->base_unit ?? 'kg',
+                'on_hand' => round($availableInBaseUnit, 2),
+                'committed' => round($committedInBaseUnit, 2),
+                'shortfall' => round($shortfallInBaseUnit, 2),
             ];
-        });
-
-        $inventory = collect()
-            ->merge($seeds)
-            ->merge($items)
-            ->unique(function ($item) {
-                return $item['type'] . '-' . $item['id'];
-            })
-            ->values();
-
-        return Inertia::render('Inventory/Dashboard', [
-            'inventory' => $inventory,
-        ]);
+        }
     }
+
+    // Build inventory list for dashboard table
+    $seedsList = Seed::active()->get()->map(function ($seed) {
+        $hasTransaction = InventoryTransaction::where('product_type', 'Seed')
+            ->where('product_id', $seed->id)
+            ->exists();
+        $currentStock = $hasTransaction ? $seed->getCurrentStock() : null;
+
+        return [
+            'id' => $seed->id,
+            'name' => $seed->seed_variety,
+            'type' => 'Seed',
+            'current_stock' => $currentStock,
+            'unit' => 'kg',
+            'status' => $hasTransaction ? $this->determineStockStatus($currentStock) : null,
+        ];
+    });
+
+    $itemsList = Item::active()->get()->map(function ($item) {
+        $hasTransaction = InventoryTransaction::where('product_type', 'item')
+            ->where('product_id', $item->id)
+            ->exists();
+        $currentStock = $hasTransaction ? $item->getCurrentStock() : null;
+
+        return [
+            'id' => $item->id,
+            'name' => $item->name,
+            'type' => $item->type,
+            'current_stock' => $currentStock,
+            'unit' => $item->base_unit,
+            'status' => $hasTransaction ? $this->determineStockStatus($currentStock) : null,
+        ];
+    });
+
+    $inventory = collect()
+        ->merge($seedsList)
+        ->merge($itemsList)
+        ->unique(function ($item) {
+            return $item['type'] . '-' . $item['id'];
+        })
+        ->values();
+
+    return Inertia::render('Inventory/Dashboard', [
+        'auth' => ['user' => auth()->user()],
+        'inventory' => $inventory,
+        'shortfalls' => $shortfalls,
+    ]);
+}
 
     public function show($productType, $productId)
     {
         $product = null;
-        
-        if ($productType === 'Seed') {
+        $unit = 'kg';
+
+        if ($productType === 'seed') {
             $product = Seed::findOrFail($productId);
             $productData = [
                 'id' => $product->id,
                 'name' => $product->seed_variety,
                 'type' => 'Seed',
                 'current_stock' => $product->getCurrentStock(),
-                'unit' => 'kg',
+                'unit' => $unit,
                 'status' => $this->determineStockStatus($product->getCurrentStock()),
             ];
-        } elseif (in_array($productType, ['fertilizer', 'pesticide'])) {
-            $product = Item::where('type', $productType)->findOrFail($productId);
+        } elseif ($productType === 'item') {
+            $product = Item::findOrFail($productId);
             $productData = [
                 'id' => $product->id,
                 'name' => $product->name,
                 'type' => $product->type,
                 'current_stock' => $product->getCurrentStock(),
-                'unit' => $product->base_unit,
+                'unit' => $product->base_unit ?? $unit,
                 'status' => $this->determineStockStatus($product->getCurrentStock()),
             ];
         } else {
             abort(404, 'Invalid product type');
         }
 
+        // Fetch transactions
         $transactions = InventoryTransaction::with(['creator', 'contract', 'partnerOrder'])
             ->where('product_type', $productType)
             ->where('product_id', $productId)
             ->orderBy('created_at', 'desc')
             ->get();
 
+        // Convert all transaction quantities to kg if needed
+        $convertToKg = function($qty, $unit) {
+            if ($unit === 'ton') return $qty * 1000;
+            if ($unit === 'sack') return $qty * 50;
+            return $qty; // kg, liter, etc.
+        };
+
+        // Calculate running balance in kg/liter
         $runningBalance = $productData['current_stock'];
-        $transactionsWithBalance = $transactions->map(function ($transaction) use (&$runningBalance) {
+        $transactionsWithBalance = $transactions->map(function ($transaction) use (&$runningBalance, $convertToKg, $productData) {
+            $qtyKg = abs($convertToKg(floatval($transaction->qty), $transaction->unit)); // Always positive for display
+
+            $transaction->qty_converted = $qtyKg;
+            $transaction->unit_converted = $productData['unit'];
             $transaction->running_balance = $runningBalance;
-            
+
             if ($transaction->transaction_type === 'inbound') {
-                $runningBalance -= $transaction->qty;
+                $runningBalance -= $qtyKg;
             } elseif ($transaction->transaction_type === 'outbound') {
-                $runningBalance += $transaction->qty;
+                $runningBalance -= $qtyKg; // FIX: always subtract for outbound
             } elseif ($transaction->transaction_type === 'adjustment') {
-                $runningBalance -= $transaction->qty;
+                // For adjustments, add if positive, subtract if negative
+                if ($transaction->qty >= 0) {
+                    $runningBalance -= $qtyKg;
+                } else {
+                    $runningBalance += $qtyKg;
+                }
             }
+
+            $transaction->user_name = $transaction->creator
+                ? trim(($transaction->creator->first_name ?? '') . ' ' . ($transaction->creator->last_name ?? ''))
+                : '-';
             
             return $transaction;
         });

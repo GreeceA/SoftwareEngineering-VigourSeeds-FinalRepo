@@ -156,10 +156,8 @@ Route::middleware(['auth'])->group(function () {
         ->name('inventory.inbound.store');
     
     // Stock-Out (Outbound)
-    Route::get('/inventory/outbound', [InventoryTransactionController::class, 'createOutbound'])
-        ->name('inventory.outbound.create');
-    Route::post('/inventory/outbound', [InventoryTransactionController::class, 'storeOutbound'])
-        ->name('inventory.outbound.store');
+    Route::get('/inventory/outbound', [InventoryTransactionController::class, 'createOutbound'])->name('inventory.outbound.create');
+    Route::post('/inventory/outbound', [InventoryTransactionController::class, 'storeOutbound'])->name('inventory.outbound.store');
     
     Route::get('/inventory/{productType}/{productId}', [InventoryTransactionController::class, 'show'])
     ->name('inventory.show');

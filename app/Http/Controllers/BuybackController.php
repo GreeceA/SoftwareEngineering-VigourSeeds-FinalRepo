@@ -18,18 +18,21 @@ class BuybackController extends Controller
     public function index()
     {
         $contracts = Contract::active()
-            ->with(['partner', 'seedCommitments', 'inventoryTransactions' => function ($query) {
-                $query->where('transaction_type', 'inbound')
-                    ->where('product_type', 'App\\Models\\CornProduct');
-            }])
+            ->with(['partner', 'farm'])
             ->get()
             ->map(function ($contract) {
                 return [
-                    'contract' => $contract,
+                    'id' => $contract->id,
+                    'contract_number' => $contract->contract_name,
+                    'partner_name' => $contract->partner->name,
+                    'farm_name' => $contract->farm?->location_name ?? '',
                     'expected_buyback' => $contract->getTotalExpectedBuyback(),
                     'actual_buyback' => $contract->getTotalActualBuyback(),
-                    'remaining_buyback' => $contract->getRemainingBuyback(),
-                    'fulfillment_percentage' => $contract->getBuybackFulfillmentPercentage(),
+                    'unit' => 'kg', // or $contract->buyback_unit if available
+                    'buyback_price' => $contract->buyback_price_per_unit,
+                    'status' => $contract->status,
+                    'planting_date' => $contract->contractSeedCommitments->first()?->planting_date?->format('Y-m-d'),
+                    'expected_harvest' => $contract->contractSeedCommitments->first()?->expected_first_harvest_date?->format('Y-m-d'),
                 ];
             });
 

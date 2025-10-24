@@ -36,11 +36,9 @@ class PartnerOrderLine extends Model
     /**
      * Get the product (Seed, Item, or CornProduct) for this line
      */
-    public function product()
-    {
-        return $this->morphTo();
-    }
-
+   
+    
+    
     /**
      * Calculate remaining quantity to be delivered
      */
@@ -92,4 +90,45 @@ class PartnerOrderLine extends Model
         
         return $this;
     }
+
+    public function getTotalValue()
+    {
+        $qty = $this->qty;
+        $price = $this->price_per_unit;
+        switch ($this->unit) {
+            case 'sack':
+                return $qty * 50 * $price;
+            case 'ton':
+                return $qty * 1000 * $price;
+            default: // kg, liter, etc.
+                return $qty * $price;
+        }
+    }
+    
+    public function product()
+    {
+        if ($this->product_type === 'seed' || $this->product_type === 'Seed' || $this->product_type === 'App\\Models\\Seed') {
+            return $this->belongsTo(\App\Models\Seed::class, 'product_id');
+        }
+        return $this->belongsTo(\App\Models\Item::class, 'product_id');
+    }
+
+    public function seed()
+    {
+        return $this->belongsTo(\App\Models\Seed::class, 'product_id');
+    }
+
+    public function item()
+    {
+        return $this->belongsTo(\App\Models\Item::class, 'product_id');
+    }
+    
+    public function getProductAttribute()
+    {
+        if ($this->product_type === 'seed' || $this->product_type === 'Seed' || $this->product_type === 'App\\Models\\Seed') {
+            return \App\Models\Seed::find($this->product_id);
+        }
+        return \App\Models\Item::find($this->product_id);
+    }
+        
 }

@@ -123,24 +123,6 @@ class ContractRequest extends FormRequest
                 'date',
                 'after:seeds.*.planting_date',
                 'before_or_equal:expiration_date',
-                // Validate minimum growth cycle
-                function ($attribute, $value, $fail) {
-                    $index = explode('.', $attribute)[1];
-                    $plantingDate = $this->input("seeds.{$index}.planting_date");
-                    $seedId = $this->input("seeds.{$index}.seed_id");
-                    
-                    if ($plantingDate && $seedId && $value) {
-                        $seed = \App\Models\Seed::find($seedId);
-                        if ($seed && $seed->growth_cycle) {
-                            $expectedMinDate = \Carbon\Carbon::parse($plantingDate)
-                                ->addDays($seed->growth_cycle);
-                            
-                            if (\Carbon\Carbon::parse($value)->lessThan($expectedMinDate)) {
-                                $fail("The harvest date must be at least {$seed->growth_cycle} days after planting.");
-                            }
-                        }
-                    }
-                },
             ],
             'seeds.*.agreed_cycles' => [
                 'required',
@@ -174,7 +156,7 @@ class ContractRequest extends FormRequest
                 'min:1',
                 'max:9999999',
             ],
-            'seeds.*.buyback_unit' => ['required', Rule::in(['kg', 'ton'])],
+            'seeds.*.buyback_unit' => ['required', 'in:kg,sack,ton'],
         ];
 
         // Partial edit rules (active/suspended contracts)
