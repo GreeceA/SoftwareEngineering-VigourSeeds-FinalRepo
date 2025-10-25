@@ -1,8 +1,11 @@
 import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 
 export default function Show({ auth, seed }) {
+    const { auth: authData } = usePage().props;
+    const permissions = authData?.user?.can || [];
+
     // Static contract data for demonstration
     const associatedContracts = [
         {
@@ -75,7 +78,7 @@ export default function Show({ auth, seed }) {
                 <div className="mb-6 flex items-center justify-between">
                     <h1 className="text-2xl font-semibold text-gray-800">Seed Information</h1>
                     <div className="flex space-x-3">
-                        {seed.status !== 'archived' && (
+                        {permissions.includes('edit seeds') && seed.status !== 'archived' && (
                             <Link
                                 href={route('seeds.edit', seed.id)}
                                 className="flex items-center rounded-md bg-[#37692F] px-4 py-2 text-white hover:bg-[#2a5624]"

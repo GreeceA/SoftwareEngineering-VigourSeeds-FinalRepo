@@ -29,18 +29,24 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
-        return array_merge(parent::share($request), [
+        return [
+            ...parent::share($request),
             'auth' => [
-                'user' => $request->user() ? array_merge($request->user()->toArray(), [
-                    // Always fetch fresh permissions from database
-                    'can' => $request->user()->fresh()->getAllPermissions()->pluck('name')->toArray(),
-                ]) : null,
+                'user' => $request->user() ? [
+                    'id' => $request->user()->id,
+                    'first_name' => $request->user()->first_name,
+                    'last_name' => $request->user()->last_name,
+                    'email' => $request->user()->email,
+                    'avatar' => $request->user()->avatar,
+                    'role' => $request->user()->role,
+                    'status' => $request->user()->status,
+                    'can' => $request->user()->getAllPermissions()->pluck('name')->toArray(), // ← This line
+                ] : null,
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
-                'error'   => fn () => $request->session()->get('error'),
-                'refresh_permissions' => fn () => $request->session()->get('refresh_permissions'),
+                'error' => fn () => $request->session()->get('error'),
             ],
-        ]);
+        ];
     }
 }

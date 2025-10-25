@@ -7,9 +7,21 @@ use App\Models\Partner;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class PartnerController extends Controller
+class PartnerController extends Controller implements HasMiddleware
 {
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:view partners', only: ['index', 'show']),
+            new Middleware('permission:create partners', only: ['create', 'store']),
+            new Middleware('permission:edit partners', only: ['edit', 'update']),
+            new Middleware('permission:archive partners', only: ['deactivate', 'reactivate']), // ← Change this line
+        ];
+    }
+
     public function index(Request $request)
     {
         $perPage = $request->input('per_page', 10);
@@ -41,9 +53,6 @@ class PartnerController extends Controller
         return Inertia::render('Partners/Index', [
             'partners' => $partners,
             'filters' => $request->only(['search', 'status', 'partner_type', 'per_page', 'sort_by', 'sort_dir']),
-            'auth' => [
-                'user' => $request->user(),
-            ],
         ]);
     }
 
@@ -54,90 +63,24 @@ class PartnerController extends Controller
 
     public function store(PartnerRequest $request)
     {
-        $partner = Partner::create($request->validated());
+        Partner::create($request->validated());
 
-        // Store Contact Persons for organizations
-        if ($request->partner_type === 'organization' && $request->contact_persons) {
-            foreach ($request->contact_persons as $contact) {
-                $partner->contactPersons()->create([
-                    'name'         => $contact['name'],
-                    'email'        => $contact['email'] ?? null,
-                    'phone_number' => $contact['phone_number'] ?? null,
-                ]);
-            }
-        }
-
-        // Store Farms
-        if ($request->farms && is_array($request->farms)) {
-            foreach ($request->farms as $farm) {
-                $partner->farms()->create([
-                    'location_name' => $farm['location_name'],
-                    'address'       => $farm['address'],
-                    'area_size'     => $farm['area_size'] ?? null,
-                    'soil_type'     => $farm['soil_type'] ?? null,
-                ]);
-            }
-        }
-
-        return redirect()->route('partners.index')->with('success', 'Partner created successfully.');
+        return redirect()->route('partners.index')
+            ->with('success', 'Partner created successfully.');
     }
 
     // Display the specified partner.
     public function show(Partner $partner)
     {
-        $partner->load(['contactPersons', 'farms']);
-
         return Inertia::render('Partners/Show', [
-            'partner' => [
-                ...$partner->toArray(),
-                'contact_persons' => $partner->contactPersons->map(function ($c) {
-                    return [
-                        'name'         => $c->name,
-                        'email'        => $c->email,
-                        'phone_number' => $c->phone_number,
-                    ];
-                }),
-                'farms' => $partner->farms->map(function ($f) {
-                    return [
-                        'location_name' => $f->location_name,
-                        'address'       => $f->address,
-                        'area_size'     => $f->area_size,
-                        'soil_type'     => $f->soil_type,
-                    ];
-                }),
-            ],
-            'auth' => [
-                'user' => auth()->user(),
-            ],
+            'partner' => $partner,
         ]);
     }
 
     public function edit(Partner $partner)
     {
-        $partner->load(['contactPersons', 'farms']);
-
         return Inertia::render('Partners/Edit', [
-            'partner' => [
-                ...$partner->toArray(),
-                'contact_persons' => $partner->contactPersons->map(function ($c) {
-                    return [
-                        'name'         => $c->name,
-                        'email'        => $c->email,
-                        'phone_number' => $c->phone_number,
-                    ];
-                }),
-                'farms' => $partner->farms->map(function ($f) {
-                    return [
-                        'location_name' => $f->location_name,
-                        'address'       => $f->address,
-                        'area_size'     => $f->area_size,
-                        'soil_type'     => $f->soil_type,
-                    ];
-                }),
-            ],
-            'auth' => [
-                'user' => auth()->user(),
-            ],
+            'partner' => $partner,
         ]);
     }
 
@@ -145,34 +88,8 @@ class PartnerController extends Controller
     {
         $partner->update($request->validated());
 
-        // Contacts
-        $partner->contactPersons()->delete();
-
-        if ($request->partner_type === 'organization' && $request->contact_persons) {
-            foreach ($request->contact_persons as $contact) {
-                $partner->contactPersons()->create([
-                    'name'         => $contact['name'],
-                    'email'        => $contact['email'] ?? null,
-                    'phone_number' => $contact['phone_number'] ?? null,
-                ]);
-            }
-        }
-
-        // Farms
-        $partner->farms()->delete();
-
-        if ($request->farms && is_array($request->farms)) {
-            foreach ($request->farms as $farm) {
-                $partner->farms()->create([
-                    'location_name' => $farm['location_name'],
-                    'address'       => $farm['address'],
-                    'area_size'     => $farm['area_size'] ?? null,
-                    'soil_type'     => $farm['soil_type'] ?? null,
-                ]);
-            }
-        }
-
-        return redirect()->route('partners.index')->with('success', 'Partner updated successfully.');
+        return redirect()->route('partners.index')
+            ->with('success', 'Partner updated successfully.');
     }
 
     public function destroy(Partner $partner)
@@ -186,18 +103,18 @@ class PartnerController extends Controller
     //  Status Modification 
     public function deactivate(Partner $partner)
     {
-        $partner->status = 'inactive';
-        $partner->save();
+        $partner->update(['status' => 'inactive']);
 
-        return redirect()->back()->with('success', 'Partner deactivated successfully.');
+        return redirect()->route('partners.index')
+            ->with('success', 'Partner archived successfully.');
     }
 
     public function reactivate(Partner $partner)
     {
-        $partner->status = 'active';
-        $partner->save();
+        $partner->update(['status' => 'active']);
 
-        return redirect()->back()->with('success', 'Partner reactivated successfully.');
+        return redirect()->route('partners.index')
+            ->with('success', 'Partner reactivated successfully.');
     }
 
     // AJAX Uniqueness Checks

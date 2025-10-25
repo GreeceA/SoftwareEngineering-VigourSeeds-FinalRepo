@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState, useRef, useEffect } from 'react';
 import { debounce } from 'lodash';
 import '../../../css/fonts.css';
@@ -9,6 +9,9 @@ import ReactivatePartnerModal from '@/Pages/Partners/ReactivatePartnerModal';
 import React from 'react';
 
 export default function Index({ auth, partners, filters }) {
+    const { auth: authData } = usePage().props;
+    const permissions = authData?.user?.can || [];
+
     const [search, setSearch] = useState(filters.search || '');
     const [filter, setFilter] = useState(filters.status || 'all');
     const [partnerTypeFilter, setPartnerTypeFilter] = useState(filters.partner_type || 'all');
@@ -37,7 +40,6 @@ export default function Index({ auth, partners, filters }) {
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
-    // Always fetch from backend on search/filter/sort/perPage change
     const fetchPartners = (params = {}) => {
         router.get(route('partners.index'), {
             search,
@@ -56,8 +58,6 @@ export default function Index({ auth, partners, filters }) {
     }, 300);
 
     const handleSearchChange = (e) => debouncedSearch(e.target.value);
-
-    // Filter/Sort label helpers
     const getFilterLabel = () => filter === 'active' ? 'Active Only' : filter === 'inactive' ? 'Inactive Only' : 'All Partners';
     const getTypeLabel = () => partnerTypeFilter === 'individual' ? 'Individual' : partnerTypeFilter === 'organization' ? 'Organization' : 'All Types';
     const getSortLabel = () => {
@@ -65,12 +65,9 @@ export default function Index({ auth, partners, filters }) {
         if (sortBy === 'email') return sortDir === 'asc' ? 'Email (A to Z)' : 'Email (Z to A)';
         return 'Default';
     };
-
-    // Style helpers
     const getStatusColor = (status) => status === 'active' ? "bg-green-100 text-green-700" : status === 'inactive' ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-700";
     const getTypeColor = (type) => type === 'organization' ? "bg-purple-600 text-white" : type === 'individual' ? "bg-blue-600 text-white" : "bg-gray-600 text-white";
 
-    // Modal Handlers
     const handleDeactivateConfirm = (id) => {
         router.post(route('partners.deactivate', id), {}, {
             preserveScroll: true,
@@ -300,26 +297,28 @@ export default function Index({ auth, partners, filters }) {
                             </svg>
                         </div>
 
-                        {/* Add Partner Button */}
-                        <Link
-                            href={route('partners.create')}
-                            className="flex items-center rounded-md bg-[#37692F] px-4 py-2 text-white hover:bg-[#2a5624]"
-                        >
-                            <svg
-                                className="mr-2 h-5 w-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
+                        {/* Add Partner Button - Only show if user has 'create partners' permission */}
+                        {permissions.includes('create partners') && (
+                            <Link
+                                href={route('partners.create')}
+                                className="flex items-center rounded-md bg-[#37692F] px-4 py-2 text-white hover:bg-[#2a5624]"
                             >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                                />
-                            </svg>
-                            Add Partner
-                        </Link>
+                                <svg
+                                    className="mr-2 h-5 w-5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                                    />
+                                </svg>
+                                Add Partner
+                            </Link>
+                        )}
                     </div>
                 </div>
 
@@ -371,16 +370,19 @@ export default function Index({ auth, partners, filters }) {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex space-x-2">
+                                                {/* Edit Button - Only show if user has 'edit partners' permission AND partner is active */}
                                                 {partner.status === 'active' ? (
-                                                    <Link
-                                                        href={route('partners.edit', partner.id)}
-                                                        className="text-blue-600 hover:text-blue-800"
-                                                        title="Edit Partner"
-                                                    >
-                                                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                        </svg>
-                                                    </Link>
+                                                    permissions.includes('edit partners') ? (
+                                                        <Link
+                                                            href={route('partners.edit', partner.id)}
+                                                            className="text-blue-600 hover:text-blue-800"
+                                                            title="Edit Partner"
+                                                        >
+                                                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                            </svg>
+                                                        </Link>
+                                                    ) : null
                                                 ) : (
                                                     <span
                                                         className="cursor-not-allowed text-gray-400"
@@ -391,30 +393,34 @@ export default function Index({ auth, partners, filters }) {
                                                         </svg>
                                                     </span>
                                                 )}
-                                                {partner.status === 'active' ? (
-                                                    <button
-                                                        className="text-yellow-600 hover:text-yellow-800"
-                                                        onClick={() => {
-                                                            setSelectedPartner(partner);
-                                                            setShowDeactivateModal(true);
-                                                        }}
-                                                        title="Archive Partner"
-                                                    >
-                                                        <ArchiveBoxIcon className="h-5 w-5" /> 
-                                                    </button>
-                                                ) : (
-                                                    <button
-                                                        className="text-green-600 hover:text-green-800"
-                                                        onClick={() => {
-                                                            setReactivateModalPartner(partner);
-                                                            setShowReactivateModal(true);
-                                                        }}
-                                                        title="Reactivate Partner"
-                                                    >
-                                                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                                        </svg>
-                                                    </button>
+                                                
+                                                {/* Archive/Reactivate Button - Only show if user has 'deactivate partners' permission */}
+                                                {permissions.includes('archive partners') && (
+                                                    partner.status === 'active' ? (
+                                                        <button
+                                                            className="text-yellow-600 hover:text-yellow-800"
+                                                            onClick={() => {
+                                                                setSelectedPartner(partner);
+                                                                setShowDeactivateModal(true);
+                                                            }}
+                                                            title="Archive Partner"
+                                                        >
+                                                            <ArchiveBoxIcon className="h-5 w-5" /> 
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            className="text-green-600 hover:text-green-800"
+                                                            onClick={() => {
+                                                                setReactivateModalPartner(partner);
+                                                                setShowReactivateModal(true);
+                                                            }}
+                                                            title="Reactivate Partner"
+                                                        >
+                                                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                            </svg>
+                                                        </button>
+                                                    )
                                                 )}
                                             </div>
                                         </td>

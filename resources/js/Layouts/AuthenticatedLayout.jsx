@@ -12,7 +12,6 @@ import usePermissionRefresh from '@/hooks/usePermissionRefresh';
 
 export default function AuthenticatedLayout({ header, children }) {
     const user = usePage().props.auth.user;
-    // Use the permissions from HandleInertiaRequests middleware
     const permissions = user?.can || [];
     
     // Get full name from first_name and last_name
@@ -42,7 +41,6 @@ export default function AuthenticatedLayout({ header, children }) {
                             </div>
 
                             
-                            
 
                             <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
                                 <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
@@ -55,108 +53,121 @@ export default function AuthenticatedLayout({ header, children }) {
                                     </NavLink>
                                 </div>
 
-                                {/* Users Section - Always visible */}
-                                <div className="relative hidden sm:-my-px sm:ms-10 sm:flex">
-                                    {/* Show main Users nav link - always visible */}
-                                    <NavLink
-                                        href={route("users.index")}
-                                        active={route().current("users.index")}
-                                        className="inline-flex items-center"
-                                    >
-                                        Users
-                                    </NavLink>
-
-                                    {/* Dropdown toggle button - TEMPORARILY ALWAYS SHOW */}
-                                    <button
-                                        type="button"
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            setOpenUsersDropdown(!openUsersDropdown);
-                                        }}
-                                        className="ml-2 focus:outline-none"
-                                    >
-                                        <svg
-                                            className={`h-4 w-4 transition-transform duration-200 ${
-                                                openUsersDropdown ? "rotate-180" : "rotate-0"
-                                            }`}
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            viewBox="0 0 20 20"
-                                            fill="#111827"
+                                {/* Users Section - Only show if user has any user-related permissions */}
+                                {(permissions.includes('view users') || 
+                                  permissions.includes('create users') || 
+                                  permissions.includes('edit users') || 
+                                  permissions.includes('deactivate users') ||
+                                  permissions.includes('view permissions') ||
+                                  permissions.includes('view roles')) && (
+                                    <div className="relative hidden sm:-my-px sm:ms-10 sm:flex">
+                                        {/* Show main Users nav link */}
+                                        <NavLink
+                                            href={route("users.index")}
+                                            active={route().current("users.index")}
+                                            className="inline-flex items-center"
                                         >
-                                            <path
-                                                fillRule="evenodd"
-                                                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                                clipRule="evenodd"
-                                            />
-                                        </svg>
-                                    </button>
+                                            Users
+                                        </NavLink>
 
-                                    {/* Dropdown menu - show items based on specific permissions */}
-                                    {openUsersDropdown && (
-                                        <div className="absolute top-5 left-0 mt-10 w-48 rounded-md bg-gray-50 shadow-lg text-sans text-[14px]">
-                                            {/* All Users - only if user has 'view users' */}
-                                            {permissions.includes('view users') && (
-                                                <Link
-                                                    href={route("users.index")}
-                                                    className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
-                                                >
-                                                    All Users
-                                                </Link>
-                                            )}
-                                            
-                                            {/* Add User - only if user has 'create users' */}
-                                            {permissions.includes('create users') && permissions.includes('view users') && (
-                                                <Link
-                                                    href={route("users.create")}
-                                                    className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
-                                                >
-                                                    Add User
-                                                </Link>
-                                            )}
-                                            
-                                            {/* User Permissions - only if user has 'view permissions' */}
-                                            {permissions.includes('view permissions') && (
-                                                <Link
-                                                    href={route("permissions.index")}
-                                                    className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
-                                                >
-                                                    User Permissions 
-                                                </Link>
-                                            )}
-                                            
-                                            {/* User Roles - only if user has 'view roles' */}
-                                            {permissions.includes('view roles') && (
-                                                <Link
-                                                    href={route("roles.index")}
-                                                    className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
-                                                >
-                                                    User Roles
-                                                </Link>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                                {/* PARTNERS */}
-                                <NavLink
-                                    href={route('partners.index')}
-                                    active={route().current('partners.index')}
-                                >
-                                    Partners
-                                </NavLink>
+                                        {/* Dropdown toggle button */}
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                setOpenUsersDropdown(!openUsersDropdown);
+                                            }}
+                                            className="ml-2 focus:outline-none"
+                                        >
+                                            <svg
+                                                className={`h-4 w-4 transition-transform duration-200 ${
+                                                    openUsersDropdown ? "rotate-180" : "rotate-0"
+                                                }`}
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                viewBox="0 0 20 20"
+                                                fill="#111827"
+                                            >
+                                                <path
+                                                    fillRule="evenodd"
+                                                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                                    clipRule="evenodd"
+                                                />
+                                            </svg>
+                                        </button>
+
+                                        {/* Dropdown menu - show items based on specific permissions */}
+                                        {openUsersDropdown && (
+                                            <div className="absolute top-5 left-0 mt-10 w-48 rounded-md bg-gray-50 shadow-lg text-sans text-[14px]">
+                                                {/* All Users - only if user has 'view users' */}
+                                                {permissions.includes('view users') && (
+                                                    <Link
+                                                        href={route("users.index")}
+                                                        className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
+                                                    >
+                                                        All Users
+                                                    </Link>
+                                                )}
+                                                
+                                                {/* Add User - only if user has 'create users' */}
+                                                {permissions.includes('create users') && permissions.includes('view users') && (
+                                                    <Link
+                                                        href={route("users.create")}
+                                                        className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
+                                                    >
+                                                        Add User
+                                                    </Link>
+                                                )}
+                                                
+                                                {/* User Permissions - only if user has 'view permissions' */}
+                                                {permissions.includes('view permissions') && (
+                                                    <Link
+                                                        href={route("permissions.index")}
+                                                        className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
+                                                    >
+                                                        User Permissions 
+                                                    </Link>
+                                                )}
+                                                
+                                                {/* User Roles - only if user has 'view roles' */}
+                                                {permissions.includes('view roles') && (
+                                                    <Link
+                                                        href={route("roles.index")}
+                                                        className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
+                                                    >
+                                                        User Roles
+                                                    </Link>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                {/* PARTNERS - Only show if user has 'view partners' permission */}
+                                {permissions.includes('view partners') && (
+                                    <NavLink
+                                        href={route('partners.index')}
+                                        active={route().current('partners.index')}
+                                    >
+                                        Partners
+                                    </NavLink>
+                                )}
                                 {/* SEEDS */}
-                                <NavLink
-                                    href={route('seeds.index')}
-                                    active={route().current('seeds.index')}
-                                >
-                                    Seeds
-                                </NavLink>
+                                {permissions.includes('view seeds') && (
+                                    <NavLink
+                                        href={route('seeds.index')}
+                                        active={route().current('seeds.index')}
+                                    >
+                                        Seeds
+                                    </NavLink>
+                                )}
                                 {/* ITEMS */}
-                                <NavLink
-                                    href={route('items.index')}
-                                    active={route().current('items.index')}
-                                >
-                                    Items
-                                </NavLink>
+                                {permissions.includes('view items') && (
+                                    <NavLink
+                                        href={route('items.index')}
+                                        active={route().current('items.index')}
+                                    >
+                                        Items
+                                    </NavLink>
+                                )}
                                 {/* CONTRACTS */}
                                 <NavLink
                                     href={route('contracts.index')}

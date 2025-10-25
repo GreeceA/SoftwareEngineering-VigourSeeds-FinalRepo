@@ -17,6 +17,7 @@ export default function Register() {
         email: '',
         password: '',
         password_confirmation: '',
+        role: 'employee', // Added: ensures new users get employee role
     });
 
     const [showPassword, setShowPassword] = useState(false);

@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import React, { useState, useRef, useEffect } from 'react';
 import { debounce } from 'lodash';
 import '../../../css/fonts.css';
@@ -8,6 +8,9 @@ import ArchiveModal from '@/Pages/Seeds/ArchiveSeedsModal';
 import RestoreModal from '@/Pages/Seeds/ReactivateSeedsModal';
 
 export default function Index({ auth, seeds, filters }) {
+    const { auth: authData } = usePage().props;
+    const permissions = authData?.user?.can || [];
+
     const [search, setSearch] = useState(filters.search || '');
     const [filter, setFilter] = useState(filters.status || 'all');
     const [sortBy, setSortBy] = useState(filters.sort_by || 'id');
@@ -283,26 +286,28 @@ export default function Index({ auth, seeds, filters }) {
                             </svg>
                         </div>
 
-                        {/* Add Seed Button */}
-                        <Link
-                            href={route('seeds.create')}
-                            className="flex items-center rounded-md bg-[#37692F] px-4 py-2 text-white hover:bg-[#2a5624]"
-                        >
-                            <svg
-                                className="mr-2 h-5 w-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
+                        {/* Add Seed Button - Only show if user has 'create seeds' permission */}
+                        {permissions.includes('create seeds') && (
+                            <Link
+                                href={route('seeds.create')}
+                                className="flex items-center rounded-md bg-[#37692F] px-4 py-2 text-white hover:bg-[#2a5624]"
                             >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                                />
-                            </svg>
-                            Add Seed
-                        </Link>
+                                <svg
+                                    className="mr-2 h-5 w-5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                                    />
+                                </svg>
+                                Add Seed
+                            </Link>
+                        )}
                     </div>
                 </div>
 
@@ -368,41 +373,57 @@ export default function Index({ auth, seeds, filters }) {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex space-x-2">
-                                                <Link
-                                                    href={route('seeds.edit', seed.id)}
-                                                    className={`text-blue-600 transition-colors duration-200 hover:text-blue-800 ${seed.status === 'archived' ? 'cursor-not-allowed text-gray-400 pointer-events-none' : ''}`}
-                                                    title={seed.status === 'archived' ? "Cannot edit archived seed" : "Edit Seed"}
-                                                    aria-disabled={seed.status === 'archived'}
-                                                    tabIndex={seed.status === 'archived' ? -1 : 0}
-                                                >
-                                                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                    </svg>
-                                                </Link>
+                                                {/* Edit Button - Only show if user has 'edit seeds' permission AND seed is active */}
                                                 {seed.status === 'active' ? (
-                                                    <button
-                                                        className="text-yellow-600 transition-colors duration-200 hover:text-yellow-800"
-                                                        onClick={() => {
-                                                            setSelectedSeed(seed);
-                                                            setShowArchiveModal(true);
-                                                        }}
-                                                        title="Archive Seed"
-                                                    >
-                                                        <ArchiveBoxIcon className="h-5 w-5" />
-                                                    </button>
+                                                    permissions.includes('edit seeds') ? (
+                                                        <Link
+                                                            href={route('seeds.edit', seed.id)}
+                                                            className="text-blue-600 transition-colors duration-200 hover:text-blue-800"
+                                                            title="Edit Seed"
+                                                        >
+                                                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                            </svg>
+                                                        </Link>
+                                                    ) : null
                                                 ) : (
-                                                    <button
-                                                        className="text-green-600 transition-colors duration-200 hover:text-green-800"
-                                                        onClick={() => {
-                                                            setSelectedSeed(seed);
-                                                            setShowRestoreModal(true);
-                                                        }}
-                                                        title="Reactivate Seed"
+                                                    <span
+                                                        className="cursor-not-allowed text-gray-400"
+                                                        title="Cannot edit archived seed"
                                                     >
                                                         <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                                         </svg>
-                                                    </button>
+                                                    </span>
+                                                )}
+
+                                                {/* Archive/Restore Button - Only show if user has 'archive seeds' permission */}
+                                                {permissions.includes('archive seeds') && (
+                                                    seed.status === 'active' ? (
+                                                        <button
+                                                            className="text-yellow-600 transition-colors duration-200 hover:text-yellow-800"
+                                                            onClick={() => {
+                                                                setSelectedSeed(seed);
+                                                                setShowArchiveModal(true);
+                                                            }}
+                                                            title="Archive Seed"
+                                                        >
+                                                            <ArchiveBoxIcon className="h-5 w-5" />
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            className="text-green-600 transition-colors duration-200 hover:text-green-800"
+                                                            onClick={() => {
+                                                                setSelectedSeed(seed);
+                                                                setShowRestoreModal(true);
+                                                            }}
+                                                            title="Reactivate Seed"
+                                                        >
+                                                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                            </svg>
+                                                        </button>
+                                                    )
                                                 )}
                                             </div>
                                         </td>

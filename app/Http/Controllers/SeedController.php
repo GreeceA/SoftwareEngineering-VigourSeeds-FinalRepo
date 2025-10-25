@@ -7,9 +7,21 @@ use App\Models\Seed;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class SeedController extends Controller
+class SeedController extends Controller implements HasMiddleware
 {
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:view seeds', only: ['index', 'show']),
+            new Middleware('permission:create seeds', only: ['create', 'store']),
+            new Middleware('permission:edit seeds', only: ['edit', 'update']),
+            new Middleware('permission:archive seeds', only: ['archive', 'restore']),
+        ];
+    }
+
     public function index(Request $request)
     {
         $seeds = Seed::query()

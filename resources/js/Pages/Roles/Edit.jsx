@@ -61,24 +61,51 @@ export default function Edit() {
                                     )}
                                 </div>
 
-                                <div className="grid grid-cols-4 gap-4 mb-3">
-                                    {permissions?.map((permission) => (
-                                        <div className="flex items-center" key={permission.id}>
-                                            <input
-                                                type="checkbox"
-                                                id={`permission-${permission.id}`}
-                                                className="rounded"
-                                                checked={data.permissions.includes(permission.name)}
-                                                onChange={() => handlePermissionChange(permission.name)}
-                                            />
-                                            <label 
-                                                htmlFor={`permission-${permission.id}`} 
-                                                className="ml-2 text-sm text-gray-700"
-                                            >
-                                                {permission.name}
-                                            </label>
-                                        </div>
-                                    ))}
+                                <div className="mb-6">
+                                    <label className="block mb-3 text-sm font-bold text-gray-700">
+                                        Permissions
+                                    </label>
+                                    
+                                    {/* Group permissions by resource */}
+                                    {['users', 'roles', 'permissions', 'partners', 'seeds', 'items', 'contracts'].map((resource) => {
+                                        const resourcePermissions = permissions?.filter(p => 
+                                            p.name.includes(resource)
+                                        ).sort((a, b) => {
+                                            const order = ['view', 'create', 'edit', 'archive', 'deactivate', 'delete'];
+                                            const aAction = a.name.split(' ')[0];
+                                            const bAction = b.name.split(' ')[0];
+                                            return order.indexOf(aAction) - order.indexOf(bAction);
+                                        });
+
+                                        if (!resourcePermissions || resourcePermissions.length === 0) return null;
+
+                                        return (
+                                            <div key={resource} className="mb-4 border rounded-lg p-4 bg-gray-50">
+                                                <h3 className="text-sm font-semibold text-gray-800 mb-3 capitalize">
+                                                    {resource} Management
+                                                </h3>
+                                                <div className="grid grid-cols-4 gap-3">
+                                                    {resourcePermissions.map((permission) => (
+                                                        <div className="flex items-center" key={permission.id}>
+                                                            <input
+                                                                type="checkbox"
+                                                                id={`permission-${permission.id}`}
+                                                                className="rounded text-green-600 focus:ring-green-500"
+                                                                checked={data.permissions.includes(permission.name)}
+                                                                onChange={() => handlePermissionChange(permission.name)}
+                                                            />
+                                                            <label
+                                                                htmlFor={`permission-${permission.id}`}
+                                                                className="ml-2 text-sm text-gray-700 cursor-pointer"
+                                                            >
+                                                                {permission.name.split(' ')[0]}
+                                                            </label>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
                                 </div>
 
                                 <div className="flex items-center justify-end mt-4">

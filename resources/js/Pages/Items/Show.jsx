@@ -1,8 +1,11 @@
 import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 
 export default function Show({ auth, item }) {
+    const { auth: authData } = usePage().props;
+    const permissions = authData?.user?.can || [];
+
     // Static contract data for demonstration
     const recentInventoryLogs = [
         {
@@ -100,7 +103,7 @@ export default function Show({ auth, item }) {
                 <div className="flex justify-between items-center mb-6">
                     <h1 className="text-2xl font-semibold text-gray-800">Item Information</h1>
                     <div className="flex space-x-3">
-                        {item.status === 'active' && (
+                        {permissions.includes('edit items') && item.status === 'active' && (
                             <Link
                                 href={route('items.edit', item.id)}
                                 className="bg-[#37692F] text-white px-4 py-2 rounded-md hover:bg-[#2a5624] flex items-center"

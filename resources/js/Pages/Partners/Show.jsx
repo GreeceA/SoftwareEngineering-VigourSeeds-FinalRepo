@@ -1,8 +1,11 @@
 import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 
 export default function Show({ auth, partner }) {
+    const { auth: authData } = usePage().props;
+    const permissions = authData?.user?.can || [];
+
     // Static contract data for demonstration - SAMPLE TO BE REPLACED WITH DYNAMIC DATA
     const associatedContracts = [
         {
@@ -66,7 +69,7 @@ export default function Show({ auth, partner }) {
                 <div className="mb-6 flex items-center justify-between">
                     <h1 className="text-2xl font-semibold text-gray-800">Partner Information</h1>
                     <div className="flex space-x-3">
-                        {partner.status !== 'inactive' && (
+                        {permissions.includes('edit partners') && partner.status !== 'inactive' && (
                             <Link
                                 href={route('partners.edit', partner.id)}
                                 className="flex items-center rounded-md bg-[#37692F] px-4 py-2 text-white hover:bg-[#2a5624]"
@@ -188,7 +191,7 @@ export default function Show({ auth, partner }) {
                                         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                                             <div>
                                                 <span className="mb-1 block text-xs text-gray-500">Name</span>
-                                                <span className="font-poppins text-sm font-normal font-medium text-gray-900">{person.name}</span>
+                                                <span className="font-poppins text-sm font-normal text-gray-900">{person.name}</span>
                                             </div>
                                             <div>
                                                 <span className="mb-1 block text-xs text-gray-500">Email</span>

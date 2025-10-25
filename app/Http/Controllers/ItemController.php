@@ -6,9 +6,21 @@ use App\Http\Requests\ItemRequest;
 use App\Models\Item;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class ItemController extends Controller
+class ItemController extends Controller implements HasMiddleware
 {
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:view items', only: ['index', 'show']),
+            new Middleware('permission:create items', only: ['create', 'store']),
+            new Middleware('permission:edit items', only: ['edit', 'update']),
+            new Middleware('permission:archive items', only: ['archive', 'activate', 'destroy']),
+        ];
+    }
+
     // Display a listing of the resource.
     public function index(Request $request)
     {
@@ -60,9 +72,6 @@ class ItemController extends Controller
     {
         return Inertia::render('Items/Show', [
             'item' => $item,
-            'auth' => [
-                'user' => auth()->user(),
-            ],
         ]);
     }
 

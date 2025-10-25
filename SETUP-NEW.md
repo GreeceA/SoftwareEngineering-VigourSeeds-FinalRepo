@@ -51,10 +51,11 @@ php artisan migrate
 ```
 
 ### 5. Seed Data (Conflict-Safe)
+Note: TestUsersSeeder was renamed to BasicUsersSeeder. The seeder suite now creates only admin and employee roles (employee has no permissions).
 ```bash
 php artisan db:seed --class=PermissionSeeder
 php artisan db:seed --class=AdminUserSeeder
-php artisan db:seed --class=TestUsersSeeder
+php artisan db:seed --class=BasicUsersSeeder
 ```
 
 ### 6. Start Development Servers
@@ -69,8 +70,8 @@ npm run dev
 ## 🔧 Conflict Resolution
 
 ### Existing Users
-- If `admin@vigourseeds.com` exists → Backs up to `admin_backup@vigourseeds.com`
-- If test accounts exist → Backs up with `_backup` suffix
+- No automatic backup-email renaming is performed by the seeder.
+- The seeder will normalize roles so that only one admin account remains (admin@vigourseeds.com is kept as admin) and other users are assigned the employee role (no permissions). Emails are not modified.
 
 ### Existing Permissions
 - `delete users` → Renamed to `deactivate users`
@@ -81,6 +82,7 @@ npm run dev
 - `administrator` → Renamed to `admin`
 - `user` → Renamed to `employee`
 - `member` → Renamed to `employee`
+- `manager` / `testuser` roles are removed/converted to `employee`.
 
 ## 🔑 Test Accounts
 
@@ -91,15 +93,10 @@ After setup, you'll have these accounts:
 - **Password:** admin123
 - **Can:** Do everything
 
-### 👔 Manager (Limited Access)
-- **Email:** manager@vigourseeds.com
-- **Password:** manager123
-- **Can:** View/create/edit users and roles (no delete/deactivate)
-
-### 👤 Employee (View Only)
+### 👤 Employee (No Permissions)
 - **Email:** employee@vigourseeds.com
 - **Password:** employee123
-- **Can:** Only view users list
+- **Can:** No special permissions (employee role is intentionally empty)
 
 ## 🛠️ Troubleshooting
 
@@ -114,6 +111,7 @@ php artisan migrate:fresh --seed
 # Clear permission caches
 php artisan cache:clear
 php artisan config:clear
+php artisan permission:cache-reset
 ```
 
 ### Frontend Issues
@@ -124,9 +122,9 @@ npm run build
 
 ## ⚠️ Important Notes
 
-- **Existing Data:** Our setup is designed to preserve your existing data while standardizing it
-- **Backups:** Always backup your database before running migrations
-- **Test Accounts:** Delete test accounts before production deployment
+- **Existing Data:** The setup normalizes roles but does not change user emails.
+- **Backups:** Always backup your database before running migrations and seeders.
+- **Test Accounts:** Delete test accounts before production deployment if needed.
 - **Admin Password:** Change admin password after first login
 
 Happy coding! 🎉

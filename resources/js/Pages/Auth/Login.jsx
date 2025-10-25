@@ -117,6 +117,19 @@ export default function Login({ status, canResetPassword }) {
                     </button>
                 </div>
 
+                {/* New User Register Link */}
+                <div className="text-center">
+                    <p className="text-[16px] text-[#666666]">
+                        New user?{' '}
+                        <Link
+                            href={route('register')}
+                            className="text-[#37692F] font-medium underline hover:text-[#2a5624]"
+                        >
+                            Register now
+                        </Link>
+                    </p>
+                </div>
+
                 <div className="mt-6 relative">
                     <div className="absolute inset-0 flex items-center">
                         <div className="w-full border-t border-gray-300" />

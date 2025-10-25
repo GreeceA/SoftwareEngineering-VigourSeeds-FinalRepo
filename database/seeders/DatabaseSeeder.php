@@ -14,7 +14,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             PermissionSeeder::class,
             AdminUserSeeder::class,
-            TestUsersSeeder::class,
+            \Database\Seeders\BasicUsersSeeder::class,
         ]);
 
         // Call functional data seeders

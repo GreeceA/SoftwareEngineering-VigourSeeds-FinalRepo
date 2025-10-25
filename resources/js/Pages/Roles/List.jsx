@@ -8,8 +8,8 @@ export default function List() {
     // Get user permissions (same way as in AuthenticatedLayout)
     const permissions = auth?.user?.can || [];
 
-    // Core roles that cannot be deleted
-    const protectedRoles = ['admin', 'manager', 'employee'];
+    // Core roles that cannot be deleted (removed 'manager')
+    const protectedRoles = ['admin', 'employee'];
 
       const handleDelete = (id) => {
         if (confirm('Are you sure you want to delete this role?')) {
