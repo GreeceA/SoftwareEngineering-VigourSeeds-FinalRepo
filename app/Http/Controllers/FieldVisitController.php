@@ -14,9 +14,20 @@ use App\Http\Requests\StoreDamageReportRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class FieldVisitController extends Controller
+class FieldVisitController extends Controller implements HasMiddleware
 {
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:view field visit', only: ['index', 'show']),
+            new Middleware('permission:create field visit', only: ['create', 'store', 'addGrowthReport', 'addDamageReport']),
+            new Middleware('permission:edit field visit', only: ['edit', 'update', 'complete', 'cancel', 'destroy']),
+        ];
+    }
+
     public function index(Request $request)
     {
         $query = FieldVisit::with(['contract:id,contract_name', 'assignee:id,first_name,last_name'])

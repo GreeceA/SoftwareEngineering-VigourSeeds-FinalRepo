@@ -5,6 +5,7 @@ import { usePage, Link } from '@inertiajs/react';
 
 const BuybackContractDetails = () => {
   const { auth, partnerOrder } = usePage().props;
+  const permissions = auth.user.can || [];
 
   const contract = partnerOrder.contract || {};
   const lines = partnerOrder.lines || [];
@@ -357,13 +358,15 @@ const BuybackContractDetails = () => {
                 )}
               </div>
 
-              <Link
-                href={route('inventory.outbound.create', { partner_order_id: partnerOrder.id })}
-                className="w-full mt-6 bg-[#37692F] hover:bg-[#2a5624] text-white px-4 py-3 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 font-medium shadow-sm hover:shadow-md"
-              >
-                <Plus size={20} />
-                Record New Delivery
-              </Link>
+              {permissions.includes('create inventory') && (
+                <Link
+                  href={route('inventory.outbound.create', { partner_order_id: partnerOrder.id })}
+                  className="w-full mt-6 bg-[#37692F] hover:bg-[#2a5624] text-white px-4 py-3 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 font-medium shadow-sm hover:shadow-md"
+                >
+                  <Plus size={20} />
+                  Record New Delivery
+                </Link>
+              )}
             </div>
           </div>
 

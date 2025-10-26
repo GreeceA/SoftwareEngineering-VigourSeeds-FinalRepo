@@ -18,6 +18,9 @@ class PermissionController extends Controller implements HasMiddleware
         'view partners', 'create partners', 'edit partners', 'archive partners',
         'view seeds', 'create seeds', 'edit seeds', 'archive seeds',
         'view items', 'create items', 'edit items', 'archive items',
+        'view contracts', 'create contracts', 'edit contracts', 'delete contracts',
+        'view inventory', 'create inventory',
+        'view field visit', 'create field visit', 'edit field visit',
     ];
 
     public static function middleware(): array

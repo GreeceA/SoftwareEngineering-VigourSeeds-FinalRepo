@@ -5,6 +5,7 @@ import { usePage, Link } from '@inertiajs/react';
 
 const Show = () => {
   const { auth, product, transactions } = usePage().props;
+  const permissions = auth.user.can || [];
   
   const [filterType, setFilterType] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
@@ -173,10 +174,12 @@ const Show = () => {
                 <Filter size={20} className="text-gray-600" />
                 <h3 className="font-semibold text-gray-900">Filter Transactions</h3>
               </div>
-              <button className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1">
-                <Download size={16} />
-                Export
-              </button>
+              {permissions.includes('view inventory') && (
+                <button className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1">
+                  <Download size={16} />
+                  Export
+                </button>
+              )}
             </div>
             <div className="flex gap-2 p-4">
               {['all', 'inbound', 'outbound', 'adjustment'].map((type) => (

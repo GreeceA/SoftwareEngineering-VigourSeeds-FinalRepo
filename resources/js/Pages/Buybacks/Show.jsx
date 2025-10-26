@@ -5,6 +5,7 @@ import { usePage, Link } from '@inertiajs/react'; // Add this import
 
 const BuybackContractDetails = () => {
   const { auth } = usePage().props;
+  const permissions = auth.user.can || [];
 
   const contract = {
     id: 1,
@@ -204,10 +205,12 @@ const BuybackContractDetails = () => {
                 <span className="font-bold text-xl text-green-600">₱{totalValue.toLocaleString()}</span>
               </div>
             </div>
-            <button className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition">
-              <Plus size={20} />
-              Record Delivery
-            </button>
+            {permissions.includes('create inventory') && (
+              <button className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition">
+                <Plus size={20} />
+                Record Delivery
+              </button>
+            )}
           </div>
         </div>
 

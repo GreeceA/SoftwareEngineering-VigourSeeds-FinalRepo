@@ -60,6 +60,26 @@ class PermissionSeeder extends Seeder
             'archive items',
         ];
 
+        // Contract Management Permissions (PROTECTED - cannot be deleted)
+        $contractPermissions = [
+            'view contracts',
+            'create contracts',
+            'edit contracts',
+            'delete contracts',
+        ];
+
+        // Inventory Management Permissions (PROTECTED - cannot be deleted)
+        $inventoryPermissions = [
+            'view inventory',
+            'create inventory',
+        ];
+
+        // Field Visit Management Permissions (PROTECTED - cannot be deleted)
+        $fieldVisitPermissions = [
+            'view field visit',
+            'create field visit',
+            'edit field visit',
+        ];
 
         // Combine all permissions
         $allPermissions = array_merge(
@@ -68,7 +88,10 @@ class PermissionSeeder extends Seeder
             $permissionPermissions,
             $partnerPermissions,
             $seedPermissions,
-            $itemPermissions
+            $itemPermissions,
+            $contractPermissions,
+            $inventoryPermissions,
+            $fieldVisitPermissions
         );
 
         // Create all permissions if they don't exist

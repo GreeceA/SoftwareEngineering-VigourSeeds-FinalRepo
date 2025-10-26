@@ -5,6 +5,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 
 const InventoryLedger = () => {
   const { auth, transactions, filters: serverFilters = {} } = usePage().props;
+  const permissions = auth.user.can || [];
   
   const [filters, setFilters] = useState({
     product_type: serverFilters.product_type || '',
@@ -119,10 +120,12 @@ const InventoryLedger = () => {
               <h1 className="text-3xl font-bold text-gray-900">Inventory Ledger</h1>
               <p className="text-gray-600 mt-1">Complete transaction history</p>
             </div>
-            <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition">
-              <Download size={20} />
-              Export
-            </button>
+            {permissions.includes('view inventory') && (
+              <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition">
+                <Download size={20} />
+                Export
+              </button>
+            )}
           </div>
 
           {/* Filters */}

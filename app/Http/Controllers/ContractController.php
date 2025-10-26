@@ -14,9 +14,21 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 use App\Mail\ContractReviewMail;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class ContractController extends Controller
+class ContractController extends Controller implements HasMiddleware
 {
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:view contracts', only: ['index', 'show']),
+            new Middleware('permission:create contracts', only: ['create', 'store']),
+            new Middleware('permission:edit contracts', only: ['edit', 'update']),
+            new Middleware('permission:delete contracts', only: ['destroy', 'changeStatus']),
+        ];
+    }
+
     /**
      * Display a listing of contracts with filtering, sorting, and search.
      */
@@ -65,7 +77,6 @@ class ContractController extends Controller
             ]);
 
         return Inertia::render('Contracts/Index', [
-            'auth' => ['user' => auth()->user()],
             'contracts' => $contracts,
             'filters' => [
                 'search' => $request->search,
@@ -93,7 +104,6 @@ class ContractController extends Controller
             ->get();
 
         return Inertia::render('Contracts/Create', [
-            'auth' => ['user' => auth()->user()],
             'partners' => $partners,
             'seeds' => $seeds,
         ]);
@@ -222,7 +232,6 @@ class ContractController extends Controller
             });
 
         return Inertia::render('Contracts/Show', [
-            'auth' => ['user' => auth()->user()],
             'contract' => [
                 'id' => $contract->id,
                 'contract_name' => $contract->contract_name,
@@ -297,7 +306,6 @@ class ContractController extends Controller
         $contract->load(['partner.farms', 'farm', 'contractSeedCommitments.seed']);
 
         return Inertia::render('Contracts/Edit', [
-            'auth' => ['user' => auth()->user()],
             'contract' => [
                 'id' => $contract->id,
                 'contract_name' => $contract->contract_name,

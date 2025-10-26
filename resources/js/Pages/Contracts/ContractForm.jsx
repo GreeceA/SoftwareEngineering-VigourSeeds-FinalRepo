@@ -694,7 +694,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                     }}
                                     onFocus={() => setShowPartnerDropdown(true)}
                                     onBlur={e => {
-                                        setTimeout(() => setShowPartnerDropdown(false), 150);
+                                        setTimeout(() => setShowPartnerDropdown(false), 200);
                                         handleBlur('partner_id', data.partner_id);
                                     }}
                                     className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"

@@ -6,6 +6,7 @@ import CancelOrderModal from './CancelOrderModal';
 
 const PartnerOrdersList = () => {
   const { auth, partnerOrders, partners } = usePage().props;
+  const permissions = auth.user.can || [];
 
   const [filters, setFilters] = useState({
     status: '',
@@ -101,13 +102,15 @@ const PartnerOrdersList = () => {
               <h1 className="text-3xl font-bold text-gray-900">Partner Orders</h1>
               <p className="text-gray-600 mt-1">Manage seed and item deliveries to partners</p>
             </div>
-            <Link
-              href={route('partner-orders.create')}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
-            >
-              <Plus size={20} />
-              New Order
-            </Link>
+            {permissions.includes('create inventory') && (
+              <Link
+                href={route('partner-orders.create')}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
+              >
+                <Plus size={20} />
+                New Order
+              </Link>
+            )}
           </div>
 
           {/* Stats */}

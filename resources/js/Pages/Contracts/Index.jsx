@@ -1,5 +1,5 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { useState, useRef, useEffect } from 'react';
 import { debounce } from 'lodash';
 import '../../../css/fonts.css';
@@ -7,6 +7,9 @@ import { ChevronDownIcon, FunnelIcon, ArrowsUpDownIcon } from '@heroicons/react/
 import dayjs from 'dayjs';
 
 export default function Index({ auth, contracts, filters }) {
+    const { auth: authData } = usePage().props;
+    const permissions = authData?.user?.can || [];
+    
     const [search, setSearch] = useState(filters.search || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || 'all');
     const [sortBy, setSortBy] = useState(filters.sort_by || 'id');
@@ -199,13 +202,15 @@ export default function Index({ auth, contracts, filters }) {
                         </div>
 
                         {/* Create Contract Button */}
-                        <Link
-                            href={route('contracts.create')}
-                            className="flex items-center rounded-md bg-[#37692F] px-4 py-2 text-white hover:bg-[#2a5624]"
-                        >
-                            <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
-                            New Contract
-                        </Link>
+                        {permissions.includes('create contracts') && (
+                            <Link
+                                href={route('contracts.create')}
+                                className="flex items-center rounded-md bg-[#37692F] px-4 py-2 text-white hover:bg-[#2a5624]"
+                            >
+                                <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" /></svg>
+                                New Contract
+                            </Link>
+                        )}
                     </div>
                 </div>
 
@@ -263,26 +268,30 @@ export default function Index({ auth, contracts, filters }) {
                                         {/* Actions */}
                                         <td className="px-6 py-4">
                                             <div className="flex space-x-2">
-                                                <Link
-                                                    href={route('contracts.show', contract.id)}
-                                                    className="text-blue-600 hover:text-blue-800"
-                                                    title="View Details"
-                                                >
-                                                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                                                </Link>
-                                                <Link
-                                                    href={route('contracts.edit', contract.id)}
-                                                    className={`text-blue-600 hover:text-blue-800 ${
-                                                        ['cancelled', 'active'].includes(contract.status)
-                                                            ? 'pointer-events-none opacity-50 cursor-not-allowed'
-                                                            : ''
-                                                    }`}
-                                                    title="Edit Contract"
-                                                    tabIndex={['cancelled', 'active'].includes(contract.status) ? -1 : 0}
-                                                    aria-disabled={['cancelled', 'active'].includes(contract.status)}
-                                                >
-                                                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-                                                </Link>
+                                                {permissions.includes('view contracts') && (
+                                                    <Link
+                                                        href={route('contracts.show', contract.id)}
+                                                        className="text-blue-600 hover:text-blue-800"
+                                                        title="View Details"
+                                                    >
+                                                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
+                                                    </Link>
+                                                )}
+                                                {permissions.includes('edit contracts') && (
+                                                    <Link
+                                                        href={route('contracts.edit', contract.id)}
+                                                        className={`text-blue-600 hover:text-blue-800 ${
+                                                            ['cancelled', 'active'].includes(contract.status)
+                                                                ? 'pointer-events-none opacity-50 cursor-not-allowed'
+                                                                : ''
+                                                        }`}
+                                                        title="Edit Contract"
+                                                        tabIndex={['cancelled', 'active'].includes(contract.status) ? -1 : 0}
+                                                        aria-disabled={['cancelled', 'active'].includes(contract.status)}
+                                                    >
+                                                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                                                    </Link>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>

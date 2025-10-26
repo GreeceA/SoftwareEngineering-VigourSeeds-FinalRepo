@@ -5,6 +5,7 @@ import { usePage, Link } from '@inertiajs/react';
 
 const InventoryDashboard = () => {
   const { auth, inventory, shortfalls } = usePage().props;
+  const permissions = auth.user.can || [];
 
   const [filter, setFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -94,20 +95,24 @@ const InventoryDashboard = () => {
               <p className="text-gray-600 mt-1">Monitor and manage your stock levels</p>
             </div>
             <div className="flex gap-3">
-              <Link
-                href={route('inventory.inbound.create')}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
-              >
-                <Plus size={20} />
-                Stock In
-              </Link>
-              <Link
-                href={route('inventory.outbound.create')}
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
-              >
-                <ArrowRight size={20} />
-                Stock Out
-              </Link>
+              {permissions.includes('create inventory') && (
+                <Link
+                  href={route('inventory.inbound.create')}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
+                >
+                  <Plus size={20} />
+                  Stock In
+                </Link>
+              )}
+              {permissions.includes('create inventory') && (
+                <Link
+                  href={route('inventory.outbound.create')}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
+                >
+                  <ArrowRight size={20} />
+                  Stock Out
+                </Link>
+              )}
             </div>
           </div>
 

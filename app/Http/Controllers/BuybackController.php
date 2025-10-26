@@ -9,9 +9,19 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class BuybackController extends Controller
+class BuybackController extends Controller implements HasMiddleware
 {
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:view inventory', only: ['index', 'show']),
+            new Middleware('permission:create inventory', only: ['createInbound', 'storeInbound']),
+        ];
+    }
+
     /**
      * Display buyback overview page
      */

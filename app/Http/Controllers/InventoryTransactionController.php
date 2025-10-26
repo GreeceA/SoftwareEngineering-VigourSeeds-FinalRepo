@@ -13,9 +13,19 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class InventoryTransactionController extends Controller
+class InventoryTransactionController extends Controller implements HasMiddleware
 {
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:view inventory', only: ['index', 'dashboard', 'show']),
+            new Middleware('permission:create inventory', only: ['createInbound', 'storeInbound', 'createOutbound', 'storeOutbound', 'createAdjustment', 'storeAdjustment']),
+        ];
+    }
+
     /**
      * Display the inventory ledger
      */
@@ -453,7 +463,6 @@ public function dashboard()
         ->values();
 
     return Inertia::render('Inventory/Dashboard', [
-        'auth' => ['user' => auth()->user()],
         'inventory' => $inventory,
         'shortfalls' => $shortfalls,
     ]);

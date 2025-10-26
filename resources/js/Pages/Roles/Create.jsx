@@ -65,7 +65,7 @@ export default function Create({ permissions }) {
                                     </label>
                                     
                                     {/* Group permissions by resource */}
-                                    {['users', 'roles', 'permissions', 'partners', 'seeds', 'items', 'contracts'].map((resource) => {
+                                    {['users', 'roles', 'permissions', 'partners', 'seeds', 'items', 'contracts', 'inventory', 'field visit'].map((resource) => {
                                         const resourcePermissions = permissions?.filter(p => 
                                             p.name.includes(resource)
                                         ).sort((a, b) => {

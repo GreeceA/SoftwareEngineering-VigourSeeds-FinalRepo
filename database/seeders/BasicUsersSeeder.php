@@ -45,40 +45,6 @@ class BasicUsersSeeder extends Seeder
             $employeeUser->syncRoles(['employee']);
         }
 
-        // Convert any users in roles 'manager' or 'testuser' (or extra admins) to 'employee'
-        $rolesToConvert = ['manager', 'testuser'];
-        $usersToConvert = User::whereHas('roles', function ($q) use ($rolesToConvert) {
-            $q->whereIn('name', $rolesToConvert);
-        })->get();
-
-        foreach ($usersToConvert as $u) {
-            $u->role = 'employee';
-            if (method_exists($u, 'syncPermissions')) {
-                $u->syncPermissions([]);
-            }
-            if (method_exists($u, 'syncRoles')) {
-                $u->syncRoles(['employee']);
-            }
-            $u->save();
-        }
-
-        // Downgrade any other admins (keep admin@vigourseeds.com only)
-        $adminEmail = 'admin@vigourseeds.com';
-        $otherAdmins = User::whereHas('roles', function ($q) {
-            $q->where('name', 'admin');
-        })->where('email', '!=', $adminEmail)->get();
-
-        foreach ($otherAdmins as $other) {
-            $other->role = 'employee';
-            if (method_exists($other, 'syncPermissions')) {
-                $other->syncPermissions([]);
-            }
-            if (method_exists($other, 'syncRoles')) {
-                $other->syncRoles(['employee']);
-            }
-            $other->save();
-        }
-
-        $this->command->info('🎯 Basic users seeded/normalized: only admin + employee roles present; employees have no permissions.');
+        $this->command->info('✅ Employee test account created/updated: employee@vigourseeds.com');
     }
 }

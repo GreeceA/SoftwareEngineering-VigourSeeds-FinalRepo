@@ -5,6 +5,7 @@ import { usePage, Link } from '@inertiajs/react'; // Add this import
 
 const BuybackOverview = () => {
   const { auth, contracts } = usePage().props;
+  const permissions = auth.user.can || [];
 
   const totalExpected = contracts.reduce((sum, c) => sum + c.expected_buyback, 0);
   const totalActual = contracts.reduce((sum, c) => sum + c.actual_buyback, 0);
@@ -35,13 +36,15 @@ const BuybackOverview = () => {
             <h1 className="text-3xl font-bold text-gray-900">Buyback Overview</h1>
             <p className="text-gray-600 mt-1">Track corn buyback commitments from partner farms</p>
           </div>
-          <Link
-            href={route('buybacks.inbound.create')}
-            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
-          >
-            <Plus size={20} />
-            Record Buyback
-          </Link>
+          {permissions.includes('create inventory') && (
+            <Link
+              href={route('buybacks.inbound.create')}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
+            >
+              <Plus size={20} />
+              Record Buyback
+            </Link>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">

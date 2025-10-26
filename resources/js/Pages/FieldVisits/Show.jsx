@@ -8,6 +8,7 @@ import HandleCancelModal from './handleCancel';
 
 export default function Show({ auth, fieldVisit }) {
     const { flash } = usePage().props;
+    const permissions = auth.user.can || [];
     const [showGrowthModal, setShowGrowthModal] = useState(false);
     const [showDamageModal, setShowDamageModal] = useState(false);
     const [showCompleteModal, setShowCompleteModal] = useState(false);
@@ -135,7 +136,7 @@ export default function Show({ auth, fieldVisit }) {
                 <div className="mb-6 flex items-center justify-between">
                     <h1 className="text-2xl font-semibold text-gray-800">Field Visit Information</h1>
                     <div className="flex space-x-3">
-                        {fieldVisit.status !== 'completed' && fieldVisit.status !== 'cancelled' && (
+                        {permissions.includes('edit field visit') && fieldVisit.status !== 'completed' && fieldVisit.status !== 'cancelled' && (
                             <Link
                                 href={route('field-visits.edit', fieldVisit.field_visit_ID)}
                                 className="flex items-center rounded-md bg-[#37692F] px-4 py-2 text-white hover:bg-[#2a5624]"
@@ -413,7 +414,7 @@ export default function Show({ auth, fieldVisit }) {
                                 <h2 className="text-lg font-semibold text-green-700">
                                     Growth Reports ({fieldVisit.growth_reports?.length || 0})
                                 </h2>
-                                {fieldVisit.status === 'ongoing' && (
+                                {permissions.includes('edit field visit') && fieldVisit.status === 'ongoing' && (
                                     <button
                                         onClick={() => setShowGrowthModal(true)}
                                         className="flex items-center rounded-md bg-green-600 px-3 py-1 text-sm text-white hover:bg-green-700"
@@ -491,7 +492,7 @@ export default function Show({ auth, fieldVisit }) {
                                 <h2 className="text-lg font-semibold text-red-700">
                                     Damage Reports ({fieldVisit.damage_reports?.length || 0})
                                 </h2>
-                                {fieldVisit.status === 'ongoing' && (
+                                {permissions.includes('edit field visit') && fieldVisit.status === 'ongoing' && (
                                     <button
                                         onClick={() => setShowDamageModal(true)}
                                         className="flex items-center rounded-md bg-orange-600 px-3 py-1 text-sm text-white hover:bg-orange-700"
@@ -571,7 +572,7 @@ export default function Show({ auth, fieldVisit }) {
                 </div>
 
                 {/* Action Buttons */}
-                {fieldVisit.status === 'ongoing' && (
+                {permissions.includes('edit field visit') && fieldVisit.status === 'ongoing' && (
                 <div className="mt-6 flex justify-end space-x-3">
                     <button
                     onClick={handleComplete}

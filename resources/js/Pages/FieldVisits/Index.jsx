@@ -8,6 +8,7 @@ import CancelVisitModal from './handleCancel';
 
 export default function Index({ auth, fieldVisits, filters, contracts }) {
     const { flash } = usePage().props;
+    const permissions = auth.user.can || [];
     const [search, setSearch] = useState(filters.search || '');
     const [status, setStatus] = useState(filters.status || '');
     const [contractId, setContractId] = useState(filters.contract_id || '');
@@ -286,25 +287,27 @@ export default function Index({ auth, fieldVisits, filters, contracts }) {
                         </div>
 
                         {/* Create Field Visit Button */}
-                        <Link
-                            href={route('field-visits.create')}
-                            className="flex items-center rounded-md bg-[#37692F] px-4 py-2 text-white hover:bg-[#2a5624]"
-                        >
-                            <svg
-                                className="mr-2 h-5 w-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
+                        {permissions.includes('create field visit') && (
+                            <Link
+                                href={route('field-visits.create')}
+                                className="flex items-center rounded-md bg-[#37692F] px-4 py-2 text-white hover:bg-[#2a5624]"
                             >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                                />
-                            </svg>
-                            Create Visit
-                        </Link>
+                                <svg
+                                    className="mr-2 h-5 w-5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                                    />
+                                </svg>
+                                Create Visit
+                            </Link>
+                        )}
                     </div>
                 </div>
 
@@ -392,7 +395,7 @@ export default function Index({ auth, fieldVisits, filters, contracts }) {
                                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                                      </svg>
                                                 </Link>
-                                                {visit.status === 'ongoing' && (
+                                                {visit.status === 'ongoing' && permissions.includes('edit field visit') && (
                                                     <>
                                                         <button
                                                             onClick={() => handleComplete(visit.field_visit_ID)}

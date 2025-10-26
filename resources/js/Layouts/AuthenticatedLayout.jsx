@@ -168,93 +168,96 @@ export default function AuthenticatedLayout({ header, children }) {
                                         Items
                                     </NavLink>
                                 )}
-                                {/* CONTRACTS */}
-                                <NavLink
-                                    href={route('contracts.index')}
-                                    active={route().current('contracts.index')}
-                                >
-                                    Contracts
-                                </NavLink>
-                                {/* INVENTORY */}
-                                <div className="relative hidden sm:-my-px sm:ms-10 sm:flex">
-                                    {/* Show main Users nav link - always visible */}
+                                {/* CONTRACTS - Only show if user has 'view contracts' permission */}
+                                {permissions.includes('view contracts') && (
                                     <NavLink
-                                        href={route('inventory.dashboard')}
-                                        active={route().current('inventory.dashboard')}
-                                        className="inline-flex items-center"
+                                        href={route('contracts.index')}
+                                        active={route().current('contracts.index')}
                                     >
-                                        Inventory
+                                        Contracts
                                     </NavLink>
-                                    {/* Dropdown toggle button - TEMPORARILY ALWAYS SHOW */}
-                                    <button
-                                        type="button"
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            setOpenInventoryDropdown(!openInventoryDropdown);
-                                        }}
-                                        className="ml-2 focus:outline-none"
-                                    >
-                                        <svg
-                                            className={`h-4 w-4 transition-transform duration-200 ${
-                                                openInventoryDropdown ? "rotate-180" : "rotate-0"
-                                            }`}
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            viewBox="0 0 20 20"
-                                            fill="#111827"
+                                )}
+                                {/* INVENTORY */}
+                                {permissions.includes('view inventory') && (
+                                    <div className="relative hidden sm:-my-px sm:ms-10 sm:flex">
+                                        {/* Show main Inventory nav link */}
+                                        <NavLink
+                                            href={route('inventory.dashboard')}
+                                            active={route().current('inventory.dashboard')}
+                                            className="inline-flex items-center"
                                         >
-                                            <path
-                                                fillRule="evenodd"
-                                                d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                                clipRule="evenodd"
-                                            />
-                                        </svg>
-                                    </button>
+                                            Inventory
+                                        </NavLink>
+                                        {/* Dropdown toggle button */}
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                setOpenInventoryDropdown(!openInventoryDropdown);
+                                            }}
+                                            className="ml-2 focus:outline-none"
+                                        >
+                                            <svg
+                                                className={`h-4 w-4 transition-transform duration-200 ${
+                                                    openInventoryDropdown ? "rotate-180" : "rotate-0"
+                                                }`}
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                viewBox="0 0 20 20"
+                                                fill="#111827"
+                                            >
+                                                <path
+                                                    fillRule="evenodd"
+                                                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                                    clipRule="evenodd"
+                                                />
+                                            </svg>
+                                        </button>
 
-                                    {/* Dropdown menu - show items based on specific permissions */}
-                                    {openInventoryDropdown && (
-                                        <div className="absolute top-5 left-0 mt-10 w-48 rounded-md bg-gray-50 shadow-lg text-sans text-[14px]">
-                                            {/* All Users - only if user has 'view users' */}
-                                            {permissions.includes('view users') && (
-                                                <Link
-                                                    href={route('inventory.ledger')}
-                                                    className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
-                                                >
-                                                    Inventory Ledger
-                                                </Link>
-                                            )}
-                                            
-                                            {/* Add User - only if user has 'create users' */}
-                                            {permissions.includes('create users') && permissions.includes('view users') && (
-                                                <Link
-                                                    href={route('partner-orders.index')}
-                                                    className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
-                                                >
-                                                    Partner Orders
-                                                </Link>
-                                            )}
-                                            
-                                            {/* User Roles - only if user has 'view roles' */}
-                                            {permissions.includes('view roles') && (
-                                                <Link
-                                                    href={route('buybacks.index')}
-                                                    className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
-                                                >
-                                                    Buyback Tracking
-                                                </Link>
-                                            )}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-
-                            {/* FIELD VISITATION */}
-                            <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                                <NavLink
-                                    href={route('field-visits.index')}
-                                    active={route().current('field-visits.index')}
-                                >
-                                    Field Visit
-                                </NavLink>
+                                        {/* Dropdown menu - show items based on specific permissions */}
+                                        {openInventoryDropdown && (
+                                            <div className="absolute top-5 left-0 mt-10 w-48 rounded-md bg-gray-50 shadow-lg text-sans text-[14px]">
+                                                {/* Inventory Ledger - only if user has 'view inventory' */}
+                                                {permissions.includes('view inventory') && (
+                                                    <Link
+                                                        href={route('inventory.ledger')}
+                                                        className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
+                                                    >
+                                                        Inventory Ledger
+                                                    </Link>
+                                                )}
+                                                
+                                                {/* Partner Orders - only if user has 'view inventory' */}
+                                                {permissions.includes('view inventory') && (
+                                                    <Link
+                                                        href={route('partner-orders.index')}
+                                                        className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
+                                                    >
+                                                        Partner Orders
+                                                    </Link>
+                                                )}
+                                                
+                                                {/* Buyback Tracking - only if user has 'view inventory' */}
+                                                {permissions.includes('view inventory') && (
+                                                    <Link
+                                                        href={route('buybacks.index')}
+                                                        className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
+                                                    >
+                                                        Buyback Tracking
+                                                    </Link>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                                {/* FIELD VISITATION */}
+                                {permissions.includes('view field visit') && (
+                                    <NavLink
+                                        href={route('field-visits.index')}
+                                        active={route().current('field-visits.index')}
+                                    >
+                                        Field Visit
+                                    </NavLink>
+                                )}
                             </div>
 
                         </div> 

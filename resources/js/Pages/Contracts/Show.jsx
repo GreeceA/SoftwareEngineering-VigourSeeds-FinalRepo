@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Head, Link, useForm, router } from '@inertiajs/react';
+import { Head, Link, useForm, router, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { ArrowTopRightOnSquareIcon, DocumentTextIcon, CalendarIcon, UserIcon, MapPinIcon, CubeIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 import { CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/solid';
@@ -11,6 +11,9 @@ import SendEmailModal from './SendEmailModal';
 import CompleteContractModal from './CompleteContractModal';
 
 export default function Show({ auth, contract }) {
+    const { auth: authData } = usePage().props;
+    const permissions = authData?.user?.can || [];
+    
     const [showCancelModal, setShowCancelModal] = useState(false);
     const [showStatusModal, setShowStatusModal] = useState(false);
     const [statusToTransition, setStatusToTransition] = useState('');
@@ -115,7 +118,7 @@ export default function Show({ auth, contract }) {
                         <p className="mt-1 text-sm text-gray-600">View and manage contract information</p>
                     </div>
                     <div className="flex items-center space-x-3">
-                        {(contract.can_be_edited || contract.can_be_partially_edited) && (
+                        {permissions.includes('edit contracts') && (contract.can_be_edited || contract.can_be_partially_edited) && (
                             <Link
                                 href={route('contracts.edit', contract.id)}
                                 className={`inline-flex items-center rounded-lg bg-[#37692F] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#2a5624] ${
@@ -177,7 +180,7 @@ export default function Show({ auth, contract }) {
                             <h2 className="mb-4 text-lg font-semibold text-gray-900">Quick Actions</h2>
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                                 {/* Submit for Review - Draft status */}
-                                {contract.status === 'draft' && contract.available_transitions?.includes('under_review') && (
+                                {permissions.includes('edit contracts') && contract.status === 'draft' && contract.available_transitions?.includes('under_review') && (
                                     <button
                                         onClick={() => handleOpenStatusModal('under_review')}
                                         className="flex flex-col items-center justify-center rounded-lg bg-blue-50 p-4 text-center transition-all hover:bg-blue-100 hover:shadow-md border border-blue-200"
@@ -189,7 +192,7 @@ export default function Show({ auth, contract }) {
                                 )}
 
                                 {/* Activate Contract - Under Review status */}
-                                {contract.status === 'under_review' && contract.available_transitions?.includes('active') && (
+                                {permissions.includes('edit contracts') && contract.status === 'under_review' && contract.available_transitions?.includes('active') && (
                                     <button
                                         onClick={() => handleOpenStatusModal('active')}
                                         className="flex flex-col items-center justify-center rounded-lg bg-green-50 p-4 text-center transition-all hover:bg-green-100 hover:shadow-md border border-green-200"
@@ -201,7 +204,7 @@ export default function Show({ auth, contract }) {
                                 )}
 
                                 {/* Complete Contract - Active status */}
-                                {contract.status === 'active' && contract.available_transitions?.includes('completed') && (
+                                {permissions.includes('edit contracts') && contract.status === 'active' && contract.available_transitions?.includes('completed') && (
                                     <button
                                         onClick={() => setShowCompleteModal(true)}
                                         className="flex flex-col items-center justify-center rounded-lg bg-green-50 p-4 text-center transition-all hover:bg-green-100 hover:shadow-md border border-green-200"
@@ -213,7 +216,7 @@ export default function Show({ auth, contract }) {
                                 )}
 
                                 {/* Suspend Contract - Active status */}
-                                {contract.status === 'active' && contract.available_transitions?.includes('suspended') && (
+                                {permissions.includes('edit contracts') && contract.status === 'active' && contract.available_transitions?.includes('suspended') && (
                                     <button
                                         onClick={() => handleOpenStatusModal('suspended')}
                                         className="flex flex-col items-center justify-center rounded-lg bg-yellow-50 p-4 text-center transition-all hover:bg-yellow-100 hover:shadow-md border border-yellow-200"
@@ -225,7 +228,7 @@ export default function Show({ auth, contract }) {
                                 )}
 
                                 {/* Terminate Contract - Suspended status */}
-                                {contract.status === 'suspended' && contract.available_transitions?.includes('terminated') && (
+                                {permissions.includes('edit contracts') && contract.status === 'suspended' && contract.available_transitions?.includes('terminated') && (
                                     <button
                                         onClick={() => handleOpenStatusModal('terminated')}
                                         className="flex flex-col items-center justify-center rounded-lg bg-red-50 p-4 text-center transition-all hover:bg-red-100 hover:shadow-md border border-red-200"
@@ -237,7 +240,7 @@ export default function Show({ auth, contract }) {
                                 )}
 
                                 {/* Reactivate Contract - Suspended status */}
-                                {contract.status === 'suspended' && contract.available_transitions?.includes('active') && (
+                                {permissions.includes('edit contracts') && contract.status === 'suspended' && contract.available_transitions?.includes('active') && (
                                     <button
                                         onClick={() => handleOpenStatusModal('active')}
                                         className="flex flex-col items-center justify-center rounded-lg bg-green-50 p-4 text-center transition-all hover:bg-green-100 hover:shadow-md border border-green-200"
@@ -249,7 +252,7 @@ export default function Show({ auth, contract }) {
                                 )}
 
                                 {/* Cancel Contract - Draft and Under Review only */}
-                                {['draft', 'under_review'].includes(contract.status) && contract.available_transitions?.includes('cancelled') && (
+                                {permissions.includes('edit contracts') && ['draft', 'under_review'].includes(contract.status) && contract.available_transitions?.includes('cancelled') && (
                                     <button
                                         onClick={() => setShowCancelModal(true)}
                                         className="flex flex-col items-center justify-center rounded-lg bg-red-50 p-4 text-center transition-all hover:bg-red-100 hover:shadow-md border border-red-200"
@@ -261,7 +264,7 @@ export default function Show({ auth, contract }) {
                                 )}
 
                                 {/* Send Email - Under Review only */}
-                                {contract.contract_file && contract.status === 'under_review' && (
+                                {permissions.includes('edit contracts') && contract.contract_file && contract.status === 'under_review' && (
                                     <button
                                         onClick={handleSendEmail}
                                         className="flex flex-col items-center justify-center rounded-lg bg-orange-50 p-4 text-center transition-all hover:bg-orange-100 hover:shadow-md border border-orange-200"
@@ -272,7 +275,7 @@ export default function Show({ auth, contract }) {
                                     </button>
                                 )}
 
-                                {/* View File - Always available if file exists */}
+                                {/* View File - Always available if file exists and user has view contracts permission */}
                                 {contract.contract_file && (
                                     <button
                                         onClick={handleOpenPreview}
