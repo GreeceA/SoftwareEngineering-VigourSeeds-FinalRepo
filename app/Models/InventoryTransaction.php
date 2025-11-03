@@ -39,6 +39,11 @@ class InventoryTransaction extends Model
         return $this->morphTo();
     }
 
+    public function cornProduct()
+    {
+        return $this->belongsTo(\App\Models\CornProduct::class, 'product_id');
+    }
+    
     /**
      * Get the contract associated with this transaction
      */

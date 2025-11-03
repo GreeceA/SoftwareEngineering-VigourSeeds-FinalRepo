@@ -7,10 +7,10 @@ const BuybackOverview = () => {
   const { auth, contracts } = usePage().props;
   const permissions = auth.user.can || [];
 
-  const totalExpected = contracts.reduce((sum, c) => sum + c.expected_buyback, 0);
-  const totalActual = contracts.reduce((sum, c) => sum + c.actual_buyback, 0);
+  const totalExpected = contracts.reduce((sum, c) => sum + (c.expected_kg ?? 0), 0);
+  const totalActual = contracts.reduce((sum, c) => sum + (c.actual_kg ?? 0), 0);
   const totalRemaining = totalExpected - totalActual;
-  const overallFulfillment = (totalActual / totalExpected) * 100;
+  const overallFulfillment = totalExpected > 0 ? (totalActual / totalExpected) * 100 : 0;
 
   const getFulfillmentStatus = (pct) => {
     if (pct >= 100) return { color: 'text-green-600', bg: 'bg-green-100', label: 'Complete' };
@@ -53,7 +53,7 @@ const BuybackOverview = () => {
               <p className="text-gray-600 text-sm">Total Expected</p>
               <Leaf className="text-blue-600" size={20} />
             </div>
-            <p className="text-3xl font-bold text-gray-900">{totalExpected.toLocaleString()}</p>
+            <p className="text-3xl font-bold text-gray-900">{totalExpected ? totalExpected.toLocaleString() : '0'}</p>
             <p className="text-xs text-gray-500 mt-1">kg</p>
           </div>
 
@@ -62,7 +62,7 @@ const BuybackOverview = () => {
               <p className="text-gray-600 text-sm">Total Received</p>
               <CheckCircle className="text-green-600" size={20} />
             </div>
-            <p className="text-3xl font-bold text-gray-900">{totalActual.toLocaleString()}</p>
+            <p className="text-3xl font-bold text-gray-900">{totalActual ? totalActual.toLocaleString() : '0'}</p>
             <p className="text-xs text-gray-500 mt-1">kg</p>
           </div>
 
@@ -71,7 +71,7 @@ const BuybackOverview = () => {
               <p className="text-gray-600 text-sm">Remaining</p>
               <AlertCircle className="text-yellow-600" size={20} />
             </div>
-            <p className="text-3xl font-bold text-gray-900">{totalRemaining.toLocaleString()}</p>
+            <p className="text-3xl font-bold text-gray-900">{totalRemaining ? totalRemaining.toLocaleString() : '0'}</p>
             <p className="text-xs text-gray-500 mt-1">kg</p>
           </div>
 
@@ -80,11 +80,13 @@ const BuybackOverview = () => {
               <p className="text-gray-600 text-sm">Fulfillment Rate</p>
               <TrendingUp className="text-purple-600" size={20} />
             </div>
-            <p className="text-3xl font-bold text-gray-900">{overallFulfillment.toFixed(1)}%</p>
+            <p className="text-3xl font-bold text-gray-900">
+              {totalExpected > 0 ? `${overallFulfillment.toFixed(1)}%` : '-'}
+            </p>
             <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
               <div
                 className="bg-purple-600 h-2 rounded-full transition-all"
-                style={{ width: `${Math.min(overallFulfillment, 100)}%` }}
+                style={{ width: `${totalExpected > 0 ? Math.min(overallFulfillment, 100) : 0}%` }}
               />
             </div>
           </div>
@@ -125,78 +127,86 @@ const BuybackOverview = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {contracts.map((contract) => {
-                  const remaining = contract.expected_buyback - contract.actual_buyback;
-                  const fulfillment = (contract.actual_buyback / contract.expected_buyback) * 100;
-                  const status = getFulfillmentStatus(fulfillment);
-                  const expectedValue = contract.expected_buyback * contract.buyback_price;
+              {contracts.map((contract) => {
+                // Use the new fields from backend
+                const expectedValue = contract.expected_kg * contract.buyback_price;
+                const fulfillment = contract.expected_kg > 0 ? (contract.actual_kg / contract.expected_kg) * 100 : 0;
+                const status = getFulfillmentStatus(fulfillment);
 
-                  return (
-                    <tr key={contract.id} className="hover:bg-gray-50 transition">
-                      <td className="px-6 py-4">
-                        <div>
-                          <p className="font-medium text-gray-900">{contract.contract_number}</p>
-                          <p className="text-xs text-gray-500">₱{contract.buyback_price}/kg</p>
+                return (
+                  <tr key={contract.id} className="hover:bg-gray-50 transition">
+                    <td className="px-6 py-4">
+                      <div>
+                        <p className="font-medium text-gray-900">{contract.contract_number}-{contract.id}</p>
+                        <p className="text-xs text-gray-500">₱{Number(contract.buyback_price).toFixed(2)}/kg</p>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div>
+                        <p className="font-medium text-gray-900">{contract.partner_name}</p>
+                        <p className="text-xs text-gray-500">{contract.farm_name}</p>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <p className="font-semibold text-gray-900">
+                        {contract.expected_buyback_amount.toLocaleString()} {contract.buyback_unit}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        ≈ {contract.expected_kg.toLocaleString()} kg
+                      </p>
+                      <p className="text-xs text-gray-500">≈ ₱{expectedValue.toLocaleString()}</p>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <p className="font-semibold text-green-600">
+                        {contract.actual_kg.toLocaleString()} kg
+                      </p>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <p className={`font-semibold ${contract.remaining_kg === 0 ? 'text-green-600' : 'text-yellow-600'}`}>
+                        {contract.remaining_kg.toLocaleString()} kg
+                      </p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 bg-gray-200 rounded-full h-2 min-w-24">
+                          <div
+                            className={`h-2 rounded-full transition-all ${
+                              fulfillment >= 100 ? 'bg-green-600' : 
+                              fulfillment >= 75 ? 'bg-blue-600' : 
+                              fulfillment >= 50 ? 'bg-yellow-600' : 'bg-red-600'
+                            }`}
+                            style={{ width: `${Math.min(fulfillment, 100)}%` }}
+                          />
                         </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div>
-                          <p className="font-medium text-gray-900">{contract.partner_name}</p>
-                          <p className="text-xs text-gray-500">{contract.farm_name}</p>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <p className="font-semibold text-gray-900">
-                          {contract.expected_buyback.toLocaleString()} {contract.unit}
-                        </p>
-                        <p className="text-xs text-gray-500">≈ ₱{expectedValue.toLocaleString()}</p>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <p className="font-semibold text-green-600">
-                          {contract.actual_buyback.toLocaleString()} {contract.unit}
-                        </p>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <p className={`font-semibold ${remaining === 0 ? 'text-green-600' : 'text-yellow-600'}`}>
-                          {remaining.toLocaleString()} {contract.unit}
-                        </p>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-2">
-                          <div className="flex-1 bg-gray-200 rounded-full h-2 min-w-24">
-                            <div
-                              className={`h-2 rounded-full transition-all ${
-                                fulfillment >= 100 ? 'bg-green-600' : 
-                                fulfillment >= 75 ? 'bg-blue-600' : 
-                                fulfillment >= 50 ? 'bg-yellow-600' : 'bg-red-600'
-                              }`}
-                              style={{ width: `${Math.min(fulfillment, 100)}%` }}
-                            />
-                          </div>
-                          <span className="text-xs font-medium w-12 text-right">
-                            {fulfillment.toFixed(0)}%
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-3 py-1 text-xs font-medium rounded-full ${status.bg} ${status.color}`}>
-                          {status.label}
+                        <span className="text-xs font-medium w-12 text-right">
+                          {fulfillment.toFixed(0)}%
                         </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <Link
-                          href={route('buybacks.show', { contract: contract.id })}
-                          className="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium text-sm transition"
-                        >
-                          <Eye size={16} />
-                          Details
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-3 py-1 text-xs font-medium rounded-full ${status.bg} ${status.color}`}>
+                        {status.label}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <Link
+                        href={route('buybacks.show', { contract: contract.id })}
+                        className="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium text-sm transition"
+                      >
+                        <Eye size={16} />
+                        Details
+                      </Link>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
             </table>
+            {contracts.length === 0 && (
+              <div className="p-8 text-center text-gray-500 text-lg">
+                No Active Contracts
+              </div>
+            )}
           </div>
         </div>
 

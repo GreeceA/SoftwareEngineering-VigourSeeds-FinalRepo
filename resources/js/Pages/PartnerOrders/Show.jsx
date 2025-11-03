@@ -358,15 +358,15 @@ const BuybackContractDetails = () => {
                 )}
               </div>
 
-              {permissions.includes('create inventory') && (
+             
                 <Link
                   href={route('inventory.outbound.create', { partner_order_id: partnerOrder.id })}
                   className="w-full mt-6 bg-[#37692F] hover:bg-[#2a5624] text-white px-4 py-3 rounded-xl flex items-center justify-center gap-2 transition-all duration-200 font-medium shadow-sm hover:shadow-md"
                 >
                   <Plus size={20} />
-                  Record New Delivery
+                  Record Delivery
                 </Link>
-              )}
+              
             </div>
           </div>
 
@@ -424,7 +424,23 @@ const BuybackContractDetails = () => {
                     <td className="px-6 py-4">
                       {line.qty}
                       {isBackordered && (
-                        <span className="ml-2 text-orange-500" title={`Available: ${availableStockKg} kg (${orderedQtyKg} kg ordered)`}>
+                        <span
+                          className="ml-2 text-orange-500"
+                          title={`Available: ${availableStockKg} kg (${(() => {
+                            let qty = Number(line.qty) || 0;
+                            switch (line.unit) {
+                              case 'sack':
+                                qty = qty * 50;
+                                break;
+                              case 'ton':
+                                qty = qty * 1000;
+                                break;
+                              default:
+                                break;
+                            }
+                            return qty;
+                          })()} kg ordered)`}
+                        >
                           ⚠️
                         </span>
                       )}

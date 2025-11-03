@@ -231,6 +231,46 @@ class ContractController extends Controller implements HasMiddleware
                 ];
             });
 
+        // --- BUYBACK SUMMARY DATA ---
+        // Get buyback transactions for this contract
+        $buybackTransactions = \App\Models\BuybackTransaction::where('contract_id', $contract->id)->get();
+
+        // Get expected buyback (in kg)
+        $commitment = $contract->contractSeedCommitments->first();
+        $expected_amount = $commitment?->expected_buyback_amount ?? 0;
+        $expected_unit = $commitment?->buyback_unit ?? 'kg';
+
+        // Helper for unit conversion
+        $toKg = function($amount, $unit) {
+            if ($unit === 'kg') return $amount;
+            if ($unit === 'sack') return $amount * 50;
+            if ($unit === 'ton') return $amount * 1000;
+            return $amount;
+        };
+
+        $expected_kg = $toKg($expected_amount, $expected_unit);
+
+        // Actual delivered in kg
+        $actual_kg = $buybackTransactions->sum(function ($tx) use ($toKg) {
+            return $toKg($tx->qty, $tx->unit);
+        });
+
+        $remaining_kg = max($expected_kg - $actual_kg, 0);
+        $fulfillment_percentage = $expected_kg > 0 ? round(($actual_kg / $expected_kg) * 100, 2) : 0;
+
+        // Total value of all buyback transactions
+        $total_value = $buybackTransactions->sum('total_value');
+
+        // Pass transactions as array for summary card (not for table)
+        $buybackTransactionsArr = $buybackTransactions->map(function ($tx) {
+            return [
+                'id' => $tx->id,
+                'qty' => $tx->qty,
+                'unit' => $tx->unit,
+                'total_value' => $tx->total_value,
+            ];
+        });
+
         return Inertia::render('Contracts/Show', [
             'contract' => [
                 'id' => $contract->id,
@@ -279,15 +319,18 @@ class ContractController extends Controller implements HasMiddleware
                     'total_buyback_value' => $item->getTotalBuybackValue(),
                     'profit_margin_estimate' => $item->getProfitMarginEstimate(),
                 ]),
-                'partner_orders' => $partnerOrders, // Add this line
+                'partner_orders' => $partnerOrders,
                 'field_visits' => $fieldVisits,
                 'can_be_edited' => $contract->canBeEdited(),
                 'can_be_partially_edited' => $contract->canBePartiallyEdited(),
                 'available_transitions' => $this->getAvailableTransitions($contract),
                 'is_expired' => $contract->isExpired(),
                 'days_until_expiration' => $contract->getDaysUntilExpiration(),
-                'total_expected_buyback' => $contract->getTotalExpectedBuyback(),
-                'buyback_fulfillment_percentage' => $contract->getBuybackFulfillmentPercentage(),
+                // --- Buyback summary fields for summary card ---
+                'total_expected_buyback' => $expected_kg,
+                'buyback_fulfillment_percentage' => $fulfillment_percentage,
+                'buyback_transactions' => $buybackTransactionsArr,
+                'buyback_total_value' => $total_value,
             ],
         ]);
     }
@@ -547,6 +590,14 @@ class ContractController extends Controller implements HasMiddleware
             if (!$hasCompletedFieldVisit || $unfulfilledOrders > 0) {
                 return redirect()->back()->withErrors([
                     'error' => 'Cannot complete contract: You must have at least one completed field visit and all partner orders must be fulfilled.'
+                ]);
+            }
+
+            $buybackFulfilled = $contract->getBuybackFulfillmentPercentage() >= 100;
+
+            if (!$hasCompletedFieldVisit || $unfulfilledOrders > 0 || !$buybackFulfilled) {
+                return redirect()->back()->withErrors([
+                    'error' => 'Cannot complete contract: You must have at least one completed field visit, all partner orders fulfilled, and all buyback commitments fulfilled.',
                 ]);
             }
         }

@@ -1,63 +1,22 @@
-import React, { useState } from 'react';
-import { Leaf, Calendar, AlertTriangle, CheckCircle, Package } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Leaf, Calendar, AlertTriangle, CheckCircle, Package, TrendingUp } from 'lucide-react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { usePage, Link } from '@inertiajs/react'; // Add this import
+import { usePage, router } from '@inertiajs/react';
 
 const BuybackInboundForm = () => {
-  const { auth } = usePage().props;
+  const { auth, contracts = [], cornProducts = [], flash = {} } = usePage().props;
   const [formData, setFormData] = useState({
     contract_id: '',
     corn_product_id: '',
     qty: '',
     unit: 'kg',
-    delivery_date: '',
+    delivery_date: new Date().toISOString().split('T')[0],
     notes: ''
   });
 
-  const [showSuccess, setShowSuccess] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
   const [selectedContract, setSelectedContract] = useState(null);
-
-  const contracts = [
-    {
-      id: 1,
-      contract_number: 'CNT-2024-001',
-      partner_name: 'Partner Farm A',
-      farm_name: 'Main Farm',
-      expected_buyback: 5000,
-      actual_buyback: 3200,
-      remaining: 1800,
-      buyback_price: 25.50,
-      unit: 'kg'
-    },
-    {
-      id: 2,
-      contract_number: 'CNT-2024-002',
-      partner_name: 'Partner Farm B',
-      farm_name: 'North Field',
-      expected_buyback: 8000,
-      actual_buyback: 8000,
-      remaining: 0,
-      buyback_price: 26.00,
-      unit: 'kg'
-    },
-    {
-      id: 3,
-      contract_number: 'CNT-2024-003',
-      partner_name: 'Partner Farm C',
-      farm_name: 'Valley Farm',
-      expected_buyback: 6500,
-      actual_buyback: 2100,
-      remaining: 4400,
-      buyback_price: 25.00,
-      unit: 'kg'
-    }
-  ];
-
-  const cornProducts = [
-    { id: 1, name: 'White Corn', unit: 'kg' },
-    { id: 2, name: 'Yellow Corn', unit: 'kg' }
-  ];
+  const [submitting, setSubmitting] = useState(false);
 
   const handleContractChange = (contractId) => {
     const contract = contracts.find(c => c.id === parseInt(contractId));
@@ -65,44 +24,71 @@ const BuybackInboundForm = () => {
     setFormData({
       ...formData,
       contract_id: contractId,
+      corn_product_id: contract?.corn_product_id || '',
       unit: contract?.unit || 'kg'
     });
     setShowWarning(false);
   };
 
   const handleQtyChange = (qty) => {
-    setFormData({...formData, qty});
-    if (selectedContract && parseFloat(qty) > selectedContract.remaining) {
+    const qtyInKg = toKg(qty, formData.unit);
+    const maxKg = selectedContract ? selectedContract.remaining_kg : Infinity;
+    setFormData({ ...formData, qty });
+
+    if (selectedContract && qtyInKg > maxKg) {
       setShowWarning(true);
     } else {
       setShowWarning(false);
     }
   };
 
-  const handleSubmit = () => {
-    console.log('Submitting buyback:', formData);
-    setShowSuccess(true);
-    setTimeout(() => {
-      setShowSuccess(false);
-      setFormData({
-        contract_id: '',
-        corn_product_id: '',
-        qty: '',
-        unit: 'kg',
-        delivery_date: '',
-        notes: ''
-      });
-      setSelectedContract(null);
-      setShowWarning(false);
-    }, 2000);
+  const toKg = (qty, unit) => {
+    if (unit === 'kg') return parseFloat(qty || 0);
+    if (unit === 'sack') return parseFloat(qty || 0) * 50;
+    if (unit === 'ton') return parseFloat(qty || 0) * 1000;
+    return parseFloat(qty || 0);
   };
 
-  const isFormValid = formData.contract_id && formData.corn_product_id && 
-                      formData.qty > 0 && formData.delivery_date;
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setSubmitting(true);
 
-  const estimatedValue = selectedContract && formData.qty 
-    ? parseFloat(formData.qty) * selectedContract.buyback_price 
-    : 0;
+    router.post(route('buybacks.inbound.store'), formData, {
+      onSuccess: () => {
+        setFormData({
+          contract_id: '',
+          corn_product_id: '',
+          qty: '',
+          unit: 'kg',
+          delivery_date: new Date().toISOString().split('T')[0],
+          notes: ''
+        });
+        setSelectedContract(null);
+        setShowWarning(false);
+      },
+      onFinish: () => setSubmitting(false)
+    });
+  };
+
+  const isFormValid =
+    formData.contract_id &&
+    formData.corn_product_id &&
+    formData.qty >= 0.01 &&
+    formData.delivery_date 
+
+  const estimatedValue =
+    selectedContract && formData.qty
+      ? toKg(formData.qty, formData.unit) * selectedContract.buyback_price
+      : 0;
+
+  useEffect(() => {
+    if (selectedContract) {
+      setFormData((prev) => ({
+        ...prev,
+        corn_product_id: selectedContract.corn_product_id || ''
+      }));
+    }
+  }, [selectedContract]);
 
   return (
     <AuthenticatedLayout
@@ -110,7 +96,7 @@ const BuybackInboundForm = () => {
         header={
             <h2 className="text-[25px] font-[800]" style={{ fontFamily: "'Poppins', sans-serif" }}>
                 <span className="text-[#37692F] font-[800]">VIGOUR SEEDS</span>
-                <span className="text-[#333333] font-[400]"> | Inventory Management</span>
+                <span className="text-[#333333] font-[400]"> | Record Buyback Delivery</span>
             </h2>
         }
     >
@@ -126,17 +112,25 @@ const BuybackInboundForm = () => {
           <p className="text-gray-600">Log incoming corn from partner farms based on contract commitments</p>
         </div>
 
-        {showSuccess && (
+        {flash.success && (
           <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
             <CheckCircle className="text-green-600" size={20} />
             <div>
-              <p className="font-medium text-green-900">Buyback recorded successfully!</p>
-              <p className="text-sm text-green-700">Inventory and contract tracking have been updated.</p>
+              <p className="font-medium text-green-900">{flash.success}</p>
             </div>
           </div>
         )}
 
-        <div className="bg-white rounded-lg shadow p-6">
+        {flash.error && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+            <AlertTriangle className="text-red-600" size={20} />
+            <div>
+              <p className="font-medium text-red-900">{flash.error}</p>
+            </div>
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow p-6">
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Select Contract <span className="text-red-500">*</span>
@@ -145,68 +139,85 @@ const BuybackInboundForm = () => {
               value={formData.contract_id}
               onChange={(e) => handleContractChange(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+              required
             >
               <option value="">Choose a contract...</option>
-              {contracts.map((contract) => (
+              {contracts.map(contract => (
                 <option key={contract.id} value={contract.id}>
-                  {contract.contract_number} - {contract.partner_name} ({contract.farm_name})
+                  {contract.contract_name} - {contract.partner_name}
                 </option>
               ))}
             </select>
           </div>
 
           {selectedContract && (
-            <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="font-semibold text-blue-900 mb-3">Contract Buyback Status</h3>
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <p className="text-xs text-blue-700 mb-1">Expected</p>
-                  <p className="text-lg font-bold text-blue-900">
-                    {selectedContract.expected_buyback.toLocaleString()} {selectedContract.unit}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-blue-700 mb-1">Already Received</p>
-                  <p className="text-lg font-bold text-blue-900">
-                    {selectedContract.actual_buyback.toLocaleString()} {selectedContract.unit}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-blue-700 mb-1">Remaining</p>
-                  <p className={`text-lg font-bold ${selectedContract.remaining === 0 ? 'text-green-600' : 'text-yellow-600'}`}>
-                    {selectedContract.remaining.toLocaleString()} {selectedContract.unit}
-                  </p>
-                </div>
-              </div>
-              <div className="mt-3">
-                <div className="w-full bg-blue-200 rounded-full h-2">
-                  <div
-                    className="bg-blue-600 h-2 rounded-full transition-all"
-                    style={{ width: `${(selectedContract.actual_buyback / selectedContract.expected_buyback) * 100}%` }}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {formData.contract_id && (
             <>
+              <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h3 className="font-semibold text-blue-900 mb-3 flex items-center gap-2">
+                  <TrendingUp size={18} />
+                  Contract Buyback Status
+                </h3>
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-xs text-blue-700 mb-1">Expected</p>
+                    <p className="text-lg font-bold text-blue-900">
+                      {selectedContract.expected_kg.toLocaleString()} kg
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-blue-700 mb-1">Already Received</p>
+                    <p className="text-lg font-bold text-blue-900">
+                      {selectedContract.actual_kg.toLocaleString()} kg
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-blue-700 mb-1">Remaining</p>
+                    <p className={`text-lg font-bold ${selectedContract.remaining_kg === 0 ? 'text-green-600' : 'text-yellow-600'}`}>
+                      {selectedContract.remaining_kg.toLocaleString()} kg
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3">
+                  <div className="w-full bg-blue-200 rounded-full h-2">
+                    <div
+                      className="bg-blue-600 h-2 rounded-full transition-all"
+                      style={{
+                        width: `${
+                          selectedContract.expected_kg > 0
+                            ? Math.min((selectedContract.actual_kg / selectedContract.expected_kg) * 100, 100)
+                            : 0
+                        }%`
+                      }}
+                    />
+                  </div>
+                  <p className="text-xs text-blue-700 mt-1 text-right">
+                    {selectedContract.expected_kg > 0
+                      ? Math.round((selectedContract.actual_kg / selectedContract.expected_kg) * 100)
+                      : 0}% fulfilled
+                  </p>
+                </div>
+              </div>
+
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Corn Product <span className="text-red-500">*</span>
                 </label>
-                <select
-                  value={formData.corn_product_id}
-                  onChange={(e) => setFormData({...formData, corn_product_id: e.target.value})}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                >
-                  <option value="">Choose corn type...</option>
-                  {cornProducts.map((product) => (
-                    <option key={product.id} value={product.id}>
-                      {product.name}
-                    </option>
-                  ))}
-                </select>
+                <input
+                  type="text"
+                  value={
+                    cornProducts.find((p) => p.id === Number(formData.corn_product_id))?.name ||
+                    selectedContract?.corn_product_name ||
+                    ''
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700"
+                  readOnly
+                  disabled
+                />
+                {/* Hidden input to submit the corn_product_id */}
+                <input type="hidden" name="corn_product_id" value={formData.corn_product_id} />
+                <p className="text-xs text-gray-500 mt-1">
+                  Corn product is auto-selected based on the contract's seed and cannot be changed.
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4 mb-6">
@@ -224,8 +235,9 @@ const BuybackInboundForm = () => {
                       showWarning ? 'border-yellow-500' : 'border-gray-300'
                     }`}
                     placeholder="Enter quantity"
+                    required
                   />
-                  {selectedContract && (
+                  {selectedContract.remaining > 0 && (
                     <button
                       type="button"
                       onClick={() => handleQtyChange(selectedContract.remaining)}
@@ -243,8 +255,10 @@ const BuybackInboundForm = () => {
                     value={formData.unit}
                     onChange={(e) => setFormData({...formData, unit: e.target.value})}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    required
                   >
                     <option value="kg">Kilogram (kg)</option>
+                    <option value="sack">Sack (50 kg)</option>
                     <option value="ton">Ton</option>
                   </select>
                 </div>
@@ -257,7 +271,7 @@ const BuybackInboundForm = () => {
                     <p className="font-medium text-yellow-900">Warning: Exceeds Expected Buyback</p>
                     <p className="text-sm text-yellow-800 mt-1">
                       Delivery quantity ({formData.qty} {formData.unit}) exceeds remaining expected buyback 
-                      ({selectedContract.remaining} {selectedContract.unit}). This may indicate over-delivery 
+                      ({selectedContract.remaining_kg.toLocaleString()} kg). This may indicate over-delivery 
                       or additional harvest cycles. You can proceed if this is intentional.
                     </p>
                   </div>
@@ -275,6 +289,7 @@ const BuybackInboundForm = () => {
                     value={formData.delivery_date}
                     onChange={(e) => setFormData({...formData, delivery_date: e.target.value})}
                     className="w-full pl-11 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    required
                   />
                 </div>
               </div>
@@ -288,7 +303,7 @@ const BuybackInboundForm = () => {
                   onChange={(e) => setFormData({...formData, notes: e.target.value})}
                   rows={3}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  placeholder="Add any notes about this delivery (quality, moisture content, etc.)"
+                  placeholder="Add any notes about this delivery (quality, moisture content, harvest cycle, etc.)"
                 />
               </div>
 
@@ -298,11 +313,18 @@ const BuybackInboundForm = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Quantity</span>
-                      <span className="font-semibold">{formData.qty} {formData.unit}</span>
+                      <span className="font-semibold">
+                        {formData.qty} {formData.unit} 
+                        <span className="text-xs text-gray-500 ml-2">
+                          ({toKg(formData.qty, formData.unit).toLocaleString()} kg)
+                        </span>
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Buyback Price</span>
-                      <span className="font-semibold">₱{selectedContract.buyback_price}/{selectedContract.unit}</span>
+                      <span className="font-semibold">
+                        ₱{Number(selectedContract.buyback_price).toFixed(2)}/{selectedContract.unit}
+                      </span>
                     </div>
                     <div className="flex justify-between pt-2 border-t">
                       <span className="text-gray-900 font-medium">Estimated Value</span>
@@ -318,13 +340,12 @@ const BuybackInboundForm = () => {
 
           <div className="flex gap-3">
             <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={!isFormValid}
+              type="submit"
+              disabled={!isFormValid || submitting}
               className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition"
             >
               <Package size={20} />
-              Record Buyback
+              {submitting ? 'Recording...' : 'Record Buyback'}
             </button>
             <button
               type="button"
@@ -334,18 +355,19 @@ const BuybackInboundForm = () => {
                   corn_product_id: '',
                   qty: '',
                   unit: 'kg',
-                  delivery_date: '',
+                  delivery_date: new Date().toISOString().split('T')[0],
                   notes: ''
                 });
                 setSelectedContract(null);
                 setShowWarning(false);
               }}
               className="px-6 py-3 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 transition"
+              disabled={submitting}
             >
               Clear
             </button>
           </div>
-        </div>
+        </form>
       </div>
     </div>
     </AuthenticatedLayout>

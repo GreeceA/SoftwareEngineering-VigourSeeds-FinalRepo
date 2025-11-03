@@ -164,10 +164,10 @@ Route::middleware(['auth'])->group(function () {
 
     // Inventory Adjustments
     Route::get('/inventory/adjustment/create', [InventoryTransactionController::class, 'createAdjustment'])
-        ->name('inventory.adjustment.create');  
+        ->name('inventory.adjustment.create');
     Route::post('/inventory/adjustment', [InventoryTransactionController::class, 'storeAdjustment'])
         ->name('inventory.adjustment.store');
-    
+        
     // ============================================
     // PARTNER ORDERS ROUTES
     // ============================================

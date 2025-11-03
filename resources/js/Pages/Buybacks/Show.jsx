@@ -1,89 +1,20 @@
 import React, { useState } from 'react';
 import { FileText, Leaf, TrendingUp, Calendar, MapPin, User, Download, ArrowLeft, Plus } from 'lucide-react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { usePage, Link } from '@inertiajs/react'; // Add this import
+import { usePage, Link } from '@inertiajs/react';
 
 const BuybackContractDetails = () => {
-  const { auth } = usePage().props;
+  const { contract, buybackData, auth } = usePage().props;
   const permissions = auth.user.can || [];
 
-  const contract = {
-    id: 1,
-    contract_number: 'CNT-2024-001',
-    partner_name: 'Partner Farm A',
-    partner_contact: '+63 912 345 6789',
-    farm_name: 'Main Farm - Plot 5A',
-    farm_location: 'Brgy. San Miguel, Nueva Ecija',
-    signing_date: '2024-03-15',
-    effective_date: '2024-04-01',
-    expiration_date: '2025-03-31',
-    buyback_price: 25.50,
-    status: 'active',
-    seed_commitments: [
-      {
-        id: 1,
-        seed_variety: 'White Corn Hybrid A',
-        seed_quantity: 150,
-        seed_unit: 'kg',
-        seed_price: 180,
-        planting_date: '2024-06-15',
-        expected_first_harvest: '2024-10-15',
-        agreed_cycles: 2,
-        expected_buyback_amount: 5000,
-        buyback_unit: 'kg'
-      },
-      {
-        id: 2,
-        seed_variety: 'Yellow Corn Premium',
-        seed_quantity: 100,
-        seed_unit: 'kg',
-        seed_price: 200,
-        planting_date: '2024-07-01',
-        expected_first_harvest: '2024-11-01',
-        agreed_cycles: 1,
-        expected_buyback_amount: 3000,
-        buyback_unit: 'kg'
-      }
-    ],
-    buyback_transactions: [
-      {
-        id: 1,
-        date: '2024-10-16',
-        corn_product: 'White Corn',
-        quantity: 1500,
-        unit: 'kg',
-        value: 38250,
-        notes: 'First harvest - good quality',
-        delivered_by: 'John Farmer'
-      },
-      {
-        id: 2,
-        date: '2024-10-20',
-        corn_product: 'White Corn',
-        quantity: 1200,
-        unit: 'kg',
-        value: 30600,
-        notes: 'Second batch',
-        delivered_by: 'John Farmer'
-      },
-      {
-        id: 3,
-        date: '2024-10-25',
-        corn_product: 'White Corn',
-        quantity: 500,
-        unit: 'kg',
-        value: 12750,
-        notes: 'Final batch from first cycle',
-        delivered_by: 'John Farmer'
-      }
-    ]
-  };
-
-  const totalExpected = contract.seed_commitments.reduce((sum, sc) => sum + sc.expected_buyback_amount, 0);
-  const totalReceived = contract.buyback_transactions.reduce((sum, tx) => sum + tx.quantity, 0);
-  const totalValue = contract.buyback_transactions.reduce((sum, tx) => sum + tx.value, 0);
-  const remaining = totalExpected - totalReceived;
-  const fulfillmentPct = (totalReceived / totalExpected) * 100;
+  const totalExpected = buybackData.expected_total;
+  const totalReceived = buybackData.actual_total_kg;
+  const totalValue = buybackData.transactions.reduce(
+    (sum, tx) => sum + (Number(tx.total_value) || 0),
+    0
+  );
+  const remaining = buybackData.remaining_kg;
+  const fulfillmentPct = buybackData.fulfillment_percentage;
 
   const getFulfillmentColor = () => {
     if (fulfillmentPct >= 100) return 'text-green-600';
@@ -120,7 +51,7 @@ const BuybackContractDetails = () => {
                   <FileText className="text-purple-600" size={24} />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">{contract.contract_number}</h1>
+                  <h1 className="text-2xl font-bold text-gray-900">{contract.contract_number}-{contract.id}</h1>
                   <p className="text-gray-600">{contract.partner_name}</p>
                 </div>
               </div>
@@ -158,7 +89,7 @@ const BuybackContractDetails = () => {
                 <Leaf className="text-gray-400 mt-1" size={20} />
                 <div>
                   <p className="text-xs text-gray-500">Buyback Price</p>
-                  <p className="font-medium text-green-600 text-lg">₱{contract.buyback_price}/kg</p>
+                  <p className="font-medium text-green-600 text-lg">₱{Number(contract.buyback_price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/kg</p>
                 </div>
               </div>
             </div>
@@ -188,28 +119,33 @@ const BuybackContractDetails = () => {
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">Total Expected</span>
-                <span className="font-semibold text-lg">{totalExpected.toLocaleString()} kg</span>
+                <span className="font-semibold text-lg">{buybackData.expected_total ? buybackData.expected_total.toLocaleString() : 0} kg</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">Total Received</span>
-                <span className="font-semibold text-lg text-green-600">{totalReceived.toLocaleString()} kg</span>
+                <span className="font-semibold text-lg text-green-600">{buybackData.actual_total_kg ? buybackData.actual_total_kg.toLocaleString() : 0} kg</span>
               </div>
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">Remaining</span>
-                <span className={`font-semibold text-lg ${remaining === 0 ? 'text-green-600' : 'text-yellow-600'}`}>
-                  {remaining.toLocaleString()} kg
+                <span className={`font-semibold text-lg ${buybackData.remaining_kg === 0 ? 'text-green-600' : 'text-yellow-600'}`}>
+                  {buybackData.remaining_kg ? buybackData.remaining_kg.toLocaleString() : 0} kg
                 </span>
               </div>
               <div className="flex justify-between items-center pt-3 border-t">
                 <span className="text-gray-900 font-medium">Total Value</span>
-                <span className="font-bold text-xl text-green-600">₱{totalValue.toLocaleString()}</span>
+                <span className="font-bold text-xl text-green-600">
+                  ₱{totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
               </div>
             </div>
             {permissions.includes('create inventory') && (
-              <button className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition">
+              <Link
+                href={route('buybacks.inbound.create', { contract_id: contract.id })}
+                className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition"
+              >
                 <Plus size={20} />
                 Record Delivery
-              </button>
+              </Link>
             )}
           </div>
         </div>
@@ -230,14 +166,14 @@ const BuybackContractDetails = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {contract.seed_commitments.map((sc) => (
+              {(contract.seed_commitments ?? []).map((sc) => (
                 <tr key={sc.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4">
                     <p className="font-medium text-gray-900">{sc.seed_variety}</p>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <p className="font-semibold">{sc.seed_quantity} {sc.seed_unit}</p>
-                    <p className="text-xs text-gray-500">₱{sc.seed_price}/unit</p>
+                    <p className="text-xs text-gray-500">₱{Number(sc.seed_price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/kg</p>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <p className="text-sm text-gray-900">{sc.planting_date}</p>
@@ -270,9 +206,9 @@ const BuybackContractDetails = () => {
             </button>
           </div>
 
-          {contract.buyback_transactions.length > 0 ? (
+          {buybackData.transactions.length > 0 ? (
             <div className="space-y-3">
-              {contract.buyback_transactions.map((tx) => (
+              {buybackData.transactions.map((tx) => (
                 <div key={tx.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
                   <div className="flex items-center gap-4">
                     <div className="bg-green-100 p-3 rounded-lg">
@@ -280,17 +216,19 @@ const BuybackContractDetails = () => {
                     </div>
                     <div>
                       <div className="flex items-center gap-3">
-                        <p className="font-medium text-gray-900">{tx.corn_product}</p>
+                        <p className="font-medium text-gray-900">{tx.corn_product_name}</p>
                         <span className="text-sm text-gray-500">•</span>
-                        <p className="text-sm text-gray-600">{tx.date}</p>
+                        <p className="text-sm text-gray-600">
+                          {tx.delivery_date ? new Date(tx.delivery_date).toLocaleDateString('en-CA') : ''}
+                        </p>
                       </div>
                       <p className="text-sm text-gray-600 mt-1">{tx.notes}</p>
-                      <p className="text-xs text-gray-500 mt-1">Delivered by: {tx.delivered_by}</p>
+                      <p className="text-xs text-gray-500 mt-1">Recorded by: {tx.created_by}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-bold text-green-600 text-lg">+{tx.quantity.toLocaleString()} {tx.unit}</p>
-                    <p className="text-sm text-gray-600">₱{tx.value.toLocaleString()}</p>
+                    <p className="font-bold text-green-600 text-lg">+{tx.qty.toLocaleString()} {tx.unit}</p>
+                    <p className="text-sm text-gray-600">₱{Number(tx.total_value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                   </div>
                 </div>
               ))}

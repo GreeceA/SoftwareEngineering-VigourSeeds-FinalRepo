@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Seed extends Model
 {
@@ -93,6 +94,36 @@ class Seed extends Model
             $q->where('seed_variety', 'like', '%' . $search . '%')
                 ->orWhere('growth_cycle', $search)
                 ->orWhere('soil_type', 'like', '%' . $search . '%');
+        });
+    }
+
+    public function cornProduct(): HasOne
+    {
+        return $this->hasOne(CornProduct::class);
+    }
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::created(function ($seed) {
+            CornProduct::firstOrCreate(
+                ['seed_id' => $seed->id],
+                [
+                    'name' => $seed->seed_variety . ' Corn',
+                    'unit' => 'kg',
+                    'status' => 'active',
+                    'notes' => 'Auto-generated from seed: ' . $seed->seed_variety,
+                ]
+            );
+        });
+
+        // Update corn product when seed is updated
+        static::updated(function ($seed) {
+            $seed->cornProduct?->update([
+                'name' => $seed->seed_variety . ' Corn',
+                'status' => $seed->status,
+            ]);
         });
     }
 }

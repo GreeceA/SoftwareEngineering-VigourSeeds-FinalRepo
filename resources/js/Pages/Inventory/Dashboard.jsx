@@ -113,6 +113,15 @@ const InventoryDashboard = () => {
                   Stock Out
                 </Link>
               )}
+              {permissions.includes('create inventory') && (
+                <Link
+                  href={route('inventory.adjustment.create')}
+                  className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
+                >
+                  <AlertTriangle size={20} />
+                  Adjust Stock
+                </Link>
+              )}
             </div>
           </div>
 

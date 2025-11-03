@@ -15,7 +15,8 @@ export default function CompleteContractModal({
     const allOrdersFulfilled = contract.partner_orders?.length > 0 &&
         contract.partner_orders.every(o => o.status === 'fulfilled');
 
-    const canComplete = hasCompletedFieldVisit && allOrdersFulfilled;
+    const buybackFulfilled = contract.buyback_fulfillment_percentage >= 100;
+    const canComplete = hasCompletedFieldVisit && allOrdersFulfilled && buybackFulfilled;
 
     return (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50 p-4">
@@ -82,6 +83,27 @@ export default function CompleteContractModal({
                                 allOrdersFulfilled ? 'text-green-800' : 'text-red-800'
                             }`}>
                                 All partner orders are <strong>fulfilled</strong>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className={`flex items-center gap-3 rounded-lg border p-3 ${
+                        buybackFulfilled 
+                            ? 'border-green-200 bg-green-50' 
+                            : 'border-red-200 bg-red-50'
+                    }`}>
+                        <div className={`flex h-6 w-6 items-center justify-center rounded-full ${
+                            buybackFulfilled ? 'bg-green-500' : 'bg-red-500'
+                        }`}>
+                            <span className="text-xs font-bold text-white">
+                                {buybackFulfilled ? '✓' : '✗'}
+                            </span>
+                        </div>
+                        <div>
+                            <p className={`text-sm font-medium ${
+                                buybackFulfilled ? 'text-green-800' : 'text-red-800'
+                            }`}>
+                                All buyback commitments are <strong>fulfilled</strong>
                             </p>
                         </div>
                     </div>

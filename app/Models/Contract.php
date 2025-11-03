@@ -59,9 +59,9 @@ class Contract extends Model
         return $this->hasMany(PartnerOrder::class);
     }
 
-    public function inventoryTransactions(): HasMany
+    public function buybackTransactions(): HasMany
     {
-        return $this->hasMany(InventoryTransaction::class);
+        return $this->hasMany(BuybackTransaction::class);
     }
 
     // Status Transition Logic
@@ -113,10 +113,14 @@ class Contract extends Model
 
     public function getTotalActualBuyback(): float
     {
-        return $this->inventoryTransactions()
-            ->where('transaction_type', 'inbound')
-            ->where('product_type', 'App\\Models\\CornProduct')
-            ->sum('qty');
+        // Sum all buyback transactions in kg
+        return $this->buybackTransactions->sum(function ($transaction) {
+            return match($transaction->unit) {
+                'ton' => $transaction->qty * 1000,
+                'sack' => $transaction->qty * 50,
+                default => $transaction->qty,
+            };
+        });
     }
 
     public function getBuybackFulfillmentPercentage(): float
@@ -226,8 +230,9 @@ class Contract extends Model
         });
 
         static::deleting(function ($contract) {
-            // Cascade delete commitments
+            // Cascade delete commitments and buyback transactions
             $contract->contractSeedCommitments()->delete();
+            $contract->buybackTransactions()->delete();
         });
     }
 }

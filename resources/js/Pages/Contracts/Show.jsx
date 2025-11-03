@@ -447,7 +447,7 @@ export default function Show({ auth, contract }) {
                         )}
 
                         {/* Field Visits Card - Improved */}
-                        {contract.field_visits && contract.field_visits.length > 0 && (
+                        {contract.field_visits && contract.field_visits.length > 0 ? (
                             <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
                                 <div className="mb-6 flex items-center justify-between">
                                     <div>
@@ -516,8 +516,79 @@ export default function Show({ auth, contract }) {
                                     })}
                                 </div>
                             </div>
+                        ) : (
+                            <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200 text-center">
+                                <h2 className="text-lg font-semibold text-gray-900 mb-2">Field Visits</h2>
+                                <p className="text-gray-500">No field visit recorded.</p>
+                            </div>
                         )}
+                        
+                        <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
+    <div className="mb-6 flex items-center justify-between">
+        <div>
+            <h2 className="text-lg font-semibold text-gray-900">Buyback Summary</h2>
+            <p className="text-sm text-gray-600 mt-1">Buyback fulfillment overview</p>
+        </div>
+        <Link
+            href={route('buybacks.show', contract.id)}
+            className="inline-flex items-center gap-2 rounded-lg bg-[#37692F] px-4 py-2 text-sm font-medium text-white hover:bg-[#2a5624] transition"
+        >
+            View
+            <ArrowTopRightOnSquareIcon className="h-4 w-4" />
+        </Link>
+    </div>
+    <div className="space-y-3 mb-4">
+        <div className="flex justify-between items-center">
+            <span className="text-gray-600">Total Expected</span>
+            <span className="font-semibold text-lg">{contract.total_expected_buyback?.toLocaleString() ?? 0} kg</span>
+        </div>
+        <div className="flex justify-between items-center">
+            <span className="text-gray-600">Total Received</span>
+            <span className="font-semibold text-lg text-green-600">
+                {contract.buyback_fulfillment_percentage
+                    ? ((contract.total_expected_buyback * contract.buyback_fulfillment_percentage / 100).toLocaleString())
+                    : 0} kg
+            </span>
+        </div>
+        <div className="flex justify-between items-center">
+            <span className="text-gray-600">Remaining</span>
+            <span className={`font-semibold text-lg ${contract.buyback_fulfillment_percentage >= 100 ? 'text-green-600' : 'text-yellow-600'}`}>
+                {contract.total_expected_buyback && contract.buyback_fulfillment_percentage !== undefined
+                    ? Math.max(contract.total_expected_buyback - (contract.total_expected_buyback * contract.buyback_fulfillment_percentage / 100), 0).toLocaleString()
+                    : 0} kg
+            </span>
+        </div>
+        <div className="flex justify-between items-center">
+            <span className="text-gray-600">Fulfillment</span>
+            <span className="font-semibold text-lg">{contract.buyback_fulfillment_percentage?.toFixed(1) ?? 0}%</span>
+        </div>
+        {/* Fulfillment Bar */}
+        <div className="w-full bg-gray-200 rounded-full h-3">
+            <div
+                className={`h-3 rounded-full transition-all ${
+                    contract.buyback_fulfillment_percentage >= 100 ? 'bg-green-600' : 
+                    contract.buyback_fulfillment_percentage >= 75 ? 'bg-blue-600' : 
+                    contract.buyback_fulfillment_percentage >= 50 ? 'bg-yellow-600' : 'bg-red-600'
+                }`}
+                style={{ width: `${Math.min(contract.buyback_fulfillment_percentage, 100)}%` }}
+            />
+        </div>
+        {/* Total Value */}
+        <div className="flex justify-between items-center pt-3 border-t">
+            <span className="text-gray-900 font-medium">Total Value</span>
+            <span className="font-bold text-xl text-green-600">
+                ₱{contract.buyback_transactions
+                    ? contract.buyback_transactions.reduce((sum, tx) => sum + (Number(tx.total_value) || 0), 0)
+                        .toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                    : '0.00'}
+            </span>
+        </div>
+    </div>
+</div>
+                    
                     </div>
+
+
 
                     {/* Right Column - Sidebar */}
                     <div className="space-y-6">

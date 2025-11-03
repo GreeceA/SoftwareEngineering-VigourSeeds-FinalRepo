@@ -79,12 +79,16 @@ class InventoryTransactionController extends Controller implements HasMiddleware
 
         // Transform transactions to include product names and user names
         $transactions->getCollection()->transform(function ($txn) {
+            // Handle product name for each type
             if ($txn->product_type === 'Seed' || $txn->product_type === 'seed') {
-                $seed = Seed::find($txn->product_id);
+                $seed = $txn->seed;
                 $txn->product_name = $seed ? $seed->seed_variety : '-';
             } elseif ($txn->product_type === 'item') {
-                $item = Item::find($txn->product_id);
+                $item = $txn->item;
                 $txn->product_name = $item ? $item->name : '-';
+            } elseif ($txn->product_type === 'CornProduct') {
+                $cornProduct = $txn->cornProduct;
+                $txn->product_name = $cornProduct ? $cornProduct->name : '-';
             } else {
                 $txn->product_name = '-';
             }
