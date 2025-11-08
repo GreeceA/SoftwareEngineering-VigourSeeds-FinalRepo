@@ -36,20 +36,19 @@ class BuybackController extends Controller implements HasMiddleware
     /**
      * Display buyback overview page
      */
-    public function index()
+    public function index(Request $request)
     {
-        $contracts = Contract::active()
+        $perPage = $request->input('per_page', 10);
+
+        $contracts = Contract::whereIn('status', ['active', 'terminated', 'completed', 'suspended'])
             ->with(['partner', 'farm', 'contractSeedCommitments', 'buybackTransactions'])
-            ->get()
-            ->map(function ($contract) {
+            ->paginate($perPage)
+            ->through(function ($contract) {
                 $commitment = $contract->contractSeedCommitments->first();
                 $expected_buyback_amount = $commitment?->expected_buyback_amount ?? 0;
                 $buyback_unit = $commitment?->buyback_unit ?? 'kg';
 
-                // Convert expected to kg
                 $expected_kg = $this->toKg($expected_buyback_amount, $buyback_unit);
-
-                // Get actual delivered in kg
                 $actual_kg = $contract->buybackTransactions->sum(function ($transaction) {
                     return $this->toKg($transaction->qty, $transaction->unit);
                 });

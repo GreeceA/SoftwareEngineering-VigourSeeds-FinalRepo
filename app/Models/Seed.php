@@ -46,7 +46,7 @@ class Seed extends Model
         return $this->morphMany(PartnerOrderLine::class, 'product');
     }
 
-    public function getCurrentStock()
+     public function getCurrentStock()
     {
         $transactions = \App\Models\InventoryTransaction::where('product_type', 'Seed')
             ->where('product_id', $this->id)
@@ -62,11 +62,11 @@ class Seed extends Model
                 $qty = $qty * 1000;
             }
             if ($txn->transaction_type === 'inbound') {
-                $stock += $qty;
+                $stock += abs($qty); // Always positive
             } elseif ($txn->transaction_type === 'outbound') {
-                $stock -= abs($qty);
+                $stock -= abs($qty); // Always subtract positive value
             } elseif ($txn->transaction_type === 'adjustment') {
-                $stock += $qty;
+                $stock += $qty; // ✅ Keep the sign - can be positive or negative
             }
         }
         return $stock; // in kg

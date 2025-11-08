@@ -80,6 +80,11 @@ class Contract extends Model
         return in_array($newStatus, $transitions[$this->status] ?? []);
     }
 
+    public function fieldVisits(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(FieldVisit::class, 'contract_ID', 'id');
+    }
+    
     public function canBeEdited(): bool
     {
         return in_array($this->status, ['draft', 'under_review']);

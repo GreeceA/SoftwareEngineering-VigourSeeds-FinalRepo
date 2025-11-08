@@ -173,6 +173,9 @@ public function createOutbound()
 {
     $partnerOrders = \App\Models\PartnerOrder::with(['partner', 'lines.seed', 'lines.item', 'contract.farm'])
         ->whereIn('status', ['pending', 'partially_fulfilled'])
+        ->whereHas('contract', function ($q) {
+            $q->where('status', 'active'); // Only contracts with status 'active'
+        })
         ->orderBy('created_at', 'desc')
         ->get()
         ->map(function ($order) {
@@ -361,8 +364,11 @@ public function dashboard()
     $items = Item::all();
 
     // Get all pending order lines
-    $pendingOrderLines = PartnerOrderLine::whereHas('partnerOrder', function ($q) {
-        $q->whereIn('status', ['pending', 'partially_fulfilled']);
+    $pendingOrderLines = \App\Models\PartnerOrderLine::whereHas('partnerOrder', function ($q) {
+        $q->whereIn('status', ['pending', 'partially_fulfilled'])
+        ->whereHas('contract', function ($qc) {
+            $qc->where('status', 'active');
+        });
     })->get();
 
     // Build shortfall list

@@ -47,12 +47,15 @@ class ContractRequest extends FormRequest
                     }
                 },
             ],
-            'signing_date' => [
+            'signing_date' => array_filter([
                 'required',
                 'date',
                 'before_or_equal:' . $today,
-                'after_or_equal:' . now()->subWeek()->format('Y-m-d'), // Max 1 week in past
-            ],
+                // Only enforce "max 1 week in past" if creating or editing a draft
+                (!$isUpdate || ($contract && $contract->status === 'draft'))
+                    ? 'after_or_equal:' . now()->subWeek()->format('Y-m-d')
+                    : null,
+            ]),
             'effective_date' => [
                 'required',
                 'date',
@@ -166,6 +169,12 @@ class ContractRequest extends FormRequest
                     'required',
                     'date',
                     'after:' . $contract->effective_date->format('Y-m-d'),
+                        // Only allow extending expiration date if suspended
+                        function ($attribute, $value, $fail) use ($contract) {
+                            if ($contract->status === 'suspended' && $value < $contract->expiration_date->format('Y-m-d')) {
+                                $fail('You can only extend the expiration date. Shortening is not allowed while suspended.');
+                            }
+                        },
                 ],
                 'buyback_price_per_unit' => [
                     'required',
@@ -198,6 +207,7 @@ class ContractRequest extends FormRequest
                 ],
                 'seeds.*.agreed_cycles' => ['required', 'integer', 'min:1', 'max:50'],
                 'seeds.*.expected_buyback_amount' => ['required', 'integer', 'min:1'],
+                'seeds.*.buyback_unit' => ['required', 'in:kg,sack,ton'],
             ];
         }
 

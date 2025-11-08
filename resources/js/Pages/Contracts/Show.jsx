@@ -9,6 +9,9 @@ import ActivateContractModal from './ActivateContractModal';
 import CancelContractModal from './CancelContractModal';
 import SendEmailModal from './SendEmailModal'; 
 import CompleteContractModal from './CompleteContractModal';
+import TerminateContractModal from './TerminateContractModal';
+import SuspendContractModal from './SuspendContractModal';
+
 
 export default function Show({ auth, contract }) {
     const { auth: authData } = usePage().props;
@@ -20,6 +23,7 @@ export default function Show({ auth, contract }) {
     const [showFilePreview, setShowFilePreview] = useState(false);
     const [showSendEmailModal, setShowSendEmailModal] = useState(false);
     const [showCompleteModal, setShowCompleteModal] = useState(false);
+    const [showTerminateModal, setShowTerminateModal] = useState(false); // ✅ Add this
 
     const { post, processing } = useForm();
 
@@ -27,8 +31,12 @@ export default function Show({ auth, contract }) {
     const handleClosePreview = () => setShowFilePreview(false);
 
     const handleOpenStatusModal = (status) => {
-        setStatusToTransition(status);
-        setShowStatusModal(true);
+        if (status === 'terminated') {
+            setShowTerminateModal(true);
+        } else {
+            setStatusToTransition(status);
+            setShowStatusModal(true);
+        }
     };
 
     const handleCancelConfirm = () => {
@@ -43,16 +51,49 @@ export default function Show({ auth, contract }) {
         setShowCancelModal(false);
     };
 
+    // Helper to convert to kg
+const toKg = (amount, unit) => {
+    if (unit === 'kg') return amount;
+    if (unit === 'sack') return amount * 50;
+    if (unit === 'ton') return amount * 1000;
+    return amount;
+};
+
+// Calculate total expected buyback (sum all commitments, convert to kg)
+const totalExpectedBuyback = contract.contract_commitments
+    ? contract.contract_commitments.reduce((sum, c) => sum + toKg(Number(c.expected_buyback_amount), c.buyback_unit), 0)
+    : 0;
+
+// Calculate total received (sum all buyback transactions, convert to kg)
+const totalReceivedBuyback = contract.buyback_transactions
+    ? contract.buyback_transactions.reduce((sum, tx) => sum + toKg(Number(tx.qty), tx.unit), 0)
+    : 0;
+
+// Calculate remaining
+const remainingBuyback = Math.max(totalExpectedBuyback - totalReceivedBuyback, 0);
+
+// Calculate fulfillment percentage
+const buybackFulfillmentPercentage = totalExpectedBuyback > 0
+    ? (totalReceivedBuyback / totalExpectedBuyback) * 100
+    : 0;
+
+// Calculate total value
+const totalBuybackValue = contract.buyback_transactions
+    ? contract.buyback_transactions.reduce((sum, tx) => sum + (Number(tx.total_value) || 0), 0)
+    : 0;
+
     const handleTransitionConfirm = (newStatus) => {
         router.post(route('contracts.change-status', contract.id), { status: newStatus }, {
             onSuccess: () => {
                 setShowStatusModal(false);
                 setStatusToTransition('');
-                setShowCompleteModal(false); // <-- Always close CompleteContractModal
+                setShowCompleteModal(false);
+                setShowTerminateModal(false); // ✅ Add this
             },
             onError: (errors) => {
                 setShowStatusModal(false);
                 setStatusToTransition('');
+                setShowTerminateModal(false); // ✅ Add this
                 const errorMsg = errors.status || errors.error || "An unknown error occurred.";
                 alert(`Transition Failed: ${errorMsg}`);
             }
@@ -227,19 +268,8 @@ export default function Show({ auth, contract }) {
                                     </button>
                                 )}
 
-                                {/* Terminate Contract - Suspended status */}
-                                {permissions.includes('edit contracts') && contract.status === 'suspended' && contract.available_transitions?.includes('terminated') && (
-                                    <button
-                                        onClick={() => handleOpenStatusModal('terminated')}
-                                        className="flex flex-col items-center justify-center rounded-lg bg-red-50 p-4 text-center transition-all hover:bg-red-100 hover:shadow-md border border-red-200"
-                                        disabled={processing}
-                                    >
-                                        <ExclamationTriangleIcon className="h-6 w-6 text-red-600 mb-2" />
-                                        <span className="text-sm font-medium text-red-900">Terminate Contract</span>
-                                    </button>
-                                )}
 
-                                {/* Reactivate Contract - Suspended status */}
+                                {/* Reactivate Contract - Only when suspended */}
                                 {permissions.includes('edit contracts') && contract.status === 'suspended' && contract.available_transitions?.includes('active') && (
                                     <button
                                         onClick={() => handleOpenStatusModal('active')}
@@ -248,6 +278,18 @@ export default function Show({ auth, contract }) {
                                     >
                                         <CheckCircleIcon className="h-6 w-6 text-green-600 mb-2" />
                                         <span className="text-sm font-medium text-green-900">Reactivate Contract</span>
+                                    </button>
+                                )}
+
+                                {/* Terminate Contract - when active or suspended */}
+                                {permissions.includes('edit contracts') && ['active', 'suspended'].includes(contract.status) && contract.available_transitions?.includes('terminated') && (
+                                    <button
+                                        onClick={() => handleOpenStatusModal('terminated')}
+                                        className="flex flex-col items-center justify-center rounded-lg bg-red-50 p-4 text-center transition-all hover:bg-red-100 hover:shadow-md border border-red-200"
+                                        disabled={processing}
+                                    >
+                                        <ExclamationTriangleIcon className="h-6 w-6 text-red-600 mb-2" />
+                                        <span className="text-sm font-medium text-red-900">Terminate Contract</span>
                                     </button>
                                 )}
 
@@ -289,6 +331,16 @@ export default function Show({ auth, contract }) {
                                             </span>
                                         )}
                                     </button>
+                                )}
+
+                                {['terminated', 'completed'].includes(contract.status) && (
+                                    <a
+                                        href={route('contracts.report', contract.id)}
+                                        className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-700 ml-3"
+                                        download
+                                    >
+                                        Download Contract Report
+                                    </a>
                                 )}
                             </div>
                         </div>
@@ -540,47 +592,38 @@ export default function Show({ auth, contract }) {
     <div className="space-y-3 mb-4">
         <div className="flex justify-between items-center">
             <span className="text-gray-600">Total Expected</span>
-            <span className="font-semibold text-lg">{contract.total_expected_buyback?.toLocaleString() ?? 0} kg</span>
+            <span className="font-semibold text-lg">{totalExpectedBuyback.toLocaleString()} kg</span>
         </div>
         <div className="flex justify-between items-center">
             <span className="text-gray-600">Total Received</span>
             <span className="font-semibold text-lg text-green-600">
-                {contract.buyback_fulfillment_percentage
-                    ? ((contract.total_expected_buyback * contract.buyback_fulfillment_percentage / 100).toLocaleString())
-                    : 0} kg
+                {totalReceivedBuyback.toLocaleString()} kg
             </span>
         </div>
         <div className="flex justify-between items-center">
             <span className="text-gray-600">Remaining</span>
-            <span className={`font-semibold text-lg ${contract.buyback_fulfillment_percentage >= 100 ? 'text-green-600' : 'text-yellow-600'}`}>
-                {contract.total_expected_buyback && contract.buyback_fulfillment_percentage !== undefined
-                    ? Math.max(contract.total_expected_buyback - (contract.total_expected_buyback * contract.buyback_fulfillment_percentage / 100), 0).toLocaleString()
-                    : 0} kg
+            <span className={`font-semibold text-lg ${buybackFulfillmentPercentage >= 100 ? 'text-green-600' : 'text-yellow-600'}`}>
+                {remainingBuyback.toLocaleString()} kg
             </span>
         </div>
         <div className="flex justify-between items-center">
             <span className="text-gray-600">Fulfillment</span>
-            <span className="font-semibold text-lg">{contract.buyback_fulfillment_percentage?.toFixed(1) ?? 0}%</span>
+            <span className="font-semibold text-lg">{buybackFulfillmentPercentage.toFixed(1)}%</span>
         </div>
-        {/* Fulfillment Bar */}
         <div className="w-full bg-gray-200 rounded-full h-3">
             <div
                 className={`h-3 rounded-full transition-all ${
-                    contract.buyback_fulfillment_percentage >= 100 ? 'bg-green-600' : 
-                    contract.buyback_fulfillment_percentage >= 75 ? 'bg-blue-600' : 
-                    contract.buyback_fulfillment_percentage >= 50 ? 'bg-yellow-600' : 'bg-red-600'
+                    buybackFulfillmentPercentage >= 100 ? 'bg-green-600' : 
+                    buybackFulfillmentPercentage >= 75 ? 'bg-blue-600' : 
+                    buybackFulfillmentPercentage >= 50 ? 'bg-yellow-600' : 'bg-red-600'
                 }`}
-                style={{ width: `${Math.min(contract.buyback_fulfillment_percentage, 100)}%` }}
+                style={{ width: `${Math.min(buybackFulfillmentPercentage, 100)}%` }}
             />
         </div>
-        {/* Total Value */}
         <div className="flex justify-between items-center pt-3 border-t">
             <span className="text-gray-900 font-medium">Total Value</span>
             <span className="font-bold text-xl text-green-600">
-                ₱{contract.buyback_transactions
-                    ? contract.buyback_transactions.reduce((sum, tx) => sum + (Number(tx.total_value) || 0), 0)
-                        .toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-                    : '0.00'}
+                ₱{totalBuybackValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
         </div>
     </div>
@@ -721,8 +764,15 @@ export default function Show({ auth, contract }) {
                 </div>
             </div>
 
-            {/* Modals */}
-            {showStatusModal && statusToTransition === 'active' ? (
+            {/* Modals - Fix the order */}
+            {showStatusModal && statusToTransition === 'suspended' ? (
+                <SuspendContractModal
+                    contract={contract}
+                    onCancel={() => setShowStatusModal(false)}
+                    onConfirm={handleTransitionConfirm}
+                    processing={processing}
+                />
+            ) : showStatusModal && statusToTransition === 'active' ? (
                 <ActivateContractModal
                     contract={contract}
                     onCancel={() => setShowStatusModal(false)}
@@ -774,6 +824,15 @@ export default function Show({ auth, contract }) {
                 contract={contract}
                 processing={processing}
             />
+
+            <TerminateContractModal
+                open={showTerminateModal}
+                onCancel={() => setShowTerminateModal(false)}
+                onConfirm={handleTransitionConfirm}
+                contract={contract}
+                processing={processing}
+            />
+
         </AuthenticatedLayout>
     );
 }

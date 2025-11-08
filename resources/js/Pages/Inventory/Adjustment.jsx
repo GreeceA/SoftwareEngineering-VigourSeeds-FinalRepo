@@ -18,6 +18,25 @@ const Adjustment = ({ auth, seeds, items }) => {
 
     const products = selectedProductType === 'seed' ? seeds : items;
 
+    // Suggested reasons based on adjustment type
+    const suggestedReasons = {
+        add: [
+            'Physical count correction - found extra stock',
+            'Previously unrecorded inventory',
+            'Supplier bonus/free goods',
+            'Returned goods from partner',
+            'Correction of data entry error',
+        ],
+        subtract: [
+            'Physical count correction - shortage found',
+            'Damaged/spoiled stock',
+            'Lost/stolen inventory',
+            'Expired products disposal',
+            'Quality control rejection',
+            'Correction of data entry error',
+        ],
+    };
+
     const handleProductChange = (productId) => {
         const product = products.find(p => p.id === parseInt(productId));
         setSelectedProduct(product);
@@ -51,6 +70,10 @@ const Adjustment = ({ auth, seeds, items }) => {
         if (!selectedProduct || !data.qty) return null;
         const adjustment = adjustmentType === 'subtract' ? -Math.abs(parseFloat(data.qty)) : Math.abs(parseFloat(data.qty));
         return (selectedProduct.current_stock || 0) + adjustment;
+    };
+
+    const handleReasonClick = (reason) => {
+        setData('notes', reason);
     };
 
     const newStock = calculateNewStock();
@@ -209,7 +232,7 @@ const Adjustment = ({ auth, seeds, items }) => {
                                 <input
                                     type="number"
                                     step="0.01"
-                                    min="0.01"
+                                    // min="0.01"
                                     value={data.qty}
                                     onChange={(e) => setData('qty', e.target.value)}
                                     className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
@@ -252,12 +275,34 @@ const Adjustment = ({ auth, seeds, items }) => {
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Reason for Adjustment <span className="text-red-500">*</span>
                             </label>
+                            
+                            {/* Suggested Reasons */}
+                            <div className="mb-3">
+                                <p className="text-xs text-gray-600 mb-2">Quick select a common reason:</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {suggestedReasons[adjustmentType].map((reason, index) => (
+                                        <button
+                                            key={index}
+                                            type="button"
+                                            onClick={() => handleReasonClick(reason)}
+                                            className={`px-3 py-1.5 text-xs rounded-full border transition ${
+                                                data.notes === reason
+                                                    ? 'bg-green-100 border-green-500 text-green-800 font-medium'
+                                                    : 'bg-white border-gray-300 text-gray-700 hover:border-green-400 hover:bg-green-50'
+                                            }`}
+                                        >
+                                            {reason}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
                             <textarea
                                 value={data.notes}
                                 onChange={(e) => setData('notes', e.target.value)}
                                 rows="4"
                                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                placeholder="e.g., Physical count correction, Damaged stock, Found extra inventory, etc."
+                                placeholder="Click a suggestion above or type your own reason..."
                                 required
                             />
                             <p className="text-sm text-gray-500 mt-1">

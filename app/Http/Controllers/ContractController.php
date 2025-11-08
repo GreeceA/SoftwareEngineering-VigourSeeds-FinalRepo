@@ -16,6 +16,7 @@ use Inertia\Inertia;
 use App\Mail\ContractReviewMail;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Barryvdh\Snappy\Facades\SnappyPdf;
 
 class ContractController extends Controller implements HasMiddleware
 {
@@ -401,6 +402,11 @@ class ContractController extends Controller implements HasMiddleware
     /**
      * Update the specified contract in storage.
      */
+    public function canBePartiallyEdited(): bool
+    {
+        return in_array($this->status, ['under_review', 'suspended']);
+    }
+
     public function update(ContractRequest $request, Contract $contract)
     {
         $isFullyEditable = $contract->canBeEdited();
@@ -413,6 +419,49 @@ class ContractController extends Controller implements HasMiddleware
         }
 
         $validated = $request->validated();
+
+        if ($isPartiallyEditable && $contract->status === 'suspended' && isset($validated['seeds'])) {
+        // Get total received buyback in kg
+        $totalReceivedKg = $contract->buybackTransactions->sum(function ($tx) {
+            if ($tx->unit === 'kg') return $tx->qty;
+            if ($tx->unit === 'sack') return $tx->qty * 50;
+            if ($tx->unit === 'ton') return $tx->qty * 1000;
+            return $tx->qty;
+        });
+
+        // Get new expected buyback in kg
+        $totalExpectedKg = collect($validated['seeds'])->sum(function ($seed) {
+            $unit = $seed['buyback_unit'] ?? null;
+            $amount = $seed['expected_buyback_amount'] ?? 0;
+            if ($unit === 'kg') return $amount;
+            if ($unit === 'sack') return $amount * 50;
+            if ($unit === 'ton') return $amount * 1000;
+            return $amount;
+        });
+
+if ($totalExpectedKg < $totalReceivedKg) {
+    // Conversion helper (define it HERE, before using)
+    $toKg = function($amount, $unit) {
+        if ($unit === 'kg') return $amount;
+        if ($unit === 'sack') return $amount * 50;
+        if ($unit === 'ton') return $amount * 1000;
+        return $amount;
+    };
+
+    // Find the first seed commitment for the error message
+    $firstSeed = $validated['seeds'][0] ?? null;
+    $amount = $firstSeed['expected_buyback_amount'] ?? 0;
+    $unit = $firstSeed['buyback_unit'] ?? '[NO BUYBACK UNIT]'; 
+    
+    // Now call $toKg
+    $converted = $toKg($amount, $unit);
+
+    return redirect()->back()->withInput()->withErrors([
+        'seeds' => "Expected buyback amount ({$amount} {$unit} = {$converted} kg) cannot be less than total received ({$totalReceivedKg} kg)."
+    ]);
+}
+        
+    }
 
         DB::beginTransaction();
 
@@ -743,7 +792,7 @@ class ContractController extends Controller implements HasMiddleware
             'under_review' => ['draft', 'active', 'cancelled'],
             'active' => ['suspended', 'terminated', 'completed'],
             'suspended' => ['active', 'terminated'],
-            'terminated' => ['completed'],
+            'terminated' => [''],
             'cancelled' => ['completed'],
             'completed' => [],
         ];
@@ -804,4 +853,37 @@ class ContractController extends Controller implements HasMiddleware
         return redirect()->route('partner.contracts.show', $contract->id)
             ->with('success', 'Contract verified and activated successfully!');
     }
+
+        
+public function exportReport(Contract $contract)
+{
+    $contract->load([
+        'partner',
+        'farm',
+        'contractSeedCommitments.seed',
+        'partnerOrders.lines.product',
+        'fieldVisits.assignee',
+        'fieldVisits.growthReports',
+        'fieldVisits.damageReports',
+        'buybackTransactions'
+    ]);
+
+    $data = [
+        'contract' => $contract,
+        'partner' => $contract->partner,
+        'farm' => $contract->farm,
+        'seedCommitments' => $contract->contractSeedCommitments,
+        'partnerOrders' => $contract->partnerOrders,
+        'fieldVisits' => $contract->fieldVisits,
+        'buybackTransactions' => $contract->buybackTransactions,
+    ];
+
+    $pdf = SnappyPdf::loadView('contracts.report', $data)
+        ->setPaper('a4')
+        ->setOption('margin-bottom', 10);
+
+    return response($pdf->output(), 200)
+        ->header('Content-Type', 'application/pdf')
+        ->header('Content-Disposition', 'attachment; filename="Contract_Report_' . $contract->contract_name . '.pdf"');
+}
 }

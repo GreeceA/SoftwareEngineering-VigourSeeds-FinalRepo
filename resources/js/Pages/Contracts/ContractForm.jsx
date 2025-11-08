@@ -40,6 +40,19 @@ export default function ContractForm({ partners, seeds, contract = null }) {
         seeds: initialSeeds,
     });
 
+    
+
+    const toKg = (amount, unit) => {
+        if (unit === 'kg') return Number(amount);
+        if (unit === 'sack') return Number(amount) * 50;
+        if (unit === 'ton') return Number(amount) * 1000;
+        return Number(amount);
+    };
+
+    const totalReceivedBuyback = contract?.buyback_transactions
+        ? contract.buyback_transactions.reduce((sum, tx) => sum + toKg(tx.qty, tx.unit), 0)
+        : 0;
+
     // --- UI STATE (useState) ---
 
     const [selectedSeeds, setSelectedSeeds] = useState(initialSeeds);
@@ -90,15 +103,18 @@ export default function ContractForm({ partners, seeds, contract = null }) {
     const today = dayjs().format('YYYY-MM-DD');
     const oneWeekAgo = dayjs().subtract(7, 'day').format('YYYY-MM-DD');
     let effectiveMin = data.signing_date || '';
-    let expirationMin = '';
-    if (data.effective_date) {
-        expirationMin = dayjs(data.effective_date).add(1, 'day').format('YYYY-MM-DD');
-    }
-
+    
     // Edit Permissions
     const isDraft = isEditing && contract?.status === 'draft';
     const isFullyEditable = !isEditing || isDraft || contract?.can_be_edited;
-    const isPartiallyEditable = isEditing && contract?.status === 'under_review' && contract?.can_be_partially_edited;
+    const isPartiallyEditable = isEditing && ['under_review', 'suspended'].includes(contract?.status) && contract?.can_be_partially_edited;
+
+    let expirationMin = '';
+    if (isPartiallyEditable && contract?.status === 'suspended') {
+        expirationMin = contract.expiration_date; // Prevent shortening
+    } else if (data.effective_date) {
+        expirationMin = dayjs(data.effective_date).add(1, 'day').format('YYYY-MM-DD');
+    }
 
     // Form State Booleans
     const requiredContractFieldsFilled =
@@ -197,8 +213,8 @@ export default function ContractForm({ partners, seeds, contract = null }) {
     };
 
     const isLocked = (field) => {
-        // Always lock core fields in under_review
-        if (isEditing && contract?.status === 'under_review') {
+        // Always lock core fields in under_review or suspended
+        if (isEditing && ['under_review', 'suspended'].includes(contract?.status)) {
             const lockedFields = [
                 'contract_name',
                 'partner_id',
@@ -220,6 +236,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
             'expected_buyback_amount',
             'agreed_cycles',
             'seed_quantity',
+            'buyback_unit',
         ];
         return !editableFields.includes(field);
     };
@@ -319,6 +336,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
 
     const updateFormSeeds = (seedsArray) => {
         setData('seeds', seedsArray.map(seed => ({
+            id: seed.id,
             seed_id: seed.seed_id, 
             seed_quantity: Number(String(seed.seed_quantity).replace(/,/g, '')),
             unit: seed.unit,
@@ -586,42 +604,62 @@ export default function ContractForm({ partners, seeds, contract = null }) {
         setBuybackPriceError('');
     };
 
-    const submit = (e) => {
-        e.preventDefault();
-
-
-        if (selectedSeeds.length === 0) {
-            setSeedSelectionError('Selecting a seed variety is required.');
-            return;
-        }
-
-        let cleanBuybackPrice = String(data.buyback_price_per_unit)
-            .replace(/,/g, '')
-            .trim();
-        let buybackPriceValue = cleanBuybackPrice === '' ? 0 : parseFloat(cleanBuybackPrice);
-
-        const submissionData = {
-            ...data,
-            buyback_price_per_unit: buybackPriceValue,
-            _method: isEditing ? 'put' : 'post',
-        };
-
-        if (isEditing && !(data.contract_file instanceof File)) {
-            delete submissionData.contract_file;
-        }
-
-        if (isEditing) {
-            router.post(route('contracts.update', contract.id), submissionData, {
-                onSuccess: () => router.visit(route('contracts.show', contract.id)),
-                onError: (e) => console.error(e)
-            });
-        } else {
-            router.post(route('contracts.store'), submissionData, {
-                onSuccess: () => router.visit(route('contracts.index')),
-                onError: (e) => console.error(e)
-            });
-        }
+    const getTotalExpectedBuyback = () => {
+        return selectedSeeds.reduce((sum, seed) => sum + toKg(seed.expected_buyback_amount, seed.buyback_unit), 0);
     };
+
+    const submit = (e) => {
+    e.preventDefault();
+
+    if (selectedSeeds.length === 0) {
+        setSeedSelectionError('Selecting a seed variety is required.');
+        return;
+    }
+
+    // --- VALIDATE BUYBACK BEFORE SUBMIT ---
+    if (isEditing && contract?.status === 'suspended') {
+        const totalExpectedKg = getTotalExpectedBuyback(); // already in kg
+        if (totalExpectedKg < totalReceivedBuyback) {
+            setExpectedBuybackErrors(prev => ({
+                ...prev,
+                form: `Expected buyback amount (${totalExpectedKg} kg) cannot be less than total received (${totalReceivedBuyback} kg).`
+            }));
+            return; // STOP SUBMIT
+        } else {
+            setExpectedBuybackErrors(prev => ({
+                ...prev,
+                form: ''
+            }));
+        }
+    }
+
+    let cleanBuybackPrice = String(data.buyback_price_per_unit)
+        .replace(/,/g, '')
+        .trim();
+    let buybackPriceValue = cleanBuybackPrice === '' ? 0 : parseFloat(cleanBuybackPrice);
+
+    const submissionData = {
+        ...data,
+        buyback_price_per_unit: buybackPriceValue,
+        _method: isEditing ? 'put' : 'post',
+    };
+
+    if (isEditing && !(data.contract_file instanceof File)) {
+        delete submissionData.contract_file;
+    }
+
+    if (isEditing) {
+        router.post(route('contracts.update', contract.id), submissionData, {
+            onSuccess: () => router.visit(route('contracts.show', contract.id)),
+            onError: (e) => console.error(e)
+        });
+    } else {
+        router.post(route('contracts.store'), submissionData, {
+            onSuccess: () => router.visit(route('contracts.index')),
+            onError: (e) => console.error(e)
+        });
+    }
+};
 
     // --- RENDER ---
 
@@ -836,7 +874,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                     className="w-full px-3 py-2 pl-8 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                     placeholder="0.00"
                                     required
-                                    disabled={isLocked('buyback_price_per_unit')}
+                                    disabled={isLocked('buyback_price_per_unit') || totalReceivedBuyback > 0}
                                 />
                                 <span className="text-xs text-gray-500 block mt-1">Valid range: ₱0.01–₱999,999.99</span>
                                 {buybackPriceError && (
@@ -1105,7 +1143,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                                         onChange={(e) => updateSeedData(seed.id, 'agreed_cycles', e.target.value)}
                                                         className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
                                                         required
-                                                        disabled={!isFullyEditable}
+                                                        disabled={isLocked('agreed_cycles')}
                                                         placeholder={seed.expected_first_harvest_date ? undefined : 'Set harvest date first'}
                                                     />
                                                     {errors[`seeds.${index}.agreed_cycles`] && <p className="text-red-500 text-xs mt-1">{errors[`seeds.${index}.agreed_cycles`]}</p>}
@@ -1136,20 +1174,24 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                                 </div>
 
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Buyback Unit *</label>
-                                                    <select
-                                                        value={seed.buyback_unit}
-                                                        onChange={(e) => updateSeedData(seed.id, 'buyback_unit', e.target.value)}
-                                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
-                                                        required
-                                                        disabled={!isFullyEditable}
-                                                    >
-                                                        <option value="kg">kg</option>
-                                                        <option value="sack">sack</option>
-                                                        <option value="ton">ton</option>
-                                                    </select>
-                                                    {errors[`seeds.${index}.buyback_unit`] && <p className="text-red-500 text-xs mt-1">{errors[`seeds.${index}.buyback_unit`]}</p>}
-                                                </div>
+    <label className="block text-sm font-medium text-gray-700 mb-2">Buyback Unit *</label>
+    <select
+        value={seed.buyback_unit}
+        onChange={(e) => updateSeedData(seed.id, 'buyback_unit', e.target.value)}
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+        required
+        disabled={isLocked('buyback_unit')}
+    >
+        <option value="kg">kg</option>
+        <option value="sack">sack</option>
+        <option value="ton">ton</option>
+    </select>
+    {/* Add this hidden input when disabled */}
+    {isLocked('buyback_unit') && (
+        <input type="hidden" name={`seeds.${index}.buyback_unit`} value={seed.buyback_unit} />
+    )}
+    {errors[`seeds.${index}.buyback_unit`] && <p className="text-red-500 text-xs mt-1">{errors[`seeds.${index}.buyback_unit`]}</p>}
+</div>
                                             </div>
                                         </div>
 
@@ -1179,6 +1221,12 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                         )}
                     </div>
 
+                    {/* Place the error block here, before the buttons */}
+                    {expectedBuybackErrors.form && (
+                        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                            <p className="text-red-600 text-sm">{expectedBuybackErrors.form}</p>
+                        </div>
+                    )}
                     <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200">
                         <Link
                             href={route('contracts.index')}

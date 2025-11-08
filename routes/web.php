@@ -104,7 +104,10 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/partner-portal/contracts/{id}/verify', [ContractController::class, 'verifyPartner'])->name('partner.contracts.verify');
     Route::post('contracts/check-name', [ContractController::class, 'checkNameUnique'])
       ->name('contracts.checkNameUnique');
-    
+    Route::get('/contracts/{contract}/report', [ContractController::class, 'exportReport'])
+        ->name('contracts.report')
+        ->middleware(['permission:view contracts']);
+
     // Seeds
     Route::resource('seeds', SeedController::class);
     Route::patch('seeds/{seed}/archive', [SeedController::class, 'archive'])->name('seeds.archive');
@@ -159,14 +162,17 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/inventory/outbound', [InventoryTransactionController::class, 'createOutbound'])->name('inventory.outbound.create');
     Route::post('/inventory/outbound', [InventoryTransactionController::class, 'storeOutbound'])->name('inventory.outbound.store');
     
-    Route::get('/inventory/{productType}/{productId}', [InventoryTransactionController::class, 'show'])
-    ->name('inventory.show');
-
     // Inventory Adjustments
     Route::get('/inventory/adjustment/create', [InventoryTransactionController::class, 'createAdjustment'])
         ->name('inventory.adjustment.create');
     Route::post('/inventory/adjustment', [InventoryTransactionController::class, 'storeAdjustment'])
         ->name('inventory.adjustment.store');
+    
+    // Show specific product (wildcard route - MUST BE LAST)
+    Route::get('/inventory/{productType}/{productId}', [InventoryTransactionController::class, 'show'])
+    ->name('inventory.show');
+
+    
         
     // ============================================
     // PARTNER ORDERS ROUTES
