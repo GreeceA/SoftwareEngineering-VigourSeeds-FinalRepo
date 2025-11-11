@@ -13,14 +13,43 @@ use Inertia\Response;
 
 class ProfileController extends Controller
 {
-    /**
-     * Display the user's profile form.
-     */
     public function edit(Request $request): Response
     {
+        $user = auth()->user();
+        if ($user->avatar) {
+            // Use the same logic as AppServiceProvider
+            $avatarPath = ltrim(str_replace('/storage/', '', $user->avatar), '/');
+            $user->avatar = "http://localhost/dashboard/SoftwareEngineering-VigourSeeds-FinalRepo/public/storage/" . $avatarPath;
+        }
+
+
         return Inertia::render('Profile/Edit', [
-            'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
+            'mustVerifyEmail' => $user instanceof MustVerifyEmail,
             'status' => session('status'),
+            'user' => [
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'email' => $user->email,
+                'role' => $user->role,
+                'avatar' => $user->avatar,
+                'created_at' => $user->created_at,
+                'email_verified_at' => $user->email_verified_at,
+                'google_id' => $user->google_id,
+                'can' => $user->getAllPermissions()->pluck('name')->toArray(),
+            ],
+            'auth' => [
+                'user' => [
+                    'first_name' => $user->first_name,
+                    'last_name' => $user->last_name,
+                    'email' => $user->email,
+                    'role' => $user->role,
+                    'avatar' => $user->avatar,
+                    'created_at' => $user->created_at,
+                    'email_verified_at' => $user->email_verified_at,
+                    'google_id' => $user->google_id,
+                    'can' => $user->getAllPermissions()->pluck('name')->toArray(),
+                ]
+            ]
         ]);
     }
 
@@ -59,5 +88,26 @@ class ProfileController extends Controller
         $request->session()->regenerateToken();
 
         return Redirect::to('/');
+    }
+
+    public function updateAvatar(Request $request)
+    {
+        $request->validate([
+            'avatar' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
+        ]);
+
+        $user = auth()->user();
+
+        // Delete old avatar if exists
+        if ($user->avatar && file_exists(public_path($user->avatar))) {
+            @unlink(public_path($user->avatar));
+        }
+
+        // Store new avatar
+        $avatarPath = $request->file('avatar')->store('avatars', 'public');
+        $user->avatar = '/storage/' . $avatarPath;
+        $user->save();
+
+        return back()->with('status', 'Profile photo updated!');
     }
 }

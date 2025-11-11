@@ -50,6 +50,14 @@ class PartnerController extends Controller implements HasMiddleware
 
         $partners = $query->paginate($perPage)->withQueryString();
 
+        $partners->getCollection()->transform(function ($partner) {
+            if ($partner->avatar) {
+                $avatarPath = ltrim(str_replace('/storage/', '', $partner->avatar), '/');
+                $partner->avatar = url("/dashboard/SoftwareEngineering-VigourSeeds-FinalRepo/public/storage/" . $avatarPath);
+            }
+            return $partner;
+        });
+
         return Inertia::render('Partners/Index', [
             'partners' => $partners,
             'filters' => $request->only(['search', 'status', 'partner_type', 'per_page', 'sort_by', 'sort_dir']),
@@ -94,7 +102,7 @@ class PartnerController extends Controller implements HasMiddleware
     // Display the specified partner.
     public function show(Partner $partner)
     {
-        $partner->load(['contactPersons', 'farms']);
+        $partner->load(['contactPersons', 'farms', 'contracts']); // Add 'contracts' relationship
 
         return Inertia::render('Partners/Show', [
             'partner' => [
@@ -112,6 +120,16 @@ class PartnerController extends Controller implements HasMiddleware
                         'address'       => $f->address,
                         'area_size'     => $f->area_size,
                         'soil_type'     => $f->soil_type,
+                    ];
+                }),
+                'contracts' => $partner->contracts->map(function ($contract) {
+                    return [
+                        'id' => $contract->id,
+                        'name' => $contract->contract_name,
+                        'status' => $contract->status,
+                        'start_date' => $contract->signing_date,
+                        'end_date' => $contract->expiration_date,
+                        'value' => $contract->buyback_price_per_unit, // or another field for contract value
                     ];
                 }),
             ],

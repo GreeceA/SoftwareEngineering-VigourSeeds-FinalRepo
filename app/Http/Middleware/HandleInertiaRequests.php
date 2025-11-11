@@ -7,46 +7,31 @@ use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
 {
-    /**
-     * The root template that is loaded on the first page visit.
-     *
-     * @var string
-     */
     protected $rootView = 'app';
 
-    /**
-     * Determine the current asset version.
-     */
     public function version(Request $request): ?string
     {
         return parent::version($request);
     }
 
-    /**
-     * Define the props that are shared by default.
-     *
-     * @return array<string, mixed>
-     */
     public function share(Request $request): array
     {
-        return [
-            ...parent::share($request),
-            'auth' => [
-                'user' => $request->user() ? [
-                    'id' => $request->user()->id,
-                    'first_name' => $request->user()->first_name,
-                    'last_name' => $request->user()->last_name,
-                    'email' => $request->user()->email,
-                    'avatar' => $request->user()->avatar,
-                    'role' => $request->user()->role,
-                    'status' => $request->user()->status,
-                    'can' => $request->user()->getAllPermissions()->pluck('name')->toArray(), // ← This line
-                ] : null,
-            ],
-            'flash' => [
-                'success' => fn () => $request->session()->get('success'),
-                'error' => fn () => $request->session()->get('error'),
-            ],
-        ];
+        $shared = parent::share($request);
+        
+        // Get the user from the auth array
+        if (isset($shared['auth']['user']) && $shared['auth']['user']) {
+            $user = $shared['auth']['user'];
+            
+            // Fix avatar URL
+            if (isset($user['avatar']) && $user['avatar']) {
+                $avatarPath = str_replace('/storage/', '', $user['avatar']);
+                $avatarPath = ltrim($avatarPath, '/');
+                $user['avatar'] = "http://localhost/dashboard/SoftwareEngineering-VigourSeeds-FinalRepo/public/storage/" . $avatarPath;
+                
+                $shared['auth']['user'] = $user;
+            }
+        }
+        
+        return $shared;
     }
 }

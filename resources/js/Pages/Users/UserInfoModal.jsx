@@ -57,14 +57,10 @@ export default function UserInfoModal({ user, onClose }) {
                             <div className="text-2xl font-bold text-[#37692F]">{calculateYears(user.created_at)}</div>
                             <div className="text-xs text-gray-500 mt-1">Years in Company</div>
                         </div>
-                        <div className="text-center flex-1 border-r border-gray-200">
-                            {/* Add FORMULA to connect how many contract the user is invloved */}
-                            <div className="text-2xl font-bold text-[#37692F]">5</div>
-                            <div className="text-xs text-gray-500 mt-1">Contracts</div>
-                        </div>
                         <div className="text-center flex-1">
-                            {/* Add FORMULA to connect how many Field Visitaion the user has done */}
-                            <div className="text-2xl font-bold text-[#37692F]">69</div>
+                            <div className="text-2xl font-bold text-[#37692F]">
+                                {user.field_visits_count ?? 0}
+                            </div>
                             <div className="text-xs text-gray-500 mt-1">Field Visited</div>
                         </div>
                     </div>

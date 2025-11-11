@@ -4,7 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
 
-        <title inertia>{{ config('app.name', 'Laravel') }}</title>
+        <title>Vigour Seeds</title>
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
@@ -13,7 +13,11 @@
             <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;800&display=swap" />
             <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;800&display=swap" rel="stylesheet" />
 
-
+        <!-- Favicon -->
+        <link rel="icon" href="../vigour-logo.png?v=2" type="image/png" />
+        <link rel="icon" href="./vigour-logo.png?v=2" type="image/png" />
+        <link rel="icon" href="/vigour-logo.png?v=2" type="image/png" />
+        
         <!-- Scripts -->
         @routes
         @viteReactRefresh

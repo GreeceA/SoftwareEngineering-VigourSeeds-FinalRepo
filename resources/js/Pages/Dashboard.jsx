@@ -3,7 +3,7 @@ import { Head } from '@inertiajs/react';
 import '../../css/fonts.css';
 import { Link } from '@inertiajs/react';
 
-export default function Dashboard() {
+export default function Dashboard({ totalSeeds, activeContracts, lowStock, partnersCount }) {
     return (
         <AuthenticatedLayout
             header={
@@ -32,7 +32,7 @@ export default function Dashboard() {
                                     </div>
                                     <div className="ml-4">
                                         <h3 className="text-lg font-medium text-gray-900">Total Seeds</h3>
-                                        <p className="text-2xl font-bold text-[#37692F]">1,247</p>
+                                        <p className="text-2xl font-bold text-[#37692F]">{totalSeeds}</p>
                                     </div>
                                 </div>
                             </div>
@@ -49,8 +49,8 @@ export default function Dashboard() {
                                         </div>
                                     </div>
                                     <div className="ml-4">
-                                        <h3 className="text-lg font-medium text-gray-900">Active Orders</h3>
-                                        <p className="text-2xl font-bold text-green-600">23</p>
+                                        <h3 className="text-lg font-medium text-gray-900">Active Contracts</h3>
+                                        <p className="text-2xl font-bold text-green-600">{activeContracts}</p>
                                     </div>
                                 </div>
                             </div>
@@ -68,7 +68,7 @@ export default function Dashboard() {
                                     </div>
                                     <div className="ml-4">
                                         <h3 className="text-lg font-medium text-gray-900">Low Stock</h3>
-                                        <p className="text-2xl font-bold text-yellow-600">8</p>
+                                        <p className="text-2xl font-bold text-yellow-600">{lowStock}</p>
                                     </div>
                                 </div>
                             </div>
@@ -85,12 +85,13 @@ export default function Dashboard() {
                                         </div>
                                     </div>
                                     <div className="ml-4">
-                                        <h3 className="text-lg font-medium text-gray-900">Customers</h3>
-                                        <p className="text-2xl font-bold text-blue-600">156</p>
+                                        <h3 className="text-lg font-medium text-gray-900">Partners</h3>
+                                        <p className="text-2xl font-bold text-blue-600">{partnersCount}</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
+
                     </div>
 
                     {/* Main Dashboard Content */}
@@ -122,25 +123,34 @@ export default function Dashboard() {
                             <div className="p-6">
                                 <h3 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h3>
                                 <div className="grid grid-cols-2 gap-4">
-                                    <button className="p-4 text-center border-2 border-dashed border-gray-300 rounded-lg hover:border-[#37692F] hover:bg-green-50 transition-colors">
+                                    <Link
+                                        href={route('inventory.dashboard')}
+                                        className="p-4 text-center border-2 border-dashed border-gray-300 rounded-lg hover:border-[#37692F] hover:bg-green-50 transition-colors"
+                                    >
                                         <div className="text-2xl mb-2">📦</div>
                                         <span className="text-sm font-medium text-gray-700">Add Inventory</span>
-                                    </button>
-                                    <button className="p-4 text-center border-2 border-dashed border-gray-300 rounded-lg hover:border-[#37692F] hover:bg-green-50 transition-colors">
+                                    </Link>
+                                    <Link
+                                        href={route('partner-orders.index')}
+                                        className="p-4 text-center border-2 border-dashed border-gray-300 rounded-lg hover:border-[#37692F] hover:bg-green-50 transition-colors"
+                                    >
                                         <div className="text-2xl mb-2">📋</div>
                                         <span className="text-sm font-medium text-gray-700">View Orders</span>
-                                    </button>
+                                    </Link>
                                     <Link
-                                        href={route('users.index')} // make sure you have this named route in web.php
+                                        href={route('users.index')}
                                         className="p-4 text-center border-2 border-dashed border-gray-300 rounded-lg hover:border-[#37692F] hover:bg-green-50 transition-colors"
                                     >
                                         <div className="text-2xl mb-2">👥</div>
                                         <span className="text-sm font-medium text-gray-700">Manage Users</span>
                                     </Link>
-                                    <button className="p-4 text-center border-2 border-dashed border-gray-300 rounded-lg hover:border-[#37692F] hover:bg-green-50 transition-colors">
+                                    <Link
+                                        href={route('contracts.index')}
+                                        className="p-4 text-center border-2 border-dashed border-gray-300 rounded-lg hover:border-[#37692F] hover:bg-green-50 transition-colors"
+                                    >
                                         <div className="text-2xl mb-2">📊</div>
-                                        <span className="text-sm font-medium text-gray-700">View Reports</span>
-                                    </button>
+                                        <span className="text-sm font-medium text-gray-700">View Contracts</span>
+                                    </Link>
                                 </div>
                             </div>
                         </div>

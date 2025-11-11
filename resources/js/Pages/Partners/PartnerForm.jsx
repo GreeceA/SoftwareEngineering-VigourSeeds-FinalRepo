@@ -989,7 +989,7 @@ export default function PartnerForm({ partner = null }) {
                                 </span>
                             </div>
                             <p className="mt-1 text-xs text-gray-500">
-                                Format: BN-YYYY#####REG
+                                Enter 11-digit Number (Format: BN-YYYY#####REG)
                             </p>
                             {(touched.registration_number || showErrors) && (localErrors.registration_number || regUniqueError) && (
                                 <p className="mt-1 text-sm text-red-600">

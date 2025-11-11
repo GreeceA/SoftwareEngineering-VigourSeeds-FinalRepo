@@ -21,7 +21,10 @@ use App\Http\Controllers\DamageReportController;
 use App\Http\Controllers\InventoryTransactionController;
 use App\Http\Controllers\PartnerOrderController;
 use App\Http\Controllers\BuybackController;
-
+use App\Http\Controllers\Auth\EmailVerificationPromptController;
+use App\Http\Controllers\Auth\EmailVerificationNotificationController;
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
+use App\Http\Controllers\DashboardController;
 
 
 
@@ -41,9 +44,11 @@ Route::get('/', function () {
 // Authenticated Routes
 // -----------------
 Route::middleware(['auth'])->group(function () {
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    
     // Dashboard
-    Route::get('/dashboard', fn () => Inertia::render('Dashboard'))
-        ->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
 
     // Profile
     Route::prefix('profile')->name('profile.')->group(function () {
@@ -51,6 +56,24 @@ Route::middleware(['auth'])->group(function () {
         Route::patch('/', [ProfileController::class, 'update'])->name('update');
         Route::delete('/', [ProfileController::class, 'destroy'])->name('destroy');
     });
+
+    Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
+    
+    // Email Verification
+    // Show verification notice (uses EmailVerificationPromptController::__invoke)
+    Route::get('/verify-email', EmailVerificationPromptController::class)
+        ->name('verification.notice');
+
+    // Resend verification link
+    Route::post('/email/verification-notification', [EmailVerificationNotificationController::class, 'store'])
+        ->middleware('throttle:6,1')
+        ->name('verification.send');
+
+    // Verify email (signed URL)
+    Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
+        $request->fulfill();
+        return Redirect::route('profile.edit');
+    })->middleware(['auth', 'signed'])->name('verification.verify');
 
     // Permissions
     Route::resource('permissions', PermissionController::class)->except(['show']);
@@ -76,6 +99,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{user}/reactivate', [UserController::class, 'reactivate'])->name('reactivate');
     });
 
+    Route::get('/users/export', [UserController::class, 'export'])
+    ->middleware(['auth', 'permission:view users'])
+    ->name('users.export');
+    
     // Partners
     Route::resource('partners', PartnerController::class)->except(['show']);
     Route::post('partners/{partner}/deactivate', [PartnerController::class, 'deactivate'])->name('partners.deactivate');

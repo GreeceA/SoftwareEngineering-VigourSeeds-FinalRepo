@@ -136,7 +136,7 @@ export default function Login({ status, canResetPassword }) {
                     </div>
                     <div className="relative flex justify-center text-sm">
                         <span className="bg-white px-2 text-[16px] text-[#666666]">
-                            Or continue with
+                            OR
                         </span>
                     </div>
                 </div>

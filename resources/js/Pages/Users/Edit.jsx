@@ -13,20 +13,11 @@ export default function Edit({ auth, user, roles = [], userRoles = [] }) {
     });
 
     const [showSuccessMessage, setShowSuccessMessage] = useState(false);
-    const nameRegex = /^[A-Za-z]+$/;
+    const letterOnly = (value) => value.replace(/[^A-Za-z\s]/g, '');
     const handleSubmit = (e) => {
         e.preventDefault();
-        
-        if (!nameRegex.test(data.first_name)) {
-            alert('First name can only contain letters');
-            return;
-        }
-
-        if (!nameRegex.test(data.last_name)) {
-            alert('Last name can only contain letters');
-            return;
-        }
-        
+        setData('first_name', letterOnly(data.first_name));
+        setData('last_name', letterOnly(data.last_name));
         put(route('users.update', user.id), {
             onSuccess: () => {
                 setShowSuccessMessage(true);
@@ -139,11 +130,12 @@ export default function Edit({ auth, user, roles = [], userRoles = [] }) {
                                     type="text"
                                     id="first_name"
                                     value={data.first_name}
-                                    onChange={(e) => setData('first_name', e.target.value)}
+                                    onChange={(e) => setData('first_name', letterOnly(e.target.value))}
                                     className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-transparent ${
                                         errors.first_name ? 'border-red-500' : 'border-gray-300'
                                     }`}
                                     placeholder="Enter first name"
+                                    required
                                 />
                                 {errors.first_name && (
                                     <p className="mt-1 text-sm text-red-600">{errors.first_name}</p>
@@ -159,11 +151,12 @@ export default function Edit({ auth, user, roles = [], userRoles = [] }) {
                                     type="text"
                                     id="last_name"
                                     value={data.last_name}
-                                    onChange={(e) => setData('last_name', e.target.value)}
+                                    onChange={(e) => setData('last_name', letterOnly(e.target.value))}
                                     className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-transparent ${
                                         errors.last_name ? 'border-red-500' : 'border-gray-300'
                                     }`}
                                     placeholder="Enter last name"
+                                    required
                                 />
                                 {errors.last_name && (
                                     <p className="mt-1 text-sm text-red-600">{errors.last_name}</p>

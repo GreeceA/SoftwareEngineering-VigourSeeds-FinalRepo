@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <title>@yield('title', 'Vigour Seeds')</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+
+    <!-- Favicon -->
+    <link rel="icon" href="/vigour-logo.png?v=2" type="image/png" />
+
 </head>
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-success mb-4">

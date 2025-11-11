@@ -17,6 +17,20 @@ export default function AuthenticatedLayout({ header, children }) {
     // Get full name from first_name and last_name
     const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
 
+    // DEBUG: Log everything
+    console.log('=== AVATAR DEBUG START ===');
+    console.log('Full user object:', user);
+    console.log('Avatar value:', user.avatar);
+    console.log('Avatar type:', typeof user.avatar);
+    console.log('Avatar exists?', !!user.avatar);
+    
+    // Check if avatar starts with http
+    if (user.avatar) {
+        console.log('Avatar starts with http?', user.avatar.startsWith('http'));
+        console.log('Avatar starts with /storage?', user.avatar.startsWith('/storage'));
+    }
+    console.log('=== AVATAR DEBUG END ===');
+
     // Auto-refresh permissions when needed
     usePermissionRefresh();
     const [openUsersDropdown, setOpenUsersDropdown] = useState(false);
@@ -388,7 +402,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 {user.avatar ? (
                                     <img
                                         src={user.avatar}
-                                        alt={`${fullName}'s avatar`}
+                                        alt={`${fullName}'s avatars`}
                                         className="h-10 w-10 rounded-full border border-gray-300 object-cover"
                                     />
                                 ) : (

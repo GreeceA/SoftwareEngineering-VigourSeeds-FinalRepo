@@ -14,6 +14,8 @@ use Spatie\Permission\Traits\HasRoles;
 use Spatie\Permission\Models\Permission;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use App\Exports\UsersExport;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class UserController extends Controller implements HasMiddleware
 {
@@ -33,10 +35,11 @@ class UserController extends Controller implements HasMiddleware
         $sortDir = $request->input('sort_dir', 'desc');
         $perPage = $request->input('per_page', 10);
         $status = $request->input('status', '');
-        $search = $request->input('search', ''); // <-- ADD THIS
+        $search = $request->input('search', '');
 
         $query = User::with('roles')
-            ->select('id', DB::raw("CONCAT(first_name, ' ', last_name) as name"), 'email', 'role', 'status', 'created_at', 'avatar');
+            ->select('id', DB::raw("CONCAT(first_name, ' ', last_name) as name"), 'email', 'role', 'status', 'created_at', 'avatar')
+            ->withCount('fieldVisits');
 
         // Search functionality
         if ($search) {
@@ -57,7 +60,6 @@ class UserController extends Controller implements HasMiddleware
             $query->orderBy('id', 'desc');
         }
 
-        
         $users = $query->paginate($perPage)->withQueryString();
 
         $users->getCollection()->transform(function ($user) {
@@ -70,6 +72,29 @@ class UserController extends Controller implements HasMiddleware
             }
             return $user;
         });
+
+        // Only prepend "me" on the first page
+        if ($users->currentPage() === 1) {
+            $currentUser = $request->user();
+            if (!$users->getCollection()->contains(function ($user) use ($currentUser) {
+                return (string)$user->id === (string)$currentUser->id;
+            })) {
+                $me = User::with('roles')
+                    ->select('id', DB::raw("CONCAT(first_name, ' ', last_name) as name"), 'email', 'role', 'status', 'created_at', 'avatar')
+                    ->find($currentUser->id);
+
+                if ($me) {
+                    if ($me->avatar) {
+                        if (filter_var($me->avatar, FILTER_VALIDATE_URL)) {
+                            $me->avatar = $me->avatar;
+                        } else {
+                            $me->avatar = asset('storage/' . $me->avatar);
+                        }
+                    }
+                    $users->getCollection()->prepend($me);
+                }
+            }
+        }
 
         return Inertia::render('Users/Index', [
             'users' => $users,
@@ -273,4 +298,24 @@ class UserController extends Controller implements HasMiddleware
             return back()->with('error', 'Failed to activate user');
         }
     }
+    
+    public function export(Request $request)
+    {
+        $format = $request->query('format', 'csv');
+        
+        if ($format === 'pdf') {
+            // Get all users with roles
+            $users = User::with('roles')
+                ->select('id', 'first_name', 'last_name', 'email', 'status', 'created_at')
+                ->orderBy('id', 'asc')
+                ->get();
+            
+            // Generate PDF
+            $pdf = Pdf::loadView('exports.users_pdf', compact('users'));
+            
+            // Download PDF
+            return $pdf->download('VigourSeed_UserInfoList_' . now()->format('Y-m-d') . '.pdf');
+        }
+    }
+
 }
