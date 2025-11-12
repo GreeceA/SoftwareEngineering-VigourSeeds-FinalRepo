@@ -253,13 +253,19 @@ const InventoryLedger = () => {
                           <div className="text-sm text-gray-900">{formatDate(txn.created_at)}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            {getTransactionIcon(txn.transaction_type)}
-                            <span className={`px-3 py-1 text-xs font-medium rounded-full border capitalize ${getTransactionColor(txn.transaction_type)}`}>
-                              {txn.transaction_type}
-                            </span>
-                          </div>
-                        </td>
+  <div className={`text-sm font-semibold ${
+    txn.transaction_type === 'inbound' ? 'text-green-600' :
+    txn.transaction_type === 'outbound' ? 'text-red-600' :
+    txn.qty > 0 ? 'text-green-600' : 'text-red-600'
+  }`}>
+    {txn.transaction_type === 'inbound' && `+${Math.abs(parseFloat(txn.qty)).toLocaleString()}`}
+    {txn.transaction_type === 'outbound' && `-${Math.abs(parseFloat(txn.qty)).toLocaleString()}`}
+    {txn.transaction_type === 'adjustment' && (
+      txn.qty > 0 ? `+${Math.abs(parseFloat(txn.qty)).toLocaleString()}` : `${parseFloat(txn.qty).toLocaleString()}`
+    )}
+    {' '}{txn.unit}
+  </div>
+</td>
                         <td className="px-6 py-4">
                           <div className="text-sm font-medium text-gray-900">
                             {txn.product_name || '-'}

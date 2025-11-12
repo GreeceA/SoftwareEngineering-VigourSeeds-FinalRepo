@@ -4,13 +4,16 @@ import { ChartBarIcon } from '@heroicons/react/24/solid';
 const ShowGrowthModal = ({ open, form, onSubmit, onClose }) => {
   if (!open) return null;
 
+  // Check if all required fields are filled
+  const isFormValid = form.data.stage && form.data.status && form.data.notes?.trim();
+
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50 p-4">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50">
       <div className="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
         {/* Header with Icon */}
         <div className="mb-4 flex flex-col items-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-            <ChartBarIcon className="h-8 w-8 text-green-600" />
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
+            <ChartBarIcon className="h-10 w-10 text-green-600" />
           </div>
           <h3 className="mt-3 text-center font-poppins text-xl font-semibold text-gray-800">
             Add Growth Report
@@ -29,6 +32,7 @@ const ShowGrowthModal = ({ open, form, onSubmit, onClose }) => {
             <select
               value={form.data.stage}
               onChange={(e) => form.setData('stage', e.target.value)}
+              required
               className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3 font-poppins text-sm focus:border-[#37692F] focus:outline-none focus:ring-2 focus:ring-[#37692F]"
             >
               <option value="">Select growth stage</option>
@@ -52,6 +56,7 @@ const ShowGrowthModal = ({ open, form, onSubmit, onClose }) => {
             <select
               value={form.data.status}
               onChange={(e) => form.setData('status', e.target.value)}
+              required
               className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3 font-poppins text-sm focus:border-[#37692F] focus:outline-none focus:ring-2 focus:ring-[#37692F]"
             >
               <option value="">Select plant status</option>
@@ -68,11 +73,12 @@ const ShowGrowthModal = ({ open, form, onSubmit, onClose }) => {
           {/* Notes */}
           <div>
             <label className="mb-2 block font-poppins text-sm font-medium text-gray-700">
-              Observations & Notes
+              Observations & Notes *
             </label>
             <textarea
               value={form.data.notes}
               onChange={(e) => form.setData('notes', e.target.value)}
+              required
               rows="4"
               className="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-3 font-poppins text-sm focus:border-[#37692F] focus:outline-none focus:ring-2 focus:ring-[#37692F]"
               placeholder="Describe plant health, growth patterns, notable observations, or any concerns..."
@@ -90,11 +96,11 @@ const ShowGrowthModal = ({ open, form, onSubmit, onClose }) => {
           </div>
 
           {/* Buttons */}
-          <div className="mt-6 flex justify-center space-x-3">
+          <div className="mt-8 flex justify-center space-x-4">
             <button
               onClick={onSubmit}
-              disabled={form.processing}
-              className="flex-1 rounded-lg bg-[#37692F] px-5 py-3 font-poppins text-sm font-medium text-white transition-colors hover:bg-[#2a5624] disabled:opacity-50"
+              disabled={form.processing || !isFormValid}
+              className="flex-1 rounded-lg bg-[#37692F] px-5 py-3 font-poppins text-sm font-medium text-white transition-colors hover:bg-[#2a5624] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {form.processing ? (
                 <span className="flex items-center justify-center">

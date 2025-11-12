@@ -28,7 +28,7 @@ class Item extends Model
     public function inventoryTransactions()
     {
         return $this->hasMany(InventoryTransaction::class, 'product_id')
-            ->where('product_type', $this->type);
+            ->where('product_type', 'items');
     }
 
     /**
@@ -39,6 +39,11 @@ class Item extends Model
         return $this->morphMany(PartnerOrderLine::class, 'product');
     }
 
+    public function partnerOrderLines()
+    {
+        // Assumes 'product_type' is 'App\Models\Item' or your morphMap name
+        return $this->morphMany(PartnerOrderLine::class, 'product');
+    }
     /**
      * Calculate current stock balance
      */
@@ -58,8 +63,8 @@ class Item extends Model
             ->where('product_id', $this->id)
             ->where('transaction_type', 'adjustment')
             ->sum('qty');
-        
-        return $inbound - abs($outbound) + $adjustments;
+
+        return $inbound - $outbound + $adjustments; // Subtract outbound (now positive)
     }
 
     /**

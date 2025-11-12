@@ -240,49 +240,41 @@ public function storeOutbound(Request $request)
 
     DB::beginTransaction();
     try {
-        $orderLine = PartnerOrderLine::with(['seed', 'item', 'partnerOrder.contract'])
-            ->findOrFail($validated['partner_order_line_id']);
+        $orderLine = PartnerOrderLine::with('partnerOrder')->findOrFail($validated['partner_order_line_id']);
         
-        // Helper function to convert to base unit (kg/liter)
-        $convertToBaseUnit = function($qty, $unit) {
-            if ($unit === 'ton') return $qty * 1000;
-            if ($unit === 'sack') return $qty * 50;
-            return $qty; // kg, liter
-        };
-        
-        // Validate remaining quantity
-        $remainingQty = $orderLine->qty - $orderLine->delivered_qty;
-        if ($validated['qty'] > $remainingQty) {
-            throw new \Exception("Delivery quantity ({$validated['qty']}) exceeds remaining quantity ({$remainingQty} {$orderLine->unit})");
-        }
-
-        // Get product and check stock availability
-        $product = null;
-        if ($orderLine->product_type === 'seed' || $orderLine->product_type === 'Seed' || $orderLine->product_type === 'App\\Models\\Seed') {
-            $product = $orderLine->seed;
+        // Get product
+        if ($orderLine->product_type === 'seed' || $orderLine->product_type === 'App\\Models\\Seed') {
+            $product = Seed::findOrFail($orderLine->product_id);
         } else {
-            $product = $orderLine->item;
-        }
-        
-        if (!$product) {
-            throw new \Exception("Product not found");
-        }
-        
-        // Convert delivery qty to base unit for stock check
-        $qtyInBaseUnit = $convertToBaseUnit($validated['qty'], $orderLine->unit);
-        $availableStock = $product->getCurrentStock();
-        
-        if ($qtyInBaseUnit > $availableStock) {
-            $baseUnit = ($orderLine->product_type === 'seed' || $orderLine->product_type === 'Seed') ? 'kg' : ($product->base_unit ?? 'kg');
-            throw new \Exception("Insufficient stock. Available: {$availableStock} {$baseUnit}");
+            $product = Item::findOrFail($orderLine->product_id);
         }
 
-        // Create outbound transaction (negative qty for outbound)
+        // Convert qty to base unit
+        $qtyInBaseUnit = $validated['qty'];
+        if ($orderLine->unit === 'sack') {
+            $qtyInBaseUnit = $validated['qty'] * 50;
+        } elseif ($orderLine->unit === 'ton') {
+            $qtyInBaseUnit = $validated['qty'] * 1000;
+        }
+
+        // Check available stock
+        $availableStock = $product->getCurrentStock();
+        if ($qtyInBaseUnit > $availableStock) {
+            return back()->withErrors(['qty' => 'Insufficient stock available']);
+        }
+
+        // Check if exceeds remaining order
+        $remaining = $orderLine->qty - $orderLine->delivered_qty;
+        if ($validated['qty'] > $remaining) {
+            return back()->withErrors(['qty' => 'Quantity exceeds remaining order amount']);
+        }
+
+        // Create outbound transaction (STORE POSITIVE QTY)
         $transaction = InventoryTransaction::create([
-            'product_type' => $orderLine->product_type,
+            'product_type' => $orderLine->product_type === 'App\\Models\\Seed' ? 'seed' : 'item',
             'product_id' => $orderLine->product_id,
             'transaction_type' => 'outbound',
-            'qty' => -$qtyInBaseUnit, // Store negative qty in base unit
+            'qty' => $qtyInBaseUnit, // POSITIVE value in base unit
             'unit' => ($orderLine->product_type === 'seed' || $orderLine->product_type === 'Seed') ? 'kg' : ($product->base_unit ?? 'kg'),
             'contract_id' => $orderLine->partnerOrder->contract_id,
             'partner_order_id' => $orderLine->partner_order_id,
@@ -291,30 +283,20 @@ public function storeOutbound(Request $request)
             'created_by' => Auth::id(),
         ]);
 
-        // Update delivered quantity on order line
+        // Update delivered quantity
         $orderLine->delivered_qty += $validated['qty'];
         $orderLine->save();
-        
-        // Update partner order status
-        $partnerOrder = $orderLine->partnerOrder;
-        $totalQty = $partnerOrder->lines->sum('qty');
-        $totalDelivered = $partnerOrder->lines->sum('delivered_qty');
-        
-        if ($totalDelivered >= $totalQty) {
-            $partnerOrder->status = 'fulfilled';
-        } elseif ($totalDelivered > 0) {
-            $partnerOrder->status = 'partially_fulfilled';
-        }
-        $partnerOrder->save();
+
+        // Update order status
+        $orderLine->partnerOrder->updateStatus();
 
         DB::commit();
-
         return redirect()->route('partner-orders.show', $orderLine->partner_order_id)
             ->with('success', 'Stock delivered successfully');
+
     } catch (\Exception $e) {
         DB::rollBack();
-        return back()->withInput()
-            ->with('error', 'Failed to deliver stock: ' . $e->getMessage());
+        return back()->withErrors(['error' => 'Failed to deliver stock: ' . $e->getMessage()]);
     }
 }
 

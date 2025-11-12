@@ -156,14 +156,24 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/check/seed/variety', [SeedController::class, 'checkVariety'])->name('seeds.checkVariety');
             
     // Items
+    // Export routes - Items (MUST BE BEFORE Route::resource)
+    Route::get('/items/export', [ItemController::class, 'export'])->name('items.export');
+    Route::get('/items/{item}/export-profile', [ItemController::class, 'exportProfile'])->name('items.exportProfile');
+
     Route::resource('items', ItemController::class);
     Route::patch('items/{item}/archive', [ItemController::class, 'archive'])->name('items.archive');
     Route::patch('items/{item}/activate', [ItemController::class, 'activate'])->name('items.activate');
-    Route::get('/items/{item}', [ItemController::class, 'show'])->name('items.show');
-        // Validation routes - Item fields
-        Route::post('/check/item/name', [ItemController::class, 'checkName'])->name('items.checkName');
+
+// Validation routes - Item fields
+Route::post('/check/item/name', [ItemController::class, 'checkName'])->name('items.checkName');
 
     // Field Visits + Reports
+    Route::get('/field-visits/export/pdf', [FieldVisitController::class, 'exportFieldVisitsPDF'])
+        ->name('field-visits.export.pdf')
+        ->middleware('permission:view field visit');
+    Route::get('/field-visits/{field_visit}/export-profile', [FieldVisitController::class, 'exportProfile'])
+        ->name('field-visits.exportProfile')
+        ->middleware('permission:view field visit');
     Route::resource('field-visits', FieldVisitController::class);
     Route::post('field-visits/{id}/complete', [FieldVisitController::class, 'complete'])
         ->name('field-visits.complete');
@@ -179,6 +189,49 @@ Route::middleware(['auth'])->group(function () {
     // Damage Reports Resource Routes (limited actions)
     Route::resource('damage-reports', DamageReportController::class)
         ->only(['index', 'show', 'edit', 'update', 'destroy']);
+
+
+    // Growth Reports
+    Route::get('/growth-reports', [GrowthReportController::class, 'index'])
+        ->name('growth-reports.index')
+        ->middleware('permission:view field visit');
+    
+    Route::get('/growth-reports/{growthReport}', [GrowthReportController::class, 'show'])
+        ->name('growth-reports.show')
+        ->middleware('permission:view field visit');
+    
+    Route::get('/growth-reports/{growthReport}/edit', [GrowthReportController::class, 'edit'])
+        ->name('growth-reports.edit')
+        ->middleware('permission:edit field visit');
+    
+    Route::put('/growth-reports/{growthReport}', [GrowthReportController::class, 'update'])
+        ->name('growth-reports.update')
+        ->middleware('permission:edit field visit');
+    
+    Route::delete('/growth-reports/{growthReport}', [GrowthReportController::class, 'destroy'])
+        ->name('growth-reports.destroy')
+        ->middleware('permission:edit field visit');
+    
+    // Damage Reports
+    Route::get('/damage-reports', [DamageReportController::class, 'index'])
+        ->name('damage-reports.index')
+        ->middleware('permission:view field visit');
+    
+    Route::get('/damage-reports/{damageReport}', [DamageReportController::class, 'show'])
+        ->name('damage-reports.show')
+        ->middleware('permission:view field visit');
+    
+    Route::get('/damage-reports/{damageReport}/edit', [DamageReportController::class, 'edit'])
+        ->name('damage-reports.edit')
+        ->middleware('permission:edit field visit');
+    
+    Route::put('/damage-reports/{damageReport}', [DamageReportController::class, 'update'])
+        ->name('damage-reports.update')
+        ->middleware('permission:edit field visit');
+    
+    Route::delete('/damage-reports/{damageReport}', [DamageReportController::class, 'destroy'])
+        ->name('damage-reports.destroy')
+        ->middleware('permission:edit field visit');
 
 
     // Inventory Transactions

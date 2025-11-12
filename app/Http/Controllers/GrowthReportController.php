@@ -56,19 +56,44 @@ class GrowthReportController extends Controller
     public function update(UpdateGrowthReportRequest $request, $id)
     {
         $report = GrowthReport::findOrFail($id);
+        
+        // Check if field visit is still ongoing
+        $fieldVisit = $report->fieldVisit;
+        if ($fieldVisit->status !== 'ongoing') {
+            return back()->with('error', 'Cannot edit reports from completed or cancelled field visits.');
+        }
+        
         $report->update($request->validated());
 
+        // Check if request is from the report show page or field visit show page
+        $referer = $request->headers->get('referer');
+        
+        // If coming from growth-reports.show, stay on that page
+        if (str_contains($referer, 'growth-reports/' . $id)) {
+            return redirect()
+                ->route('growth-reports.show', $id)
+                ->with('success', 'Growth report updated successfully.');
+        }
+        
+        // Otherwise, go back to field visit show page (default behavior)
         return redirect()
-            ->route('growth-reports.show', $id)
+            ->route('field-visits.show', $report->field_visit_ID)
             ->with('success', 'Growth report updated successfully.');
     }
 
     public function destroy($id)
     {
-        $report = GrowthReport::findOrFail($id);
-        $fieldVisitId = $report->field_visit_ID;
-        $report->delete();
-
+        $growthReport = GrowthReport::findOrFail($id);
+        $fieldVisitId = $growthReport->field_visit_ID;
+        
+        // Check if field visit is still ongoing
+        $fieldVisit = $growthReport->fieldVisit;
+        if ($fieldVisit->status !== 'ongoing') {
+            return back()->with('error', 'Cannot delete reports from completed or cancelled field visits.');
+        }
+        
+        $growthReport->delete();
+        
         return redirect()
             ->route('field-visits.show', $fieldVisitId)
             ->with('success', 'Growth report deleted successfully.');

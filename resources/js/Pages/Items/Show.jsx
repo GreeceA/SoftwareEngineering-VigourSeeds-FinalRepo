@@ -2,37 +2,11 @@ import React from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 
-export default function Show({ auth, item }) {
+export default function Show({ auth, item, recentInventoryLogs, partnerOrders }) {
     const { auth: authData } = usePage().props;
     const permissions = authData?.user?.can || [];
 
-    // Static contract data for demonstration
-    const recentInventoryLogs = [
-        {
-            id: 1,
-            date: "2024-10-10",
-            transaction_type: "inbound",
-            quantity: 500.00,
-            unit: "kg",
-            user: "Jane Doe"
-        },
-        {
-            id: 2,
-            date: "2024-10-05",
-            transaction_type: "outbound",
-            quantity: 120.50,
-            unit: "kg",
-            user: "John Smith"
-        },
-        {
-            id: 3,
-            date: "2024-09-28",
-            transaction_type: "adjustment",
-            quantity: -5.00,
-            unit: "kg",
-            user: "Admin User"
-        }
-    ];
+    
 
     // Helper to format currency for display
     const formatPrice = (price) => {
@@ -45,24 +19,44 @@ export default function Show({ auth, item }) {
 
     // Helper to format date
     const formatDate = (dateString) => {
+        if (!dateString) return 'N/A';
         return new Date(dateString).toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric',
             year: 'numeric'
         });
-    }
+    };
 
     // Helper to style log type
     const getTransactionColor = (type) => {
         switch (type) {
             case 'inbound':
-                return 'bg-blue-100 text-blue-700';
+                return 'bg-green-100 text-green-800 border-green-200';
             case 'outbound':
-                return 'bg-orange-100 text-orange-700';
+                return 'bg-orange-100 text-orange-800 border-orange-200';
             case 'adjustment':
-                return 'bg-yellow-100 text-yellow-700';
+                return 'bg-yellow-100 text-yellow-800 border-yellow-200';
             default:
-                return 'bg-gray-100 text-gray-700';
+                return 'bg-gray-100 text-gray-800 border-gray-200';
+        }
+    };
+
+    // Status badge colors
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'active': return 'bg-green-100 text-green-800 border-green-200';
+            case 'archived': return 'bg-red-100 text-red-800 border-red-200';
+            default: return 'bg-gray-100 text-gray-800 border-gray-200';
+        }
+    };
+
+    // Type badge colors
+    const getTypeColor = (type) => {
+        switch (type) {
+            case 'fertilizer': return 'bg-blue-100 text-blue-800 border-blue-200';
+            case 'pesticide': return 'bg-purple-100 text-purple-800 border-purple-200';
+            case 'equipment': return 'bg-amber-100 text-amber-800 border-amber-200';
+            default: return 'bg-gray-100 text-gray-800 border-gray-200';
         }
     };
 
@@ -76,133 +70,363 @@ export default function Show({ auth, item }) {
                 </h2>
             }
         >
-            <Head title={`Item: ${item.name}`} />
-
+            <Head title={item.name} />
+            
             {/* Breadcrumb */}
             <div className="px-6 pt-6">
-                <nav className="text-sm text-gray-600">
+                <nav className="flex items-center space-x-2 text-sm text-gray-600">
                     <Link
                         href={route('dashboard')}
-                        className="text-[#37692F] hover:underline"
+                        className="text-[#37692F] hover:underline transition-colors duration-200"
                     >
                         Home
-                    </Link>{" "}
-                    /{" "}
+                    </Link>
+                    <span className="text-gray-400">/</span>
                     <Link
                         href={route('items.index')}
-                        className="text-[#37692F] hover:underline"
+                        className="text-[#37692F] hover:underline transition-colors duration-200"
                     >
                         Items
-                    </Link>{" "}
-                    / <span>{item.name}</span>
+                    </Link>
+                    <span className="text-gray-400">/</span>
+                    <span className="text-gray-800 font-medium truncate max-w-xs">{item.name}</span>
                 </nav>
             </div>
 
             <div className="p-6">
                 {/* Header Section */}
-                <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-2xl font-semibold text-gray-800">Item Information</h1>
-                    <div className="flex space-x-3">
-                        {permissions.includes('edit items') && item.status === 'active' && (
-                            <Link
-                                href={route('items.edit', item.id)}
-                                className="bg-[#37692F] text-white px-4 py-2 rounded-md hover:bg-[#2a5624] flex items-center"
+                <div className="mb-8">
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                        <div className="flex items-center space-x-4">
+                            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#37692F] to-[#4a8a3f] flex items-center justify-center shadow-lg">
+                                <span className="text-2xl font-bold text-white">
+                                    {item.name.charAt(0).toUpperCase()}
+                                </span>
+                            </div>
+                            <div>
+                                <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent font-poppins">
+                                    {item.name}
+                                </h1>
+                                <div className="flex items-center space-x-3 mt-2">
+                                    {/* Item Status Badge */}
+                                    <span className={`inline-flex items-center rounded-full border px-3 py-1 text-sm font-medium ${getStatusColor(item.status)}`}>
+                                        <div className={`w-2 h-2 rounded-full mr-2 ${item.status === 'active' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                        {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                                    </span>
+                                    {/* Item Type Badge */}
+                                    <span className={`inline-flex items-center rounded-full border px-3 py-1 text-sm font-medium ${getTypeColor(item.type)}`}>
+                                        {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className="flex flex-wrap gap-3">
+                            <button
+                                type="button"
+                                onClick={() => window.location.href = route('items.exportProfile', item.id)}
+                                className="flex items-center rounded-xl bg-gradient-to-r from-[#37692F] to-[#4a8a3f] px-5 py-3 text-white font-medium hover:from-[#2a5624] hover:to-[#37692F] transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                                title="Export Item Profile PDF"
                             >
-                                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                                 </svg>
-                                Edit Item
+                                Export PDF
+                            </button>
+                            {permissions.includes('edit items') && item.status !== 'archived' && (
+                                <Link
+                                    href={route('items.edit', item.id)}
+                                    className="flex items-center rounded-xl bg-gradient-to-r from-[#37692F] to-[#4a8a3f] px-5 py-3 text-white font-medium hover:from-[#2a5624] hover:to-[#37692F] transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                                >
+                                    <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                    Edit Item
+                                </Link>
+                            )}
+                            <Link
+                                href={route('items.index')}
+                                className="flex items-center rounded-xl bg-gradient-to-r from-gray-500 to-gray-600 px-5 py-3 text-white font-medium hover:from-gray-600 hover:to-gray-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                            >
+                                <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                </svg>
+                                Back to List
                             </Link>
-                        )}
-                        <Link
-                            href={route('items.index')}
-                            className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600 flex items-center"
-                        >
-                            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                            </svg>
-                            Back to List
-                        </Link>
+                        </div>
                     </div>
                 </div>
 
-                {/* Main Content */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Basic Information Card */}
-                    <div className="bg-white shadow-lg rounded-lg p-6">
-                        <h2 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Basic Information</h2>
+                {/* Main Content Grid */}
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    
+                    {/* Basic Information */}
+                    <div className="rounded-2xl bg-gradient-to-br from-white to-gray-50 p-6 shadow-xl border border-gray-100">
+                        <div className="flex items-center space-x-3 mb-6">
+                            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <h2 className="text-xl font-bold text-gray-800">Basic Information</h2>
+                        </div>
                         
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Item Name</label>
-                                <p className="text-sm text-gray-900 font-poppins font-normal">{item.name}</p>
+                        <div className="space-y-5">
+                            <div className="p-4 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200">
+                                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500">Item Name</label>
+                                <p className="text-lg font-semibold text-gray-900">{item.name}</p>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                                <span className={`inline-flex px-3 py-1 rounded-full text-xs font-poppins font-normal ${
-                                    item.status === 'active' 
-                                        ? 'bg-green-100 text-green-700' 
-                                        : 'bg-red-100 text-red-700'
-                                }`}>
-                                    {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-                                </span>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="p-4 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200">
+                                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500">Status</label>
+                                    <span className={`inline-flex items-center rounded-full px-3 py-1.5 text-sm font-medium ${getStatusColor(item.status)}`}>
+                                        {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                                    </span>
+                                </div>
+
+                                <div className="p-4 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200">
+                                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500">Item Type</label>
+                                    <span className={`inline-flex items-center rounded-full px-3 py-1.5 text-sm font-medium ${getTypeColor(item.type)}`}>
+                                        {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
+                                    </span>
+                                </div>
                             </div>
 
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Price per Unit</label>
-                                <p className="text-sm text-gray-900 font-poppins font-normal">₱{item.price_per_unit} / {item.base_unit}</p>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">Item Type</label>
-                                <p className="text-sm text-gray-900 font-poppins font-normal">{item.type}</p>
+                            <div className="p-4 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200">
+                                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500">Price per Unit</label>
+                                <p className="text-gray-900 font-semibold">Php {Number(item.price_per_unit).toFixed(2)} / {item.base_unit}</p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Empty column to maintain grid layout */}
-                    <div></div>
+                    {/* Stock Information Card */}
+                    <div className="rounded-2xl bg-gradient-to-br from-white to-gray-50 p-6 shadow-xl border border-gray-100">
+                        <div className="flex items-center space-x-3 mb-6">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
+                                <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                </svg>
+                            </div>
+                            <h2 className="text-xl font-bold text-gray-800">Stock Information</h2>
+                        </div>
+                        
+                        <div className="space-y-5">
+                            <div className="p-4 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200">
+                                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500">Current Stock</label>
+                                <p className="text-2xl font-bold text-gray-900">
+                                    {Number(item.stock_on_hand || 0).toLocaleString()} {item.base_unit}
+                                </p>
+                            </div>
+
+                            <div className="p-4 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200">
+                                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500">Total Stock Value</label>
+                                <p className="text-xl font-bold text-gray-900">
+                                    {formatPrice(item.total_stock_value || 0)}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
 
                     {/* Description Card */}
                     {item.description && (
-                        <div className="bg-white shadow-lg rounded-lg p-6 md:col-span-2">
-                            <h2 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Description</h2>
-                            <p className="text-sm text-gray-900 font-poppins font-normal whitespace-pre-wrap">{item.description}</p>
+                        <div className="lg:col-span-2 rounded-2xl bg-gradient-to-br from-white to-gray-50 p-6 shadow-xl border border-gray-100">
+                            <div className="flex items-center space-x-3 mb-6">
+                                <div className="w-10 h-10 rounded-xl bg-yellow-50 flex items-center justify-center">
+                                    <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                </div>
+                                <h2 className="text-xl font-bold text-gray-800">Description</h2>
+                            </div>
+                            <div className="p-4 rounded-xl bg-white border border-gray-100 shadow-sm">
+                                <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{item.description}</p>
+                            </div>
                         </div>
                     )}
 
-                    {/* 👇 RENAMED AND MODIFIED: Recent Inventory Logs Card */}
-                    <div className="bg-white shadow-lg rounded-lg p-6 md:col-span-2">
-                        <h2 className="text-lg font-semibold text-gray-800 mb-4 border-b pb-2">Recent Inventory Logs</h2>
+                    {/* Partner Orders Card */}
+                    <div className="lg:col-span-2 rounded-2xl bg-gradient-to-br from-white to-gray-50 p-6 shadow-xl border border-gray-100">
+                        <div className="flex items-center space-x-3 mb-6">
+                            <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center">
+                                <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                            </div>
+                            <h2 className="text-xl font-bold text-gray-800">Partner Orders ({partnerOrders?.length || 0})</h2>
+                        </div>
                         
-                        {recentInventoryLogs.length > 0 ? (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm text-left">
-                                    <thead className="bg-gray-100 text-gray-700 uppercase text-xs">
+                        {partnerOrders && partnerOrders.length > 0 ? (
+                            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+                                            <tr>
+                                                {['Order ID', 'Partner', 'Farm', 'Date', 'Status', 'Qty Ordered', 'Qty Delivered', 'Price', 'Total Value'].map((header) => (
+                                                    <th key={header} className="px-4 py-3 text-xs font-semibold uppercase tracking-wide text-gray-700 whitespace-nowrap">
+                                                        {header}
+                                                    </th>
+                                                ))}
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {partnerOrders.map((order) => (
+                                                <tr key={order.id} className="hover:bg-gray-50 transition-colors duration-150">
+                                                    <td className="px-4 py-3">
+                                                        <Link
+                                                            href={route('partner-orders.show', order.id)}
+                                                            className="text-blue-600 hover:text-blue-800 font-semibold hover:underline"
+                                                        >
+                                                            #{order.id}
+                                                        </Link>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <span className="font-medium text-gray-900">{order.partner_name}</span>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <span className="text-sm text-gray-600">{order.farm_name}</span>
+                                                    </td>
+                                                    <td className="px-4 py-3 whitespace-nowrap">
+                                                        <span className="text-sm text-gray-900">{formatDate(order.order_date)}</span>
+                                                    </td>
+                                                    <td className="px-4 py-3">
+                                                        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
+                                                            order.status === 'fulfilled' ? 'bg-green-100 text-green-800 border border-green-200' :
+                                                            order.status === 'partially_fulfilled' ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' :
+                                                            order.status === 'pending' ? 'bg-blue-100 text-blue-800 border border-blue-200' :
+                                                            order.status === 'confirmed' ? 'bg-purple-100 text-purple-800 border border-purple-200' :
+                                                            'bg-gray-100 text-gray-800 border border-gray-200'
+                                                        }`}>
+                                                            {order.status === 'partially_fulfilled' ? 'Partial' : 
+                                                            order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-3 whitespace-nowrap">
+                                                        <span className="font-semibold text-gray-900">
+                                                            {Number(order.qty_ordered).toLocaleString()} {order.unit}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-3 whitespace-nowrap">
+                                                        <span className={`font-semibold ${
+                                                            order.qty_delivered >= order.qty_ordered ? 'text-green-600' : 'text-orange-600'
+                                                        }`}>
+                                                            {Number(order.qty_delivered).toLocaleString()} {order.unit}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-3 whitespace-nowrap">
+                                                        <span className="text-sm text-gray-900">
+                                                            {formatPrice(order.price)}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-4 py-3 whitespace-nowrap">
+                                                        <span className="font-semibold text-gray-900">
+                                                            {formatPrice(order.total_value)}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                
+                                {/* Summary Stats */}
+                                <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-4 border-t border-gray-200">
+                                    <div className="grid grid-cols-4 gap-4">
+                                        <div className="text-center">
+                                            <div className="text-xs text-gray-600 uppercase tracking-wide mb-1">Total Orders</div>
+                                            <div className="text-xl font-bold text-gray-900">{partnerOrders.length}</div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="text-xs text-gray-600 uppercase tracking-wide mb-1">Total Ordered</div>
+                                            <div className="text-lg font-bold text-blue-600">
+                                                {partnerOrders.reduce((sum, order) => sum + Number(order.qty_ordered || 0), 0).toLocaleString()} {item.base_unit}
+                                            </div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="text-xs text-gray-600 uppercase tracking-wide mb-1">Total Delivered</div>
+                                            <div className="text-lg font-bold text-green-600">
+                                                {partnerOrders.reduce((sum, order) => sum + Number(order.qty_delivered || 0), 0).toLocaleString()} {item.base_unit}
+                                            </div>
+                                        </div>
+                                        <div className="text-center">
+                                            <div className="text-xs text-gray-600 uppercase tracking-wide mb-1">Total Value</div>
+                                            <div className="text-lg font-bold text-gray-900">
+                                                {formatPrice(partnerOrders.reduce((sum, order) => sum + Number(order.total_value || 0), 0))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center py-12">
+                                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                </div>
+                                <p className="text-gray-500 font-medium">No partner orders found for this item.</p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Recent Inventory Logs Card */}
+                    <div className="lg:col-span-2 rounded-2xl bg-gradient-to-br from-white to-gray-50 p-6 shadow-xl border border-gray-100">
+                        <div className="flex items-center space-x-3 mb-6">
+                            <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center">
+                                <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                </svg>
+                            </div>
+                            <h2 className="text-xl font-bold text-gray-800">Recent Inventory Logs ({recentInventoryLogs?.length || 0})</h2>
+                        </div>
+                        
+                        {recentInventoryLogs && recentInventoryLogs.length > 0 ? (
+                            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                                <table className="w-full text-left">
+                                    <thead className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
                                         <tr>
-                                            <th className="px-4 py-3 font-poppins font-medium">Date</th>
-                                            <th className="px-4 py-3 font-poppins font-medium">Type</th>
-                                            <th className="px-4 py-3 font-poppins font-medium">Quantity</th>
-                                            <th className="px-4 py-3 font-poppins font-medium">Recorded By</th>
+                                            {['Date', 'Transaction Type', 'Quantity', 'Recorded By'].map((header) => (
+                                                <th key={header} className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-gray-700">
+                                                    {header}
+                                                </th>
+                                            ))}
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-gray-200">
+                                    <tbody className="divide-y divide-gray-100">
                                         {recentInventoryLogs.map((log) => (
-                                            <tr key={log.id} className="hover:bg-gray-50">
-                                                <td className="px-4 py-3 font-poppins font-normal text-gray-900">
-                                                    {formatDate(log.date)}
+                                            <tr key={log.id} className="hover:bg-gray-50 transition-colors duration-150">
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center space-x-3">
+                                                        <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                                                            <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                                            </svg>
+                                                        </div>
+                                                        <span className="font-medium text-gray-900">
+                                                            {formatDate(log.date)}
+                                                        </span>
+                                                    </div>
                                                 </td>
-                                                <td className="px-4 py-3">
-                                                    <span className={`px-3 py-1 rounded-full text-xs font-poppins font-normal ${getTransactionColor(log.transaction_type)}`}>
+                                                <td className="px-6 py-4">
+                                                    <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${getTransactionColor(log.transaction_type)}`}>
+                                                        <div className={`w-2 h-2 rounded-full mr-2 ${
+                                                            log.transaction_type === 'inbound' ? 'bg-green-500' : 
+                                                            log.transaction_type === 'outbound' ? 'bg-orange-500' : 'bg-yellow-500'
+                                                        }`}></div>
                                                         {log.transaction_type.charAt(0).toUpperCase() + log.transaction_type.slice(1)}
                                                     </span>
                                                 </td>
-                                                <td className="px-4 py-3 font-poppins font-normal text-gray-900">
-                                                    {/* Display quantity with its unit */}
-                                                    <span className="font-semibold">{log.quantity}</span> {log.unit}
+                                                <td className="px-6 py-4">
+                                                    <span className={`font-semibold text-sm ${
+                                                        log.transaction_type === 'inbound' ? 'text-green-700' : 
+                                                        log.transaction_type === 'outbound' ? 'text-orange-700' : 'text-yellow-700'
+                                                    }`}>
+                                                        {log.transaction_type === 'inbound' && '+'}
+                                                        {log.transaction_type === 'outbound' && '-'}
+                                                        {Number(log.quantity).toLocaleString()} {log.unit}
+                                                    </span>
                                                 </td>
-                                                <td className="px-4 py-3 font-poppins font-normal text-gray-600">
+                                                <td className="px-6 py-4 text-sm text-gray-600 font-medium">
                                                     {log.user}
                                                 </td>
                                             </tr>
@@ -211,23 +435,32 @@ export default function Show({ auth, item }) {
                                 </table>
                             </div>
                         ) : (
-                            <p className="text-sm text-gray-500 font-poppins font-normal">No inventory logs found for this item.</p>
+                            <div className="text-center py-12">
+                                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                    </svg>
+                                </div>
+                                <p className="text-gray-500 font-medium">No inventory logs found for this item.</p>
+                            </div>
                         )}
                     </div>
                 </div>
 
                 {/* Timestamps */}
-                <div className="mt-6 text-sm text-gray-500 font-poppins font-normal">
-                    <p>Created: {new Date(item.created_at).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric'
-                    })}</p>
-                    <p>Last Updated: {new Date(item.updated_at).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric'
-                    })}</p>
+                <div className="mt-8 flex flex-wrap gap-6 text-sm text-gray-500">
+                    <div className="flex items-center space-x-2 bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>Created: <strong className="text-gray-700">{formatDate(item.created_at)}</strong></span>
+                    </div>
+                    <div className="flex items-center space-x-2 bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <span>Last Updated: <strong className="text-gray-700">{formatDate(item.updated_at)}</strong></span>
+                    </div>
                 </div>
             </div>
         </AuthenticatedLayout>

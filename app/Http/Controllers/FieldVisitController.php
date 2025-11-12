@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Barryvdh\DomPDF\Facade\Pdf;
+
 
 class FieldVisitController extends Controller implements HasMiddleware
 {
@@ -125,18 +127,35 @@ class FieldVisitController extends Controller implements HasMiddleware
 
     public function edit($id)
     {
-        $fieldVisit = FieldVisit::findOrFail($id);
+        $fieldVisit = FieldVisit::with(['contract.farm'])->findOrFail($id);
 
-        if (method_exists($fieldVisit, 'canBeEdited') && ! $fieldVisit->canBeEdited()) {
+        // 🛑 THE "WHEN" CONDITION 🛑
+        // Only allow editing if status is 'ongoing'
+        if ($fieldVisit->status === 'completed') {
             return redirect()
                 ->route('field-visits.show', $id)
-                ->with('error', 'Completed field visits cannot be edited.');
+                ->with('error', 'This field visit is already completed and cannot be edited. Completed visits are locked as historical records.');
         }
 
-        return Inertia::render('FieldVisits/Edit', [
+        if ($fieldVisit->status === 'cancelled') {
+            return redirect()
+                ->route('field-visits.show', $id)
+                ->with('error', 'This field visit is cancelled and cannot be edited. Cancelled visits are locked as historical records.');
+        }
+
+        // Get contracts and users for the form
+        $contracts = Contract::with('farm')
+            ->where('status', 'active')
+            ->select('id', 'contract_name', 'farm_id')
+            ->get();
+
+        $users = User::select('id', 'first_name', 'last_name')->get();
+
+        return Inertia::render('FieldVisits/FieldVisitForm', [
+            'auth' => ['user' => auth()->user()],
             'fieldVisit' => $fieldVisit,
-            'contracts' => Contract::with('farm')->select('id', 'contract_name', 'farm_id')->get(),
-            'users' => User::select('id', 'first_name', 'last_name')->get(),
+            'contracts' => $contracts,
+            'users' => $users,
         ]);
     }
 
@@ -144,12 +163,17 @@ class FieldVisitController extends Controller implements HasMiddleware
     {
         $fieldVisit = FieldVisit::findOrFail($id);
 
-        if (method_exists($fieldVisit, 'canBeEdited') && ! $fieldVisit->canBeEdited()) {
-            return redirect()
-                ->route('field-visits.show', $id)
-                ->with('error', 'Completed field visits cannot be edited.');
+        // 🛑 THE "WHEN" CONDITION 🛑
+        // Check the *current* status of the visit (the one from the database)
+        if ($fieldVisit->status === 'completed') {
+            return back()->with('error', 'This field visit is already completed and cannot be edited. Completed visits are locked as historical records.');
         }
 
+        if ($fieldVisit->status === 'cancelled') {
+            return back()->with('error', 'This field visit is cancelled and cannot be edited. Cancelled visits are locked as historical records.');
+        }
+
+        // Update only the allowed fields
         $fieldVisit->update($request->validated());
 
         return redirect()
@@ -239,5 +263,62 @@ class FieldVisitController extends Controller implements HasMiddleware
         return redirect()
             ->route('field-visits.show', $fieldVisitId)
             ->with('success', 'Damage report added successfully.');
+    }
+
+    public function exportFieldVisitsPDF(Request $request)
+    {
+        $filters = $request->only(['status', 'contract_id', 'date_from', 'date_to']);
+
+        $query = FieldVisit::with([
+            'contract:id,contract_name,partner_id',
+            'contract.partner:id,name',
+            'assignee:id,first_name,last_name'
+        ])
+        ->withCount(['growthReports', 'damageReports']);
+
+        // Apply filters
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+        if ($request->filled('contract_id')) {
+            $query->where('contract_ID', $request->contract_id);
+        }
+        if ($request->filled('date_from')) {
+            $query->where('date_visit', '>=', $request->date_from);
+        }
+        if ($request->filled('date_to')) {
+            $query->where('date_visit', '<=', $request->date_to);
+        }
+
+        $visits = $query->orderBy('date_visit', 'desc')->get();
+
+        $pdf = Pdf::loadView('exports.field_visits_pdf', [
+            'visits' => $visits,
+            'user' => auth()->user(),
+            'filters' => $filters,
+            'generationDate' => now()->format('F d, Y - h:i A')
+        ])->setPaper('A4', 'landscape');
+
+        return $pdf->download('VigourSeed_FieldVisitsList_' . now()->format('Y-m-d') . '.pdf');
+    }
+
+    public function exportProfile($id)
+    {
+        $visit = FieldVisit::with([
+            'contract.partner',
+            'farm',
+            'assignee',
+            'growthReports',
+            'damageReports'
+        ])->findOrFail($id);
+
+        $pdf = Pdf::loadView('exports.field_visit_profile_pdf', [
+            'visit' => $visit,
+            'user' => auth()->user(),
+        ])->setPaper('a4', 'portrait');
+
+        return response($pdf->output(), 200)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'attachment; filename="VigourSeed_FieldVisit_' . $visit->field_visit_ID . '_' . now()->format('Y-m-d') . '.pdf"');
     }
 }
