@@ -1,6 +1,7 @@
 import React from 'react';
 import { Head, Link, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import { Button } from '@headlessui/react';
 
 export default function Show({ auth, partner }) {
     const { auth: authData } = usePage().props;
@@ -46,6 +47,7 @@ export default function Show({ auth, partner }) {
             {/* Breadcrumb */}
             <div className="px-6 pt-6">
                 <nav className="flex items-center space-x-2 text-sm text-gray-600">
+                    
                     <Link
                         href={route('dashboard')}
                         className="text-[#37692F] hover:underline transition-colors duration-200"
@@ -92,6 +94,17 @@ export default function Show({ auth, partner }) {
                         </div>
                         
                         <div className="flex flex-wrap gap-3">
+                            <button
+                                type="button"
+                                onClick={() => window.location.href = route('partners.exportProfile', partner.id)}
+                                className="flex items-center rounded-xl bg-gradient-to-r from-[#37692F] to-[#4a8a3f] px-5 py-3 text-white font-medium hover:from-[#2a5624] hover:to-[#37692F] transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                                title="Export Partner Profile PDF"
+                            >
+                                <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Export PDF
+                            </button>
                             {permissions.includes('edit partners') && partner.status !== 'inactive' && (
                                 <Link
                                     href={route('partners.edit', partner.id)}

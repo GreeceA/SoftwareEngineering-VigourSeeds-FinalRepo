@@ -102,6 +102,11 @@ class Seed extends Model
         return $this->hasOne(CornProduct::class);
     }
 
+    public function contractCommitments()
+    {
+        return $this->hasMany(ContractSeedCommitment::class);
+    }
+    
     protected static function boot()
     {
         parent::boot();

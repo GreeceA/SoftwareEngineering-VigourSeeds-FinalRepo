@@ -3,7 +3,7 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import React, { useState, useRef, useEffect } from 'react';
 import { debounce } from 'lodash';
 import '../../../css/fonts.css';
-import { ArchiveBoxIcon, ChevronDownIcon, FunnelIcon, ArrowsUpDownIcon } from '@heroicons/react/24/outline';
+import { ArchiveBoxIcon, ChevronDownIcon, FunnelIcon, ArrowsUpDownIcon, ArrowDownTrayIcon} from '@heroicons/react/24/outline';
 import ArchiveModal from '@/Pages/Seeds/ArchiveSeedsModal';
 import RestoreModal from '@/Pages/Seeds/ReactivateSeedsModal';
 
@@ -21,14 +21,16 @@ export default function Index({ auth, seeds, filters }) {
     const [showRestoreModal, setShowRestoreModal] = useState(false);
     const [selectedSeed, setSelectedSeed] = useState(null);
     const [perPage, setPerPage] = useState(filters.per_page || 10);
+    const [showExportDropdown, setShowExportDropdown] = useState(false);
 
     const filterRef = useRef(null);
     const sortRef = useRef(null);
-
+    const exportRef = useRef(null);
     useEffect(() => {
         const handleClickOutside = (event) => {
             if (filterRef.current && !filterRef.current.contains(event.target)) setShowFilterDropdown(false);
             if (sortRef.current && !sortRef.current.contains(event.target)) setShowSortDropdown(false);
+            if (exportRef.current && !exportRef.current.contains(event.target)) setShowExportDropdown(false);
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -102,6 +104,11 @@ export default function Index({ auth, seeds, filters }) {
         setSelectedSeed(null);
     };
 
+    const handleExport = (format) => {
+        window.location.href = route('seeds.export', { format });
+        setShowExportDropdown(false);
+    };
+
     return (
         <AuthenticatedLayout
             user={auth.user}
@@ -130,6 +137,38 @@ export default function Index({ auth, seeds, filters }) {
                 <div className="mb-6 flex items-center justify-between">
                     <h1 className="text-2xl font-semibold text-gray-800">Seed Management System</h1>
                     <div className="flex space-x-3">
+
+                        {/* Export Dropdown */}
+                        <div className="relative" ref={exportRef}>
+                            <button
+                                onClick={() => { 
+                                    setShowExportDropdown(!showExportDropdown); 
+                                    setShowFilterDropdown(false); 
+                                    setShowSortDropdown(false); 
+                                }}
+                                className="flex items-center px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#37692F] bg-white"
+                            >
+                                <ArrowDownTrayIcon className="w-4 h-4 mr-2 text-gray-500" />
+                                Export
+                                <ChevronDownIcon className="w-4 h-4 ml-2 text-gray-500" />
+                            </button>
+                            {showExportDropdown && (
+                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-10">
+                                    <div className="py-1">
+                                        <button
+                                            onClick={() => handleExport('pdf')}
+                                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700 flex items-center"
+                                        >
+                                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                            </svg>
+                                            Export as PDF
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
                         {/* Status Filter Dropdown */}
                         <div className="relative" ref={filterRef}>
                             <button

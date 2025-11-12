@@ -42,4 +42,6 @@ class Partner extends Model
     {
         return $this->hasMany(\App\Models\Contract::class, 'partner_id');
     }
+
+    
 }

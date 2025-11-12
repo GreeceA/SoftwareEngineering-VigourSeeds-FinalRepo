@@ -818,7 +818,7 @@ export default function PartnerForm({ partner = null }) {
                                         <h4 className="font-medium text-gray-700">
                                             Farm #{idx + 1} {farm.location_name && `- ${farm.location_name}`}
                                         </h4>
-                                        {idx > 0 && (
+                                        {idx > 0 && !farm.contract_id && (
                                             <button
                                                 type="button"
                                                 onClick={() => removeFarm(idx)}

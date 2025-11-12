@@ -113,6 +113,13 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/check/partner/email', [PartnerController::class, 'checkEmail'])->name('partners.checkEmail');
         Route::post('/check/partner/registration', [PartnerController::class, 'checkRegistrationNumber'])->name('partners.checkRegistration');
         Route::post('/check/partner/taxid', [PartnerController::class, 'checkTaxId'])->name('partners.checkTaxId');
+        // Export routes - Partners
+        Route::get('partners-export', [PartnerController::class, 'export'])
+         ->name('partners.export')
+         ->middleware('permission:view partners');
+        Route::get('partners/{partner}/export', [PartnerController::class, 'exportProfile'])
+            ->name('partners.exportProfile')
+            ->middleware('permission:view partners');
 
     // Contracts
     Route::resource('contracts', ContractController::class);
@@ -136,14 +143,18 @@ Route::middleware(['auth'])->group(function () {
         ->middleware(['permission:view contracts']);
 
     // Seeds
+    // Export routes - Seeds (MUST BE BEFORE Route::resource)
+    Route::get('/seeds/export', [SeedController::class, 'export'])->name('seeds.export');
+    Route::get('/seeds/{seed}/export-profile', [SeedController::class, 'exportProfile'])->name('seeds.exportProfile');
+
     Route::resource('seeds', SeedController::class);
     Route::patch('seeds/{seed}/archive', [SeedController::class, 'archive'])->name('seeds.archive');
     Route::patch('seeds/{seed}/restore', [SeedController::class, 'restore'])->name('seeds.restore');
     Route::delete('seeds/{seed}', [SeedController::class, 'destroy'])->name('seeds.destroy');
-    Route::get('/seeds/{seed}', [SeedController::class, 'show'])->name('seeds.show');
-        // Validation routes - Seed fields
-        Route::post('/check/seed/variety', [SeedController::class, 'checkVariety'])->name('seeds.checkVariety');
 
+    // Validation routes - Seed fields
+    Route::post('/check/seed/variety', [SeedController::class, 'checkVariety'])->name('seeds.checkVariety');
+            
     // Items
     Route::resource('items', ItemController::class);
     Route::patch('items/{item}/archive', [ItemController::class, 'archive'])->name('items.archive');

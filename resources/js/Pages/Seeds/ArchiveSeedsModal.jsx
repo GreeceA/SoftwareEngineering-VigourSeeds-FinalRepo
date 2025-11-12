@@ -4,6 +4,19 @@ import React from 'react';
 export default function ArchiveModal({ seed, onCancel, onConfirm }) {
     if (!seed) return null;
 
+    // Check if seed has ongoing contracts
+    const ongoingStatuses = ['draft', 'under_review', 'active', 'suspended'];
+    const hasOngoingContracts = seed.contracts?.some(
+        contract => ongoingStatuses.includes(contract.status)
+    );
+
+    // Check if seed has current stock
+    const currentStock = seed.current_stock || 0;
+    const hasStock = currentStock > 0;
+
+    // Determine if archival is blocked
+    const isBlocked = hasOngoingContracts || hasStock;
+
     return (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50">
             <div className="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
@@ -30,17 +43,41 @@ export default function ArchiveModal({ seed, onCancel, onConfirm }) {
                     This seed will be archived and will no longer be available for new contracts until reactivated.
                 </p>
 
-                <div className="mb-6 rounded-lg border border-yellow-200 bg-yellow-50 p-3">
-                    <p className="text-center text-xs font-medium text-yellow-800">
-                        ⚠️ Warning: You cannot archive a seed that is in an active and ongoing contract.
-                    </p>
+                {/* Warning Messages */}
+                <div className="mb-6 space-y-2">
+                    {hasOngoingContracts && (
+                        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3">
+                            <p className="text-center text-xs font-medium text-yellow-800">
+                                ⚠️ Cannot archive: This seed is used in ongoing contracts (<b>draft, under review, active, or suspended</b>).<br />
+                                Please terminate, cancel, or complete all contracts before archiving.
+                            </p>
+                        </div>
+                    )}
+
+                    {hasStock && (
+                        <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+                            <p className="text-center text-xs font-medium text-red-800">
+                                ⚠️ Cannot archive: This seed has <b>{currentStock.toFixed(2)} kg</b> of stock on hand.<br />
+                                Please remove or transfer all stock before archiving.
+                            </p>
+                        </div>
+                    )}
+
+                    {!isBlocked && (
+                        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3">
+                            <p className="text-center text-xs font-medium text-yellow-800">
+                                ⚠️ Warning: Seeds with ongoing contracts or stock cannot be archived.
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 {/* Buttons */}
                 <div className="mt-8 flex justify-center space-x-4">
                     <button
-                        className="flex-1 rounded-lg bg-orange-600 px-5 py-3 text-sm font-medium font-poppins text-white transition-colors hover:bg-orange-700"
+                        className="flex-1 rounded-lg bg-orange-600 px-5 py-3 text-sm font-medium font-poppins text-white transition-colors hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={() => onConfirm(seed.id)}
+                        disabled={isBlocked}
                     >
                         Archive Seed
                     </button>
