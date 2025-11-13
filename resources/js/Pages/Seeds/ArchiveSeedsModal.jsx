@@ -4,17 +4,14 @@ import React from 'react';
 export default function ArchiveModal({ seed, onCancel, onConfirm }) {
     if (!seed) return null;
 
-    // Check if seed has ongoing contracts
     const ongoingStatuses = ['draft', 'under_review', 'active', 'suspended'];
     const hasOngoingContracts = seed.contracts?.some(
         contract => ongoingStatuses.includes(contract.status)
     );
 
-    // Check if seed has current stock
     const currentStock = seed.current_stock || 0;
     const hasStock = currentStock > 0;
 
-    // Determine if archival is blocked
     const isBlocked = hasOngoingContracts || hasStock;
 
     return (

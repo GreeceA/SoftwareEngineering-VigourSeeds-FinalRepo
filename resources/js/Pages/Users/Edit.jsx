@@ -5,11 +5,10 @@ import '../../../css/fonts.css';
 import { router } from '@inertiajs/react';
 
 export default function Edit({ auth, user, roles = [], userRoles = [] }) {
-    // Use the first user role if available, fallback to user.role or empty string
     const { data, setData, put, processing, errors } = useForm({
         first_name: user.first_name || '',
         last_name: user.last_name || '',
-        roles: userRoles.map(role => role.id) || [], // Store role IDs instead of names
+        roles: userRoles.map(role => role.id) || [], 
     });
 
     const [showSuccessMessage, setShowSuccessMessage] = useState(false);

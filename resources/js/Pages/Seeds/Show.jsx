@@ -6,12 +6,6 @@ export default function Show({ auth, seed, associatedContracts }) {
     const { auth: authData } = usePage().props;
     const permissions = authData?.user?.can || [];
 
-    // --- HELPER FUNCTIONS ---
-
-    // Static contract data for demonstration
-    // This should be replaced with `seed.contracts` or similar from your controller
-  
-
     const dateFormatter = (dateString) => {
         if (!dateString) return 'N/A';
         return new Date(dateString).toLocaleDateString('en-US', {

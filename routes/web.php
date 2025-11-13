@@ -4,7 +4,6 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-
 // Controllers
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserController;
@@ -25,9 +24,7 @@ use App\Http\Controllers\Auth\EmailVerificationPromptController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\NotificationController; // Add this line
-
-
+use App\Http\Controllers\NotificationController;
 
 // -----------------
 // Public Routes
@@ -49,7 +46,6 @@ Route::middleware(['auth'])->group(function () {
     
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-
 
     // Profile
     Route::prefix('profile')->name('profile.')->group(function () {
@@ -105,26 +101,26 @@ Route::middleware(['auth'])->group(function () {
     });
 
     Route::get('/users/export', [UserController::class, 'export'])
-    ->middleware(['auth', 'permission:view users'])
-    ->name('users.export');
+        ->middleware(['auth', 'permission:view users'])
+        ->name('users.export');
     
     // Partners
     Route::resource('partners', PartnerController::class)->except(['show']);
     Route::post('partners/{partner}/deactivate', [PartnerController::class, 'deactivate'])->name('partners.deactivate');
     Route::post('partners/{partner}/reactivate', [PartnerController::class, 'reactivate'])->name('partners.reactivate');
     Route::get('partners/{partner}', [PartnerController::class, 'show'])->name('partners.show');
-        // Validation routes - Partner fields
-        Route::post('/check/partner/name', [PartnerController::class, 'checkName'])->name('partners.checkName');
-        Route::post('/check/partner/email', [PartnerController::class, 'checkEmail'])->name('partners.checkEmail');
-        Route::post('/check/partner/registration', [PartnerController::class, 'checkRegistrationNumber'])->name('partners.checkRegistration');
-        Route::post('/check/partner/taxid', [PartnerController::class, 'checkTaxId'])->name('partners.checkTaxId');
-        // Export routes - Partners
-        Route::get('partners-export', [PartnerController::class, 'export'])
-         ->name('partners.export')
-         ->middleware('permission:view partners');
-        Route::get('partners/{partner}/export', [PartnerController::class, 'exportProfile'])
-            ->name('partners.exportProfile')
-            ->middleware('permission:view partners');
+    // Validation routes - Partner fields
+    Route::post('/check/partner/name', [PartnerController::class, 'checkName'])->name('partners.checkName');
+    Route::post('/check/partner/email', [PartnerController::class, 'checkEmail'])->name('partners.checkEmail');
+    Route::post('/check/partner/registration', [PartnerController::class, 'checkRegistrationNumber'])->name('partners.checkRegistration');
+    Route::post('/check/partner/taxid', [PartnerController::class, 'checkTaxId'])->name('partners.checkTaxId');
+    // Export routes - Partners
+    Route::get('partners-export', [PartnerController::class, 'export'])
+        ->name('partners.export')
+        ->middleware('permission:view partners');
+    Route::get('partners/{partner}/export', [PartnerController::class, 'exportProfile'])
+        ->name('partners.exportProfile')
+        ->middleware('permission:view partners');
 
     // Contracts
     Route::get('/contracts/export/pdf', [ContractController::class, 'exportContractsPDF'])->name('contracts.export.pdf');
@@ -133,23 +129,23 @@ Route::middleware(['auth'])->group(function () {
         ->middleware(['permission:view contracts']);
     Route::resource('contracts', ContractController::class);
     Route::post('contracts/{contract}/status', [ContractController::class, 'changeStatus'])
-      ->name('contracts.change-status');
+        ->name('contracts.change-status');
     Route::get('partners/search', [ContractController::class, 'searchPartners'])
         ->name('partners.search');
     Route::post('/contracts/{contract}/cancel', [ContractController::class, 'destroy'])->name('contracts.cancel');
     Route::get('/contracts/preview-pdf/{filename}', [ContractController::class, 'previewDocxAsPdf']);
-        // Download routes - Contract files
-            Route::get('/contracts/download-pdf/{filename}', [ContractController::class, 'downloadAsPdf']);
-            Route::get('/contracts/download-docx/{filename}', [ContractController::class, 'downloadAsDocx']);
+    // Download routes - Contract files
+    Route::get('/contracts/download-pdf/{filename}', [ContractController::class, 'downloadAsPdf']);
+    Route::get('/contracts/download-docx/{filename}', [ContractController::class, 'downloadAsDocx']);
     Route::post('contracts/{contract}/email', [ContractController::class, 'sendEmail'])
-      ->name('contracts.sendEmail');
+        ->name('contracts.sendEmail');
     Route::get('/partner-portal/contracts/{id}', [ContractController::class, 'showPartner'])->name('partner.contracts.show');
     Route::post('/partner-portal/contracts/{id}/verify', [ContractController::class, 'verifyPartner'])->name('partner.contracts.verify');
     Route::post('contracts/check-name', [ContractController::class, 'checkNameUnique'])
-      ->name('contracts.checkNameUnique');
+        ->name('contracts.checkNameUnique');
 
     // Seeds
-    // Export routes - Seeds (MUST BE BEFORE Route::resource)
+    // Export routes - Seeds 
     Route::get('/seeds/export', [SeedController::class, 'export'])->name('seeds.export');
     Route::get('/seeds/{seed}/export-profile', [SeedController::class, 'exportProfile'])->name('seeds.exportProfile');
 
@@ -162,7 +158,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/check/seed/variety', [SeedController::class, 'checkVariety'])->name('seeds.checkVariety');
             
     // Items
-    // Export routes - Items (MUST BE BEFORE Route::resource)
+    // Export routes - Items 
     Route::get('/items/export', [ItemController::class, 'export'])->name('items.export');
     Route::get('/items/{item}/export-profile', [ItemController::class, 'exportProfile'])->name('items.exportProfile');
 
@@ -170,8 +166,8 @@ Route::middleware(['auth'])->group(function () {
     Route::patch('items/{item}/archive', [ItemController::class, 'archive'])->name('items.archive');
     Route::patch('items/{item}/activate', [ItemController::class, 'activate'])->name('items.activate');
 
-// Validation routes - Item fields
-Route::post('/check/item/name', [ItemController::class, 'checkName'])->name('items.checkName');
+    // Validation routes - Item fields
+    Route::post('/check/item/name', [ItemController::class, 'checkName'])->name('items.checkName');
 
     // Field Visits + Reports
     Route::get('/field-visits/export/pdf', [FieldVisitController::class, 'exportFieldVisitsPDF'])
@@ -195,7 +191,6 @@ Route::post('/check/item/name', [ItemController::class, 'checkName'])->name('ite
     // Damage Reports Resource Routes (limited actions)
     Route::resource('damage-reports', DamageReportController::class)
         ->only(['index', 'show', 'edit', 'update', 'destroy']);
-
 
     // Growth Reports
     Route::get('/growth-reports', [GrowthReportController::class, 'index'])
@@ -239,7 +234,6 @@ Route::post('/check/item/name', [ItemController::class, 'checkName'])->name('ite
         ->name('damage-reports.destroy')
         ->middleware('permission:edit field visit');
 
-
     // Inventory Transactions
     // Inventory Dashboard
     Route::get('/inventory/export/dashboard', [InventoryTransactionController::class, 'exportDashboard'])->name('inventory.export.dashboard');
@@ -268,11 +262,9 @@ Route::post('/check/item/name', [ItemController::class, 'checkName'])->name('ite
     Route::post('/inventory/adjustment', [InventoryTransactionController::class, 'storeAdjustment'])
         ->name('inventory.adjustment.store');
     
-    // Show specific product (wildcard route - MUST BE LAST)
+    // Show specific product
     Route::get('/inventory/{productType}/{productId}', [InventoryTransactionController::class, 'show'])
-    ->name('inventory.show');
-
-    
+        ->name('inventory.show');
         
     // ============================================
     // PARTNER ORDERS ROUTES
@@ -330,9 +322,7 @@ Route::post('/check/item/name', [ItemController::class, 'checkName'])->name('ite
     // Get buyback history (AJAX)
     Route::get('/buybacks/contract/{contractId}/history', [BuybackController::class, 'getContractHistory'])
         ->name('buybacks.contract.history');
-
-
-    }); //end
+}); 
 
 // -----------------
 // Google OAuth Routes

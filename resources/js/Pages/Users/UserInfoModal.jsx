@@ -1,4 +1,3 @@
-// UserInfoModal.jsx
 export default function UserInfoModal({ user, onClose }) {
     if (!user) return null;
 
