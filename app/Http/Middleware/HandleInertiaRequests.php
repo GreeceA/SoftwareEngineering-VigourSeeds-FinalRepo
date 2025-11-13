@@ -23,13 +23,6 @@ class HandleInertiaRequests extends Middleware
 
         // If user is authenticated, add notifications
         if ($user) {
-            // Fix avatar URL in the shared auth array
-            if (isset($shared['auth']['user']['avatar']) && $shared['auth']['user']['avatar']) {
-                $avatarPath = str_replace('/storage/', '', $shared['auth']['user']['avatar']);
-                $avatarPath = ltrim($avatarPath, '/');
-                $shared['auth']['user']['avatar'] = "http://localhost/dashboard/SoftwareEngineering-VigourSeeds-FinalRepo/public/storage/" . $avatarPath;
-            }
-
             // Add notifications (use the actual User model, not the array)
             $shared['notifications'] = $user->unreadNotifications()
                 ->latest()

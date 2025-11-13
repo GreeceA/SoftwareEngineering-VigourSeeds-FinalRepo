@@ -6,7 +6,7 @@ import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 
 const InventoryDashboard = () => {
     const { auth, inventory, shortfalls } = usePage().props;
-    const permissions = auth.user.can || [];
+    const permissions = auth?.user?.can || [];
 
     const [filter, setFilter] = useState('all');
     const [statusFilter, setStatusFilter] = useState('all');

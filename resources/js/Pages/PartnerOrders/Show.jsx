@@ -5,7 +5,7 @@ import { usePage, Link } from '@inertiajs/react';
 
 const BuybackContractDetails = () => {
     const { auth, partnerOrder } = usePage().props;
-    const permissions = auth.user.can || [];
+    const permissions = auth?.user?.can || [];
 
     const contract = partnerOrder.contract || {};
     const lines = partnerOrder.lines || [];

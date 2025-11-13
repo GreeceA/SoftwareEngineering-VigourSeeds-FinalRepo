@@ -45,11 +45,16 @@ php artisan config:clear
 php artisan cache:clear
 php artisan route:clear
 
+echo.
+echo 🔗 Step 4: Creating storage symlink (for file uploads)...
+php artisan storage:link
+
 :: Run seeders safely
-echo    🌱 Running seeders (conflict-safe)...
+echo.
+echo 🌱 Step 5: Running seeders (conflict-safe)...
 php artisan db:seed --class=PermissionSeeder
 php artisan db:seed --class=AdminUserSeeder
-php artisan db:seed --class=TestUsersSeeder
+php artisan db:seed --class=BasicUsersSeeder
 
 echo.
 echo ✅ Setup completed successfully!

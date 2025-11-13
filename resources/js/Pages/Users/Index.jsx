@@ -105,7 +105,7 @@ export default function Index({ auth, users, filters }) {
     if (sortBy === 'id' && sortDir === 'desc' && users.meta && users.meta.current_page === 1) {
         // Default sorting: id DESC, "me" at the top
         displayUsers.sort((a, b) => Number(b.id) - Number(a.id));
-        const currentUserIndex = displayUsers.findIndex(u => String(u.id) === String(auth.user.id));
+        const currentUserIndex = displayUsers.findIndex(u => String(u.id) === String(auth?.user?.id));
         if (currentUserIndex !== -1) {
             const [currentUser] = displayUsers.splice(currentUserIndex, 1);
             displayUsers = [currentUser, ...displayUsers];
@@ -311,7 +311,7 @@ export default function Index({ auth, users, filters }) {
                         </thead>
                         <tbody className="divide-y divide-gray-200">
                             {displayUsers.length > 0 ? displayUsers.map((user) => (
-                                <tr key={user.id} className={`hover:bg-gray-50 ${user.id === auth.user.id ? 'bg-blue-50' : ''}`}>
+                                <tr key={user.id} className={`hover:bg-gray-50 ${user.id === auth?.user?.id ? 'bg-blue-50' : ''}`}>
                                     <td className="px-6 py-4">
                                         {user.avatar ? (
                                             <img
@@ -336,7 +336,7 @@ export default function Index({ auth, users, filters }) {
                                     >
                                         <div className="flex items-center">
                                             {user.name}
-                                            {user.id === auth.user.id && (
+                                            {user.id === auth?.user?.id && (
                                                 <span className="ml-2 bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full">
                                                     You
                                                 </span>
@@ -412,12 +412,12 @@ export default function Index({ auth, users, filters }) {
 
                                             {/* Deactivate/Reactivate Button - only show if user has 'deactivate users' permission */}
                                             {permissions.includes('deactivate users') && (
-                                                user.id === auth.user.id || user.email === 'admin@vigourseeds.com' ? (
+                                                user.id === auth?.user?.id || user.email === 'admin@vigourseeds.com' ? (
                                                     <button
                                                         className="text-gray-400 cursor-not-allowed"
                                                         disabled
                                                         title={
-                                                            user.id === auth.user.id 
+                                                            user.id === auth?.user?.id 
                                                                 ? "You cannot modify your own account status"
                                                                 : "Cannot modify admin account"
                                                         }

@@ -42,6 +42,23 @@ DB_USERNAME=your_username
 DB_PASSWORD=your_password
 ```
 
+**Important:** Set your `APP_URL` to match your local server:
+```env
+# If using php artisan serve:
+APP_URL=http://localhost:8000
+
+# If using XAMPP with project in htdocs/dashboard:
+APP_URL=http://localhost/dashboard/SoftwareEngineering-VigourSeeds-FinalRepo/public
+
+# Or adjust to your specific setup
+```
+
+### 3.1. Create Storage Symlink (Required for Avatar Uploads)
+```bash
+php artisan storage:link
+```
+This creates a symbolic link from `public/storage` to `storage/app/public` for file uploads.
+
 ### 4. Handle Existing Data (if applicable)
 If you have an existing database, our migration will safely handle conflicts:
 ```bash

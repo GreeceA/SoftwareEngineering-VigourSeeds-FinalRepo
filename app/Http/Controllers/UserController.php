@@ -64,10 +64,9 @@ class UserController extends Controller implements HasMiddleware
 
         $users->getCollection()->transform(function ($user) {
             if ($user->avatar) {
-                if (filter_var($user->avatar, FILTER_VALIDATE_URL)) {
-                    $user->avatar = $user->avatar;
-                } else {
-                    $user->avatar = asset('storage/' . $user->avatar);
+                // If it's already a full URL, keep it; otherwise convert to full URL
+                if (!str_starts_with($user->avatar, 'http')) {
+                    $user->avatar = asset($user->avatar);
                 }
             }
             return $user;
@@ -84,12 +83,8 @@ class UserController extends Controller implements HasMiddleware
                     ->find($currentUser->id);
 
                 if ($me) {
-                    if ($me->avatar) {
-                        if (filter_var($me->avatar, FILTER_VALIDATE_URL)) {
-                            $me->avatar = $me->avatar;
-                        } else {
-                            $me->avatar = asset('storage/' . $me->avatar);
-                        }
+                    if ($me->avatar && !str_starts_with($me->avatar, 'http')) {
+                        $me->avatar = asset($me->avatar);
                     }
                     $users->getCollection()->prepend($me);
                 }
@@ -132,9 +127,7 @@ class UserController extends Controller implements HasMiddleware
 
         if ($request->hasFile('avatar')) {
             $avatarPath = $request->file('avatar')->store('avatars', 'public');
-            $user->avatar = $avatarPath;
-            $avatarPath = str_replace('public/', '', $avatarPath);
-            $user->avatar = $avatarPath;
+            $user->avatar = '/storage/' . $avatarPath;
         }
 
         $user->save();

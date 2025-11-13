@@ -16,10 +16,13 @@ class ProfileController extends Controller
     public function edit(Request $request): Response
     {
         $user = auth()->user();
+        
+        // Convert avatar to full URL - works with any APP_URL
+        $avatarUrl = null;
         if ($user->avatar) {
-            // Use the same logic as AppServiceProvider
-            $avatarPath = ltrim(str_replace('/storage/', '', $user->avatar), '/');
-            $user->avatar = "http://localhost/dashboard/SoftwareEngineering-VigourSeeds-FinalRepo/public/storage/" . $avatarPath;
+            $avatarUrl = str_starts_with($user->avatar, 'http') 
+                ? $user->avatar 
+                : asset($user->avatar);
         }
 
         return Inertia::render('Profile/Edit', [
@@ -30,7 +33,7 @@ class ProfileController extends Controller
                 'last_name' => $user->last_name,
                 'email' => $user->email,
                 'role' => $user->role,
-                'avatar' => $user->avatar,
+                'avatar' => $avatarUrl,
                 'created_at' => $user->created_at,
                 'email_verified_at' => $user->email_verified_at,
                 'google_id' => $user->google_id,
@@ -42,7 +45,7 @@ class ProfileController extends Controller
                     'last_name' => $user->last_name,
                     'email' => $user->email,
                     'role' => $user->role,
-                    'avatar' => $user->avatar,
+                    'avatar' => $avatarUrl,
                     'created_at' => $user->created_at,
                     'email_verified_at' => $user->email_verified_at,
                     'google_id' => $user->google_id,
@@ -98,8 +101,12 @@ class ProfileController extends Controller
         $user = auth()->user();
 
         // Delete old avatar if exists
-        if ($user->avatar && file_exists(public_path($user->avatar))) {
-            @unlink(public_path($user->avatar));
+        if ($user->avatar) {
+            $oldAvatarPath = str_replace('/storage/', '', $user->avatar);
+            $fullPath = storage_path('app/public/' . $oldAvatarPath);
+            if (file_exists($fullPath)) {
+                @unlink($fullPath);
+            }
         }
 
         // Store new avatar
@@ -107,6 +114,7 @@ class ProfileController extends Controller
         $user->avatar = '/storage/' . $avatarPath;
         $user->save();
 
-        return back()->with('status', 'Profile photo updated!');
+        // Refresh the auth data to show new avatar immediately
+        return redirect()->route('profile.edit')->with('status', 'Profile photo updated!');
     }
 }

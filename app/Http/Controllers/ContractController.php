@@ -36,7 +36,10 @@ class ContractController extends Controller implements HasMiddleware
      */
     public function index(Request $request)
     {
-        $query = Contract::with(['partner', 'contractSeedCommitments.seed']);
+        // Optimized: Only load partner name, limit seed commitments to 3
+        $query = Contract::with(['partner:id,name', 'contractSeedCommitments' => function($q) {
+            $q->limit(3)->with('seed:id,seed_variety');
+        }]);
 
         // Apply search
         if ($request->filled('search')) {

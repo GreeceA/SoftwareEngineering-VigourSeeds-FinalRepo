@@ -8,7 +8,7 @@ import DeleteDamageModal from '@/Pages/FieldVisits/DeleteDamageModal';
 
 export default function Show({ auth, report, reportType }) {
     const { flash } = usePage().props;
-    const permissions = auth.user.can || [];
+    const permissions = auth?.user?.can || [];
     const reportId = reportType === 'growth' ? report.growth_ID : report.damage_ID;
 
     const [showEditModal, setShowEditModal] = useState(false);

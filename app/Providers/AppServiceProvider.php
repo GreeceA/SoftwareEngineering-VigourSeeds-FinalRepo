@@ -31,10 +31,12 @@ class AppServiceProvider extends ServiceProvider
 
             $userData = $user->toArray();
             
+            // Convert avatar path to full URL - works with any APP_URL
             if (isset($userData['avatar']) && $userData['avatar']) {
-                $avatarPath = str_replace('/storage/', '', $userData['avatar']);
-                $avatarPath = ltrim($avatarPath, '/');
-                $userData['avatar'] = "http://localhost/dashboard/SoftwareEngineering-VigourSeeds-FinalRepo/public/storage/" . $avatarPath;
+                // If it's already a full URL, keep it; otherwise use asset helper
+                if (!str_starts_with($userData['avatar'], 'http')) {
+                    $userData['avatar'] = asset($userData['avatar']);
+                }
             }
             
             $userData['can'] = $user->getAllPermissions()->pluck('name')->toArray();

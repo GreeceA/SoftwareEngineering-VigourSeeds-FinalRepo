@@ -7,7 +7,7 @@ import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 
 const PartnerOrdersList = () => {
     const { auth, partnerOrders, partners } = usePage().props;
-    const permissions = auth.user.can || [];
+    const permissions = auth?.user?.can || [];
 
     const [filters, setFilters] = useState({
         status: '',

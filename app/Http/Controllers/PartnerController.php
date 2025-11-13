@@ -52,9 +52,8 @@ class PartnerController extends Controller implements HasMiddleware
         $partners = $query->paginate($perPage)->withQueryString();
 
         $partners->getCollection()->transform(function ($partner) {
-            if ($partner->avatar) {
-                $avatarPath = ltrim(str_replace('/storage/', '', $partner->avatar), '/');
-                $partner->avatar = url("/dashboard/SoftwareEngineering-VigourSeeds-FinalRepo/public/storage/" . $avatarPath);
+            if ($partner->avatar && !str_starts_with($partner->avatar, 'http')) {
+                $partner->avatar = asset($partner->avatar);
             }
             // Add contracts array for frontend modal
             $partner->contracts = $partner->contracts()->get()->map(function ($contract) {

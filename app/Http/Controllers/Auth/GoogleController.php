@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
+use Spatie\Permission\Models\Role;
 
 class GoogleController extends Controller
 {
@@ -62,6 +63,10 @@ class GoogleController extends Controller
                     'avatar' => $googleUser->getAvatar(),
                     'email_verified_at' => now(),
                 ]);
+
+                // Assign Spatie role for new users
+                Role::firstOrCreate(['name' => 'employee']);
+                $user->assignRole('employee');
             }
 
             Auth::login($user, true);

@@ -13,6 +13,7 @@ class DatabaseSeeder extends Seeder
         // Call core seeders for permissions and initial users
         $this->call([
             PermissionSeeder::class,
+            RolePermissionSeeder::class, // Comprehensive role setup
             AdminUserSeeder::class,
             \Database\Seeders\BasicUsersSeeder::class,
         ]);

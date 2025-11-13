@@ -5,7 +5,7 @@ import { usePage, Link } from '@inertiajs/react';
 
 const BuybackContractDetails = () => {
     const { contract, buybackData, auth } = usePage().props;
-    const permissions = auth.user.can || [];
+    const permissions = auth?.user?.can || [];
 
     const totalExpected = buybackData.expected_total;
     const totalReceived = buybackData.actual_total_kg;

@@ -5,7 +5,7 @@ import { usePage, Link } from '@inertiajs/react';
 
 const Show = () => {
     const { auth, product, transactions } = usePage().props;
-    const permissions = auth.user.can || [];
+    const permissions = auth?.user?.can || [];
     
     const [filterType, setFilterType] = useState('all');
     const [currentPage, setCurrentPage] = useState(1);

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Leaf, Calendar, AlertTriangle, CheckCircle, Package, TrendingUp } from 'lucide-react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { usePage, router } from '@inertia/react';
+import { usePage, router } from '@inertiajs/react';
 
 const BuybackInboundForm = () => {
     const { auth, contracts = [], cornProducts = [], flash = {} } = usePage().props;

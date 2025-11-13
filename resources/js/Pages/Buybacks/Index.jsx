@@ -28,7 +28,7 @@ const getFulfillmentStatus = (pct) => {
 
 const BuybackOverview = () => {
     const { auth, contracts } = usePage().props;
-    const permissions = auth.user.can || [];
+    const permissions = auth?.user?.can || [];
     const [statusFilter, setStatusFilter] = useState('all');
     const [sortBy, setSortBy] = useState('contract_number');
     const [sortAsc, setSortAsc] = useState(true);

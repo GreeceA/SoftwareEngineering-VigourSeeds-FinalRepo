@@ -66,12 +66,22 @@ class PermissionSeeder extends Seeder
             'create contracts',
             'edit contracts',
             'delete contracts',
+            // Granular contract workflow permissions
+            'submit contract for review',
+            'activate contract',
+            'suspend contract',
+            'terminate contract',
+            'complete contract',
+            'cancel contract',
         ];
 
         // Inventory Management Permissions (PROTECTED - cannot be deleted)
         $inventoryPermissions = [
             'view inventory',
             'create inventory',
+            'create partner order',
+            'fulfill partner order',
+            'record buyback transaction',
         ];
 
         // Field Visit Management Permissions (PROTECTED - cannot be deleted)
@@ -79,6 +89,8 @@ class PermissionSeeder extends Seeder
             'view field visit',
             'create field visit',
             'edit field visit',
+            'complete field visit',
+            'cancel field visit',
         ];
 
         // Combine all permissions
