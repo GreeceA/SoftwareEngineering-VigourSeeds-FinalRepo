@@ -16,7 +16,8 @@ use Inertia\Inertia;
 use App\Mail\ContractReviewMail;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
-use Barryvdh\Snappy\Facades\SnappyPdf;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Auth;
 
 class ContractController extends Controller implements HasMiddleware
 {
@@ -854,36 +855,121 @@ if ($totalExpectedKg < $totalReceivedKg) {
             ->with('success', 'Contract verified and activated successfully!');
     }
 
-        
-public function exportReport(Contract $contract)
+    public function exportContractsPDF(Request $request)
+    {
+        $filters = $request->only(['search', 'status', 'sort_by', 'sort_dir', 'per_page']);
+
+        $query = \App\Models\Contract::with([
+            'partner:id,name',
+            'seedCommitments.seed:id,seed_variety',
+        ])
+        ->withSum('seedCommitments as total_expected_buyback', 'expected_buyback_amount')
+        ->withSum('buybackTransactions as total_delivered_buyback', 'qty');
+
+        // Apply filters
+        if ($request->filled('search')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('contract_name', 'like', "%{$request->search}%")
+                ->orWhereHas('partner', function ($q) use ($request) {
+                    $q->where('name', 'like', "%{$request->search}%");
+                })
+                ->orWhereHas('seedCommitments.seed', function ($q) use ($request) {
+                    $q->where('seed_variety', 'like', "%{$request->search}%");
+                });
+            });
+        }
+        if ($request->filled('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
+        // Sorting
+        $sortBy = $request->get('sort_by', 'id');
+        $sortDir = $request->get('sort_dir', 'desc');
+        $validSortColumns = ['id', 'contract_name', 'signing_date', 'effective_date', 'expiration_date', 'status'];
+        if (in_array($sortBy, $validSortColumns)) {
+            $query->orderBy($sortBy, $sortDir);
+        } else {
+            $query->latest();
+        }
+
+        $contracts = $query->get();
+
+        $pdf = Pdf::loadView('exports.contracts_pdf', [
+            'contracts' => $contracts,
+            'user' => Auth::user(),
+            'filters' => $filters,
+            'generationDate' => now()->format('F d, Y - h:i A')
+        ])->setPaper('A4', 'landscape');
+
+        return $pdf->download('VigourSeed_ContractsDirectory_' . now()->format('Y-m-d') . '.pdf');
+    }
+
+    public function exportContractProfilePDF(Contract $contract)
 {
     $contract->load([
         'partner',
         'farm',
         'contractSeedCommitments.seed',
+        'buybackTransactions.creator',
         'partnerOrders.lines.product',
         'fieldVisits.assignee',
         'fieldVisits.growthReports',
-        'fieldVisits.damageReports',
-        'buybackTransactions'
+        'fieldVisits.damageReports'
     ]);
 
-    $data = [
+    $seedCommitments = $contract->contractSeedCommitments;
+    $buybackTransactions = $contract->buybackTransactions;
+    $partner = $contract->partner;
+    $farm = $contract->farm;
+    $partnerOrders = $contract->partnerOrders ?? [];
+    $fieldVisits = $contract->fieldVisits ?? [];
+
+    // Helper for unit conversion
+    $toKg = function($amount, $unit) {
+        if ($unit === 'kg') return $amount;
+        if ($unit === 'sack') return $amount * 50;
+        if ($unit === 'ton') return $amount * 1000;
+        return $amount;
+    };
+
+    // Calculate expected buyback in kg
+    $expected_kg = $seedCommitments->sum(function ($item) use ($toKg) {
+        return $toKg($item->expected_buyback_amount, $item->buyback_unit);
+    });
+
+    // Calculate actual delivered in kg
+    $actual_kg = $buybackTransactions->sum(function ($tx) use ($toKg) {
+        return $toKg($tx->qty, $tx->unit);
+    });
+
+    $remaining_kg = max($expected_kg - $actual_kg, 0);
+    $fulfillment_percentage = $expected_kg > 0 ? ($actual_kg / $expected_kg) * 100 : 0;
+
+    // Calculate financial summary
+    $total_outflow_value = $partnerOrders->sum(function ($order) {
+        return $order->lines->sum(function ($line) {
+            return $line->qty * $line->price_per_unit;
+        });
+    });
+
+    $total_inflow_value = $buybackTransactions->sum('total_value');
+    $net_balance = $total_inflow_value - $total_outflow_value;
+
+    return \Barryvdh\DomPDF\Facade\Pdf::loadView('exports.contract_profile_pdf', [
         'contract' => $contract,
-        'partner' => $contract->partner,
-        'farm' => $contract->farm,
-        'seedCommitments' => $contract->contractSeedCommitments,
-        'partnerOrders' => $contract->partnerOrders,
-        'fieldVisits' => $contract->fieldVisits,
-        'buybackTransactions' => $contract->buybackTransactions,
-    ];
-
-    $pdf = SnappyPdf::loadView('contracts.report', $data)
-        ->setPaper('a4')
-        ->setOption('margin-bottom', 10);
-
-    return response($pdf->output(), 200)
-        ->header('Content-Type', 'application/pdf')
-        ->header('Content-Disposition', 'attachment; filename="Contract_Report_' . $contract->contract_name . '.pdf"');
+        'seedCommitments' => $seedCommitments,
+        'buybackTransactions' => $buybackTransactions,
+        'partner' => $partner,
+        'farm' => $farm,
+        'partnerOrders' => $partnerOrders,
+        'fieldVisits' => $fieldVisits,
+        'expected_kg' => $expected_kg,
+        'actual_kg' => $actual_kg,
+        'remaining_kg' => $remaining_kg,
+        'fulfillment_percentage' => $fulfillment_percentage,
+        'total_outflow_value' => $total_outflow_value,
+        'total_inflow_value' => $total_inflow_value,
+        'net_balance' => $net_balance,
+    ])->setPaper('A4', 'portrait')
+      ->download('Contract_Report_' . $contract->contract_name . '_' . now()->format('Ymd') . '.pdf');
 }
 }

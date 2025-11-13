@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Package, TrendingUp, TrendingDown, AlertTriangle, Plus, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { usePage, Link } from '@inertiajs/react';
+import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 
 const InventoryDashboard = () => {
   const { auth, inventory, shortfalls } = usePage().props;
@@ -95,6 +96,14 @@ const InventoryDashboard = () => {
               <p className="text-gray-600 mt-1">Monitor and manage your stock levels</p>
             </div>
             <div className="flex gap-3">
+              <button
+                  onClick={() => window.location.href = route('inventory.export.dashboard')}
+                  className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
+              >
+                  <ArrowDownTrayIcon className="w-5 h-5" />
+                  Export Dashboard
+              </button>
+        
               {permissions.includes('create inventory') && (
                 <Link
                   href={route('inventory.inbound.create')}

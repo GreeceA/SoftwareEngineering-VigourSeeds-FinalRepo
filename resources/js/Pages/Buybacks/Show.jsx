@@ -200,9 +200,13 @@ const BuybackContractDetails = () => {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold text-gray-900">Buyback Transaction History</h2>
-            <button className="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium text-sm transition">
+            <button
+              type="button"
+              onClick={() => window.open(route('buybacks.exportBuybackDeliveryHistory', contract.id), '_blank')}
+              className="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium text-sm transition"
+            >
               <Download size={16} />
-              Export Report
+              Export Buyback Delivery History PDF
             </button>
           </div>
 

@@ -265,7 +265,17 @@ const StockOutboundForm = () => {
                     min="0.01"
                     max={Math.max(0.01, Math.min(getRemainingQty() || 0, getAvailableStockInOrderUnit()))}
                     value={formData.qty}
-                    onChange={(e) => setFormData({...formData, qty: e.target.value})}
+                    onChange={(e) => {
+                      let value = e.target.value;
+                      // Prevent negative and more than 2 decimals
+                      if (parseFloat(value) < 0) value = '';
+                      // Limit to 2 decimals
+                      if (value && value.includes('.')) {
+                        const [int, dec] = value.split('.');
+                        if (dec.length > 2) value = int + '.' + dec.slice(0, 2);
+                      }
+                      setFormData({ ...formData, qty: value });
+                    }}
                     className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
                       hasStockIssue() || exceedsOrder() ? 'border-red-500' : 'border-gray-300'
                     }`}

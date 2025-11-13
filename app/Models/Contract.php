@@ -34,9 +34,9 @@ class Contract extends Model
     ];
 
     // Relationships
-    public function partner(): BelongsTo
+    public function partner()
     {
-        return $this->belongsTo(Partner::class);
+        return $this->belongsTo(Partner::class, 'partner_id');
     }
 
     public function farm(): BelongsTo

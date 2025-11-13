@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class PartnerOrderController extends Controller implements HasMiddleware
 {
@@ -245,61 +246,78 @@ class PartnerOrderController extends Controller implements HasMiddleware
      * Display specific partner order with details
      */
     public function show($id)
-    {
-        $partnerOrder = PartnerOrder::with([
-            'partner',
-            'contract',
-            'lines.product',
-            'inventoryTransactions.product',
-            'creator'
-        ])->findOrFail($id);
+{
+    $partnerOrder = PartnerOrder::with([
+        'partner',
+        'contract',
+        'lines.product',
+        'inventoryTransactions.product',
+        'creator'
+    ])->findOrFail($id);
 
-        $deliveryTransactions = \App\Models\InventoryTransaction::with(['creator', 'seed', 'item'])
-            ->where('partner_order_id', $partnerOrder->id)
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->map(function ($tx) use ($partnerOrder) {
-                // Get product name
-                $productName = '-';
-                if ($tx->product_type === 'seed' || $tx->product_type === 'App\\Models\\Seed') {
-                    $productName = $tx->seed?->seed_variety ?? '-';
-                } elseif ($tx->product_type === 'item' || $tx->product_type === 'App\\Models\\Item') {
-                    $productName = $tx->item?->name ?? '-';
+    $deliveryTransactions = \App\Models\InventoryTransaction::with(['creator', 'seed', 'item'])
+        ->where('partner_order_id', $partnerOrder->id)
+        ->orderBy('created_at', 'desc')
+        ->get()
+        ->map(function ($tx) use ($partnerOrder) {
+            // Get product name
+            $productName = '-';
+            if ($tx->product_type === 'seed' || $tx->product_type === 'App\\Models\\Seed') {
+                $productName = $tx->seed?->seed_variety ?? '-';
+            } elseif ($tx->product_type === 'item' || $tx->product_type === 'App\\Models\\Item') {
+                $productName = $tx->item?->name ?? '-';
+            }
+
+            // Normalize transaction product type
+            $txTypeNormalized = $tx->product_type;
+            if ($txTypeNormalized === 'App\\Models\\Seed') {
+                $txTypeNormalized = 'seed';
+            } elseif ($txTypeNormalized === 'App\\Models\\Item') {
+                $txTypeNormalized = 'item';
+            }
+
+            // Find the matching order line
+            $orderLine = $partnerOrder->lines->first(function ($line) use ($tx, $txTypeNormalized) {
+                // Normalize line product type
+                $lineTypeNormalized = $line->product_type;
+                if ($lineTypeNormalized === 'App\\Models\\Seed') {
+                    $lineTypeNormalized = 'seed';
+                } elseif ($lineTypeNormalized === 'App\\Models\\Item') {
+                    $lineTypeNormalized = 'item';
                 }
 
-                // Convert quantity to base unit (kg/liter)
-                $qtyBase = abs($tx->qty);
-                if ($tx->unit === 'sack') {
-                    $qtyBase = $qtyBase * 50;
-                } elseif ($tx->unit === 'ton') {
-                    $qtyBase = $qtyBase * 1000;
-                }
-
-                // Find the matching order line for this transaction
-                $orderLine = $partnerOrder->lines
-                    ->where('product_id', $tx->product_id)
-                    ->where('product_type', $tx->product_type)
-                    ->first();
-
-                $pricePerUnit = $orderLine ? $orderLine->price_per_unit : 0;
-
-                // Calculate value
-                $value = $qtyBase * $pricePerUnit;
-
-                return [
-                    'id' => $tx->id,
-                    'product_name' => $productName,
-                    'transaction_type' => $tx->transaction_type,
-                    'quantity' => abs($tx->qty),
-                    'unit' => $tx->unit,
-                    'date' => $tx->created_at->format('Y-m-d H:i'),
-                    'notes' => $tx->notes,
-                    'delivered_by' => $tx->creator
-                        ? trim(($tx->creator->first_name ?? '') . ' ' . ($tx->creator->last_name ?? ''))
-                        : '-',
-                    'value' => $value,
-                ];
+                // Match both product_id and normalized product_type
+                return $line->product_id == $tx->product_id 
+                    && $lineTypeNormalized === $txTypeNormalized;
             });
+
+            $pricePerUnit = $orderLine ? $orderLine->price_per_unit : 0;
+
+            // Convert quantity to base unit (kg/liter) for value calculation
+            $qtyBase = abs($tx->qty);
+            if ($tx->unit === 'sack') {
+                $qtyBase = $qtyBase * 50;
+            } elseif ($tx->unit === 'ton') {
+                $qtyBase = $qtyBase * 1000;
+            }
+
+            // Calculate value
+            $value = $qtyBase * $pricePerUnit;
+
+            return [
+                'id' => $tx->id,
+                'product_name' => $productName,
+                'transaction_type' => $tx->transaction_type,
+                'quantity' => abs($tx->qty),
+                'unit' => $tx->unit,
+                'date' => $tx->created_at->format('Y-m-d H:i'),
+                'notes' => $tx->notes,
+                'delivered_by' => $tx->creator
+                    ? trim(($tx->creator->first_name ?? '') . ' ' . ($tx->creator->last_name ?? ''))
+                    : '-',
+                'value' => $value,
+            ];
+        });
 
         return Inertia::render('PartnerOrders/Show', [
             'auth' => ['user' => auth()->user()],
@@ -393,5 +411,205 @@ class PartnerOrderController extends Controller implements HasMiddleware
         } catch (\Exception $e) {
             return back()->with('error', 'Failed to cancel order: ' . $e->getMessage());
         }
+    }
+
+    public function export(Request $request)
+    {
+        $query = PartnerOrder::with(['partner', 'contract', 'lines.product'])
+            ->orderBy('created_at', 'desc');
+
+        // Apply filters
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->filled('partner_id')) {
+            $query->where('partner_id', $request->partner_id);
+        }
+
+        if ($request->filled('contract_status')) {
+            $query->whereHas('contract', function($q) use ($request) {
+                $q->where('status', $request->contract_status);
+            });
+        }
+
+        $orders = $query->get();
+
+        // Calculate total value and add fulfillment percentage
+        $orders->transform(function ($order) {
+            $totalValue = $order->lines->sum(function ($line) {
+                $qty = $line->qty;
+                // Convert to base unit (kg)
+                if ($line->unit === 'sack') {
+                    $qty = $qty * 50;
+                } elseif ($line->unit === 'ton') {
+                    $qty = $qty * 1000;
+                }
+                return $qty * $line->price_per_unit;
+            });
+
+            $order->total_value = $totalValue;
+            $order->fulfillment_percentage = $order->getFulfillmentPercentage();
+            
+            return $order;
+        });
+
+        $totalValue = $orders->sum('total_value');
+
+        $hasFilters = $request->filled('status') || 
+                    $request->filled('partner_id') || 
+                    $request->filled('contract_status');
+
+        $partnerName = '';
+        if ($request->filled('partner_id')) {
+            $partner = Partner::find($request->partner_id);
+            $partnerName = $partner ? $partner->name : '';
+        }
+
+        $pdf = Pdf::loadView('exports.partner_orders_pdf', [
+            'orders' => $orders,
+            'totalValue' => $totalValue,
+            'filters' => $request->only(['status', 'partner_id', 'contract_status']),
+            'hasFilters' => $hasFilters,
+            'partnerName' => $partnerName,
+            'user' => Auth::user(),
+            'generationDate' => now()->format('F d, Y - h:i A')
+        ])->setPaper('A4', 'landscape');
+
+        return $pdf->download('VigourSeed_PartnerOrders_' . now()->format('Y-m-d') . '.pdf');
+    }
+
+    public function exportDeliveryHistory($id)
+    {
+        $partnerOrder = PartnerOrder::with([
+            'partner',
+            'contract.farm',
+            'lines.product',
+        ])->findOrFail($id);
+
+        $deliveryTransactions = \App\Models\InventoryTransaction::with(['creator', 'seed', 'item'])
+            ->where('partner_order_id', $partnerOrder->id)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($tx) use ($partnerOrder) {
+                // Get product name
+                $productName = '-';
+                if ($tx->product_type === 'seed' || $tx->product_type === 'App\\Models\\Seed') {
+                    $productName = $tx->seed?->seed_variety ?? '-';
+                } elseif ($tx->product_type === 'item' || $tx->product_type === 'App\\Models\\Item') {
+                    $productName = $tx->item?->name ?? '-';
+                }
+
+                // Normalize transaction product type
+                $txTypeNormalized = $tx->product_type;
+                if ($txTypeNormalized === 'App\\Models\\Seed') {
+                    $txTypeNormalized = 'seed';
+                } elseif ($txTypeNormalized === 'App\\Models\\Item') {
+                    $txTypeNormalized = 'item';
+                }
+
+                // Find the matching order line
+                $orderLine = $partnerOrder->lines->first(function ($line) use ($tx, $txTypeNormalized) {
+                    $lineTypeNormalized = $line->product_type;
+                    if ($lineTypeNormalized === 'App\\Models\\Seed') {
+                        $lineTypeNormalized = 'seed';
+                    } elseif ($lineTypeNormalized === 'App\\Models\\Item') {
+                        $lineTypeNormalized = 'item';
+                    }
+                    return $line->product_id == $tx->product_id 
+                        && $lineTypeNormalized === $txTypeNormalized;
+                });
+
+                $pricePerUnit = $orderLine ? $orderLine->price_per_unit : 0;
+
+                // Convert quantity to base unit (kg/liter) for value calculation
+                $qtyBase = abs($tx->qty);
+                if ($tx->unit === 'sack') {
+                    $qtyBase = $qtyBase * 50;
+                } elseif ($tx->unit === 'ton') {
+                    $qtyBase = $qtyBase * 1000;
+                }
+
+                // Calculate value
+                $value = $qtyBase * $pricePerUnit;
+
+                return [
+                    'id' => $tx->id,
+                    'product_name' => $productName,
+                    'transaction_type' => $tx->transaction_type,
+                    'quantity' => abs($tx->qty),
+                    'unit' => $tx->unit,
+                    'date' => $tx->created_at->format('Y-m-d H:i'),
+                    'notes' => $tx->notes,
+                    'delivered_by' => $tx->creator
+                        ? trim(($tx->creator->first_name ?? '') . ' ' . ($tx->creator->last_name ?? ''))
+                        : '-',
+                    'value' => $value,
+                ];
+            });
+
+        // Format order lines data
+        $orderLines = $partnerOrder->lines->map(function ($line) {
+            // Get product type and name
+            $productType = '';
+            $productName = '';
+            
+            if ($line->product_type === 'seed' || $line->product_type === 'App\\Models\\Seed') {
+                $productType = 'seed';
+                $productName = $line->product?->seed_variety ?? '-';
+            } elseif ($line->product_type === 'item' || $line->product_type === 'App\\Models\\Item') {
+                $item = $line->product;
+                $productType = $item?->type ?? 'item';
+                $productName = $item?->name ?? '-';
+            }
+
+            // Convert to base unit for total value calculation
+            $qtyBase = $line->qty;
+            if ($line->unit === 'sack') {
+                $qtyBase = $qtyBase * 50;
+            } elseif ($line->unit === 'ton') {
+                $qtyBase = $qtyBase * 1000;
+            }
+
+            $totalValue = $qtyBase * $line->price_per_unit;
+
+            return [
+                'product_type' => $productType,
+                'product_name' => $productName,
+                'qty' => $line->qty,
+                'unit' => $line->unit,
+                'delivered_qty' => $line->delivered_qty,
+                'price_per_unit' => $line->price_per_unit,
+                'total_value' => $totalValue,
+            ];
+        });
+
+        // Get contract details
+        $contract = $partnerOrder->contract;
+        $contractPeriod = null;
+        if ($contract && $contract->effective_date && $contract->expiration_date) {
+            $contractPeriod = $contract->effective_date->format('Y-m-d') . ' to ' . $contract->expiration_date->format('Y-m-d');
+        }
+
+        $pdf = Pdf::loadView('exports.delivery_transactions_pdf', [
+            'transactions' => collect($deliveryTransactions),
+            'orderLines' => $orderLines,
+            'orderId' => $partnerOrder->id,
+            'orderNumber' => $partnerOrder->order_number ?? 'PO-' . ($contract?->contract_name ?? 'ORDER') . '-' . $partnerOrder->id,
+            'orderDate' => $partnerOrder->order_date->format('F d, Y'),
+            'orderStatus' => $partnerOrder->status,
+            'partnerName' => $partnerOrder->partner->name,
+            'partnerContact' => $partnerOrder->partner->phone ?? 'N/A',
+            'contractName' => $contract?->contract_name,
+            'contractPeriod' => $contractPeriod,
+            'buybackPrice' => $contract?->buyback_price_per_unit ?? 0,
+            'farmName' => $contract?->farm?->location_name ?? 'N/A',
+            'farmLocation' => $contract?->farm?->address ?? '',
+            'fulfillmentPercentage' => $partnerOrder->getFulfillmentPercentage(),
+            'user' => Auth::user(),
+            'generationDate' => now()->format('F d, Y - h:i A')
+        ])->setPaper('A4', 'landscape');
+
+        return $pdf->download('VigourSeed_DeliveryHistory_PO' . $partnerOrder->id . '_' . now()->format('Y-m-d') . '.pdf');
     }
 }

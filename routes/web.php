@@ -25,6 +25,7 @@ use App\Http\Controllers\Auth\EmailVerificationPromptController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use Illuminate\Foundation\Auth\EmailVerificationRequest;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\NotificationController; // Add this line
 
 
 
@@ -81,6 +82,10 @@ Route::middleware(['auth'])->group(function () {
     // Roles
     Route::resource('roles', RoleController::class)->except(['show']);
 
+    // Notifications
+    Route::post('/notifications/{id}/mark-as-read', [NotificationController::class, 'markAsRead'])
+        ->name('notifications.mark-as-read');
+
     // Users
     Route::prefix('users')->name('users.')->group(function () {
         Route::get('/', [UserController::class, 'index'])->name('index');
@@ -122,6 +127,10 @@ Route::middleware(['auth'])->group(function () {
             ->middleware('permission:view partners');
 
     // Contracts
+    Route::get('/contracts/export/pdf', [ContractController::class, 'exportContractsPDF'])->name('contracts.export.pdf');
+    Route::get('/contracts/{contract}/report', [ContractController::class, 'exportContractProfilePDF'])
+        ->name('contracts.report')
+        ->middleware(['permission:view contracts']);
     Route::resource('contracts', ContractController::class);
     Route::post('contracts/{contract}/status', [ContractController::class, 'changeStatus'])
       ->name('contracts.change-status');
@@ -138,9 +147,6 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/partner-portal/contracts/{id}/verify', [ContractController::class, 'verifyPartner'])->name('partner.contracts.verify');
     Route::post('contracts/check-name', [ContractController::class, 'checkNameUnique'])
       ->name('contracts.checkNameUnique');
-    Route::get('/contracts/{contract}/report', [ContractController::class, 'exportReport'])
-        ->name('contracts.report')
-        ->middleware(['permission:view contracts']);
 
     // Seeds
     // Export routes - Seeds (MUST BE BEFORE Route::resource)
@@ -236,6 +242,9 @@ Route::post('/check/item/name', [ItemController::class, 'checkName'])->name('ite
 
     // Inventory Transactions
     // Inventory Dashboard
+    Route::get('/inventory/export/dashboard', [InventoryTransactionController::class, 'exportDashboard'])->name('inventory.export.dashboard');
+    Route::get('/inventory/ledger/export', [InventoryTransactionController::class, 'exportLedger'])->name('inventory.ledger.export');
+
     Route::get('/inventory/dashboard', [InventoryTransactionController::class, 'dashboard'])
         ->name('inventory.dashboard');
     
@@ -268,7 +277,9 @@ Route::post('/check/item/name', [ItemController::class, 'checkName'])->name('ite
     // ============================================
     // PARTNER ORDERS ROUTES
     // ============================================
-    
+    Route::get('/partner-orders/export', [PartnerOrderController::class, 'export'])->name('partner-orders.export');
+    Route::get('/partner-orders/{id}/export-delivery-history', [PartnerOrderController::class, 'exportDeliveryHistory'])->name('partner-orders.exportDeliveryHistory');
+
     // List all partner orders
     Route::get('/partner-orders', [PartnerOrderController::class, 'index'])
         ->name('partner-orders.index');
@@ -298,7 +309,10 @@ Route::post('/check/item/name', [ItemController::class, 'checkName'])->name('ite
     // ============================================
     // BUYBACK ROUTES
     // ============================================
-    
+    Route::get('/buybacks/export', [\App\Http\Controllers\BuybackController::class, 'exportBuybackPDF'])
+        ->name('buybacks.export');
+    Route::get('/buybacks/{contract}/export-delivery-history', [\App\Http\Controllers\BuybackController::class, 'exportBuybackDeliveryTransactionHistory'])
+        ->name('buybacks.exportBuybackDeliveryHistory');
     // Buyback overview
     Route::get('/buybacks', [BuybackController::class, 'index'])
         ->name('buybacks.index');

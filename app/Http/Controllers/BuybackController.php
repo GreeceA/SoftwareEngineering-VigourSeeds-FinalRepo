@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class BuybackController extends Controller implements HasMiddleware
 {
@@ -116,6 +117,8 @@ class BuybackController extends Controller implements HasMiddleware
                     'buyback_price' => $buyback_price,
                     'corn_product_id' => $cornProduct?->id,
                     'corn_product_name' => $cornProduct?->name ?? 'Corn Product',
+                    'effective_date' => $contract->effective_date ? $contract->effective_date->format('Y-m-d') : null,
+                    'expiration_date' => $contract->expiration_date ? $contract->expiration_date->format('Y-m-d') : null,
                 ];
             })
             ->values();
@@ -132,79 +135,108 @@ class BuybackController extends Controller implements HasMiddleware
     /**
      * Store inbound buyback transaction
      */
-    public function storeInbound(Request $request)
-    {
-        $validated = $request->validate([
-            'contract_id' => 'required|exists:contracts,id',
-            'corn_product_id' => 'required|exists:corn_products,id',
-            'qty' => 'required|numeric|min:0.01',
-            'unit' => 'required|in:kg,ton,sack',
-            'delivery_date' => 'required|date',
-            'notes' => 'nullable|string',
+public function storeInbound(Request $request)
+{
+    $validated = $request->validate([
+        'contract_id' => 'required|exists:contracts,id',
+        'corn_product_id' => 'required|exists:corn_products,id',
+        'qty' => 'required|numeric|min:0.01',
+        'unit' => 'required|in:kg,ton,sack',
+        'delivery_date' => 'required|date|before_or_equal:today',
+        'notes' => 'nullable|string',
+    ]);
+
+    DB::beginTransaction();
+    try {
+        $contract = Contract::with('contractSeedCommitments')->findOrFail($validated['contract_id']);
+        $cornProduct = CornProduct::findOrFail($validated['corn_product_id']);
+
+        // ✅ VALIDATE DELIVERY DATE AGAINST CONTRACT DATES
+        $deliveryDate = \Carbon\Carbon::parse($validated['delivery_date']);
+        $effectiveDate = $contract->effective_date ? \Carbon\Carbon::parse($contract->effective_date) : null;
+        $expirationDate = $contract->expiration_date ? \Carbon\Carbon::parse($contract->expiration_date) : null;
+
+        // 1. Check if delivery date is before contract effective date
+        if ($effectiveDate && $deliveryDate->lt($effectiveDate)) {
+            return back()->withInput()
+                ->with('error', "Delivery date ({$deliveryDate->format('Y-m-d')}) cannot be before contract effective date ({$effectiveDate->format('Y-m-d')}).");
+        }
+
+        // 2. Check if delivery date is in the future
+        if ($deliveryDate->isFuture()) {
+            return back()->withInput()
+                ->with('error', "Delivery date cannot be in the future. Please select today or an earlier date.");
+        }
+
+        // 3. Warn if delivery date is after contract expiration (but allow)
+        $expirationWarning = null;
+        if ($expirationDate && $deliveryDate->gt($expirationDate)) {
+            $expirationWarning = "Note: Delivery date ({$deliveryDate->format('Y-m-d')}) is after contract expiration ({$expirationDate->format('Y-m-d')}). Consider renewing the contract.";
+        }
+
+        // Get expected buyback info
+        $commitment = $contract->contractSeedCommitments->first();
+        $expected_amount = $commitment?->expected_buyback_amount ?? 0;
+        $expected_unit = $commitment?->buyback_unit ?? 'kg';
+
+        // Calculate remaining buyback
+        $delivered_so_far = $contract->buybackTransactions->sum(function ($transaction) use ($expected_unit) {
+            $qty_in_kg = $this->toKg($transaction->qty, $transaction->unit);
+            return $expected_unit === 'kg' ? $qty_in_kg : ($expected_unit === 'ton' ? $qty_in_kg / 1000 : $qty_in_kg / 50);
+        });
+
+        $remaining = max($expected_amount - $delivered_so_far, 0);
+
+        // Check if delivery exceeds remaining
+        $quantityWarning = null;
+        if ($validated['qty'] > $remaining) {
+            $quantityWarning = "Delivery quantity ({$validated['qty']} {$validated['unit']}) exceeds remaining expected buyback ({$remaining} {$expected_unit}).";
+        }
+
+        // Create buyback transaction
+        $transaction = BuybackTransaction::create([
+            'contract_id' => $validated['contract_id'],
+            'corn_product_id' => $validated['corn_product_id'],
+            'qty' => $validated['qty'],
+            'unit' => $validated['unit'],
+            'delivery_date' => $validated['delivery_date'],
+            'buyback_price' => $contract->buyback_price_per_unit,
+            'total_value' => $this->toKg($validated['qty'], $validated['unit']) * $contract->buyback_price_per_unit,
+            'notes' => $validated['notes'] ?? "Buyback delivery from {$contract->partner->name}",
+            'created_by' => Auth::id(),
         ]);
 
-        DB::beginTransaction();
-        try {
-            $contract = Contract::with('contractSeedCommitments')->findOrFail($validated['contract_id']);
-            $cornProduct = CornProduct::findOrFail($validated['corn_product_id']);
+        // Create inventory transaction record
+        \App\Models\InventoryTransaction::create([
+            'product_type' => 'App\\Models\\CornProduct',
+            'product_id' => $validated['corn_product_id'],
+            'transaction_type' => 'inbound',
+            'qty' => $validated['qty'],
+            'unit' => $validated['unit'],
+            'contract_id' => $validated['contract_id'],
+            'notes' => $validated['notes'] ?? 'Buyback delivery recorded',
+            'receipt_date' => $validated['delivery_date'],
+            'created_by' => Auth::id(),
+        ]);
 
-            // Get expected buyback info
-            $commitment = $contract->contractSeedCommitments->first();
-            $expected_amount = $commitment?->expected_buyback_amount ?? 0;
-            $expected_unit = $commitment?->buyback_unit ?? 'kg';
+        DB::commit();
 
-            // Calculate remaining buyback
-            $delivered_so_far = $contract->buybackTransactions->sum(function ($transaction) use ($expected_unit) {
-                $qty_in_kg = $this->toKg($transaction->qty, $transaction->unit);
-                return $expected_unit === 'kg' ? $qty_in_kg : ($expected_unit === 'ton' ? $qty_in_kg / 1000 : $qty_in_kg / 50);
-            });
-
-            $remaining = max($expected_amount - $delivered_so_far, 0);
-
-            // Check if delivery exceeds remaining
-            $warning = null;
-            if ($validated['qty'] > $remaining) {
-                $warning = "Warning: Delivery quantity ({$validated['qty']} {$validated['unit']}) exceeds remaining expected buyback ({$remaining} {$expected_unit}).";
-            }
-
-            // Create buyback transaction
-            $transaction = BuybackTransaction::create([
-                'contract_id' => $validated['contract_id'],
-                'corn_product_id' => $validated['corn_product_id'],
-                'qty' => $validated['qty'],
-                'unit' => $validated['unit'],
-                'delivery_date' => $validated['delivery_date'],
-                'buyback_price' => $contract->buyback_price_per_unit,
-                'total_value' => $validated['qty'] * $contract->buyback_price_per_unit,
-                'notes' => $validated['notes'] ?? "Buyback delivery from {$contract->partner->name}",
-                'created_by' => Auth::id(),
-            ]);
-
-            // ADD THIS BLOCK:
-            \App\Models\InventoryTransaction::create([
-                'product_type' => 'CornProduct', // or 'CornProduct' if you want to distinguish
-                'product_id' => $validated['corn_product_id'],
-                'product_name' => $cornProduct->name, 
-                'transaction_type' => 'inbound',
-                'qty' => $validated['qty'],
-                'unit' => $validated['unit'],
-                'contract_id' => $validated['contract_id'],
-                'notes' => 'Buyback delivery recorded',
-                'receipt_date' => $validated['delivery_date'],
-                'created_by' => Auth::id(),
-            ]);
-
-            DB::commit();
-
-            return redirect()->route('buybacks.index')
-                ->with('success', 'Buyback delivery recorded successfully' . ($warning ? '. ' . $warning : ''));
-        } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->withInput()
-                ->with('error', 'Failed to record buyback: ' . $e->getMessage());
+        // Combine all warnings
+        $warnings = array_filter([$quantityWarning, $expirationWarning]);
+        $successMessage = 'Buyback delivery recorded successfully';
+        if (!empty($warnings)) {
+            $successMessage .= '. ' . implode(' ', $warnings);
         }
-    }
 
+        return redirect()->route('buybacks.index')
+            ->with('success', $successMessage);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return back()->withInput()
+            ->with('error', 'Failed to record buyback: ' . $e->getMessage());
+    }
+}
     /**
      * Show buyback details for specific contract
      */
@@ -336,5 +368,132 @@ class BuybackController extends Controller implements HasMiddleware
                 'message' => 'Failed to fetch contract history: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    public function exportBuybackPDF(Request $request)
+    {
+        $contracts = Contract::whereIn('status', ['active', 'terminated', 'completed', 'suspended'])
+            ->with(['partner', 'farm', 'contractSeedCommitments', 'buybackTransactions'])
+            ->get()
+            ->map(function ($contract) {
+                $commitment = $contract->contractSeedCommitments->first();
+                $expected_buyback_amount = $commitment?->expected_buyback_amount ?? 0;
+                $buyback_unit = $commitment?->buyback_unit ?? 'kg';
+
+                $expected_kg = $this->toKg($expected_buyback_amount, $buyback_unit);
+                $actual_kg = $contract->buybackTransactions->sum(function ($transaction) {
+                    return $this->toKg($transaction->qty, $transaction->unit);
+                });
+
+                return (object)[
+                    'id' => $contract->id,
+                    'contract_number' => $contract->contract_name,
+                    'partner_name' => $contract->partner->name,
+                    'farm_name' => $contract->farm?->location_name ?? '',
+                    'expected_buyback_amount' => $expected_buyback_amount,
+                    'buyback_unit' => $buyback_unit,
+                    'expected_kg' => $expected_kg,
+                    'actual_kg' => $actual_kg,
+                    'remaining_kg' => max($expected_kg - $actual_kg, 0),
+                    'fulfillment_percentage' => $expected_kg > 0 ? round(($actual_kg / $expected_kg) * 100, 2) : 0,
+                    'buyback_price' => $contract->buyback_price_per_unit,
+                    'status' => $contract->status,
+                ];
+            });
+
+        $totalExpected = $contracts->sum('expected_kg');
+        $totalActual = $contracts->sum('actual_kg');
+        $totalRemaining = $totalExpected - $totalActual;
+        $overallFulfillment = $totalExpected > 0 ? ($totalActual / $totalExpected) * 100 : 0;
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('exports.buyback_pdf', [
+            'contracts' => $contracts,
+            'user' => auth()->user(),
+            'generationDate' => now()->format('F d, Y - h:i A'), // <-- Add this line
+            'totalExpected' => $totalExpected,
+            'totalActual' => $totalActual,
+            'totalRemaining' => $totalRemaining,
+            'overallFulfillment' => $overallFulfillment,
+        ])->setPaper('A4', 'landscape');
+
+        return $pdf->download('VigourSeeds_BuybackOverview_' . now()->format('Ymd-His') . '.pdf');
+    }
+
+    public function exportBuybackDeliveryTransactionHistory(Request $request, $contractId)
+    {
+        $contract = Contract::with([
+            'partner',
+            'farm',
+            'contractSeedCommitments.seed.cornProduct',
+            'buybackTransactions.cornProduct',
+            'buybackTransactions.creator'
+        ])->findOrFail($contractId);
+
+        $commitment = $contract->contractSeedCommitments->first();
+        $expected_amount = $commitment?->expected_buyback_amount ?? 0;
+        $expected_unit = $commitment?->buyback_unit ?? 'kg';
+
+        $expected_total_kg = $this->toKg($expected_amount, $expected_unit);
+        $actual_total_kg = $contract->buybackTransactions->sum(function ($transaction) {
+            return $this->toKg($transaction->qty, $transaction->unit);
+        });
+        $remaining_kg = max($expected_total_kg - $actual_total_kg, 0);
+        $fulfillmentPercentage = $expected_total_kg > 0 ? ($actual_total_kg / $expected_total_kg) * 100 : 0;
+
+        $orderLines = collect([
+            [
+                'product_type' => 'corn',
+                'product_name' => $commitment?->seed?->cornProduct?->name ?? '-',
+                'qty' => $expected_amount,
+                'unit' => $expected_unit,
+                'delivered_qty' => $actual_total_kg,
+                'price_per_unit' => $contract->buyback_price_per_unit,
+                'total_value' => $actual_total_kg * $contract->buyback_price_per_unit,
+            ]
+        ]);
+
+        $transactions = $contract->buybackTransactions->map(function ($txn) {
+            return [
+                'delivery_date' => $txn->delivery_date,
+                'corn_product_name' => $txn->cornProduct->name ?? '-',
+                'qty' => $txn->qty,
+                'unit' => $txn->unit,
+                'total_value' => $txn->total_value,
+                'created_by' => $txn->creator ? trim(($txn->creator->first_name ?? '') . ' ' . ($txn->creator->last_name ?? '')) : '-',
+                'notes' => $txn->notes,
+            ];
+        });
+
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('exports.buyback_delivery_history_pdf', [
+            'generationDate' => now()->format('F d, Y - h:i A'), // <-- Add this line
+            'orderNumber' => $contract->contract_name . '-' . $contract->id,
+            'partnerName' => $contract->partner->name ?? '-',
+            'farmName' => $contract->farm?->location_name ?? '-',
+            'farmLocation' => $contract->farm?->address ?? '',
+            'partnerContact' => $contract->partner?->phone ?? '-',
+            'orderDate' => $contract->effective_date ? \Carbon\Carbon::parse($contract->effective_date)->format('M d, Y') : '-',
+            'contractName' => $contract->contract_name,
+            'contractPeriod' => $contract->effective_date && $contract->expiration_date
+                ? \Carbon\Carbon::parse($contract->effective_date)->format('M d, Y') . ' - ' . \Carbon\Carbon::parse($contract->expiration_date)->format('M d, Y')
+                : '-',
+            'buybackPrice' => $contract->buyback_price_per_unit,
+            'orderStatus' => $contract->status,
+            'fulfillmentPercentage' => $fulfillmentPercentage,
+            'orderLines' => $orderLines,
+            'transactions' => $transactions,
+            'user' => auth()->user(),
+            'orderId' => $contract->id,
+            // If your blade expects these:
+            'contractNumber' => $contract->contract_name . '-' . $contract->id,
+            'expectedTotalKg' => $expected_total_kg,
+            'actualTotalKg' => $actual_total_kg,
+            'remainingKg' => $remaining_kg,
+            'totalValue' => $actual_total_kg * $contract->buyback_price_per_unit,
+            'contractId' => $contract->id,
+        ])->setPaper('a4', 'landscape');
+
+        return response($pdf->output(), 200)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'attachment; filename="VigourSeed_BuybackDelivery_' . $contract->id . '_' . now()->format('Y-m-d') . '.pdf"');
     }
 }

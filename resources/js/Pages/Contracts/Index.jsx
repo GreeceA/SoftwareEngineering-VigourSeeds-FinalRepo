@@ -6,6 +6,7 @@ import '../../../css/fonts.css';
 import { ChevronDownIcon, FunnelIcon, ArrowsUpDownIcon } from '@heroicons/react/24/outline';
 import dayjs from 'dayjs';
 
+
 export default function Index({ auth, contracts, filters }) {
     const { auth: authData } = usePage().props;
     const permissions = authData?.user?.can || [];
@@ -120,6 +121,21 @@ export default function Index({ auth, contracts, filters }) {
                 <div className="mb-6 flex items-center justify-between">
                     <h1 className="text-2xl font-semibold text-gray-800">Contract Management</h1>
                     <div className="flex space-x-3">
+                        <button
+                            onClick={() => window.location.href = route('contracts.export.pdf', {
+                                search,
+                                status: statusFilter,
+                                sort_by: sortBy,
+                                sort_dir: sortDir,
+                                per_page: perPage,
+                            })}
+                            className="flex items-center px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#37692F] bg-white"
+                        >
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                            Export as PDF
+                        </button>
                         {/* Status Filter Dropdown */}
                         <div className="relative" ref={filterRef}>
                             <button

@@ -497,11 +497,14 @@ const BuybackContractDetails = () => {
 
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Delivery Transaction History</h2>
-              <button className="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium text-sm transition">
-                <Download size={16} />
-                Export Report
-              </button>
+                <h2 className="text-lg font-semibold text-gray-900">Delivery Transaction History</h2>
+                    <button
+                        onClick={() => window.location.href = route('partner-orders.exportDeliveryHistory', partnerOrder.id)}
+                        className="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium text-sm transition"
+                    >
+                        <Download size={16} />
+                        Export Report
+                    </button>
             </div>
 
             {partnerOrder.buyback_transactions.length > 0 ? (

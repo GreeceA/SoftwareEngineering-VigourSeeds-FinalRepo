@@ -2,7 +2,7 @@ import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
 import NavLink from '@/Components/NavLink';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
-import { Link, usePage } from '@inertiajs/react';
+import { Link, usePage, router } from '@inertiajs/react';
 import { useState } from 'react';
 import Vlogo from '@/assets/vigour-logo.png';
 import { route } from 'ziggy-js'; 
@@ -22,6 +22,22 @@ export default function AuthenticatedLayout({ header, children }) {
     const [openUsersDropdown, setOpenUsersDropdown] = useState(false);
     const [openInventoryDropdown, setOpenInventoryDropdown] = useState(false);
     const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false);
+
+    
+    const handleNotificationClick = (notification) => {
+        // Mark as read and navigate to URL
+        router.post(
+            route('notifications.mark-as-read', notification.id), 
+            {}, 
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    // Navigate to the notification URL after marking as read
+                    router.visit(notification.data.url);
+                }
+            }
+        );
+    };
 
     const [open, setOpen] = useState(false);
     return (
@@ -294,11 +310,10 @@ export default function AuthenticatedLayout({ header, children }) {
                                             <div className="max-h-96 overflow-y-auto">
                                                 {notifications?.length > 0 ? (
                                                     notifications.map((notification) => (
-                                                        <Link
+                                                        <div
                                                             key={notification.id}
-                                                            href={notification.data.url}
-                                                            className="block border-b border-gray-100 p-4 hover:bg-gray-50 transition-colors"
-                                                            onClick={() => setShowNotifications(false)}
+                                                            onClick={() => handleNotificationClick(notification)}
+                                                            className="block border-b border-gray-100 p-4 hover:bg-gray-50 transition-colors cursor-pointer"
                                                         >
                                                             <div className="flex items-start gap-3">
                                                                 <div className="flex-shrink-0">
@@ -336,7 +351,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                                                     </p>
                                                                 </div>
                                                             </div>
-                                                        </Link>
+                                                        </div>
                                                     ))
                                                 ) : (
                                                     <div className="p-8 text-center text-gray-500">

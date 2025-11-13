@@ -121,11 +121,23 @@ const InventoryLedger = () => {
               <p className="text-gray-600 mt-1">Complete transaction history</p>
             </div>
             {permissions.includes('view inventory') && (
-              <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition">
-                <Download size={20} />
-                Export
+              <button 
+                  onClick={() => {
+                      const params = new URLSearchParams({
+                          product_type: filters.product_type || '',
+                          transaction_type: filters.transaction_type || '',
+                          date_from: filters.date_from || '',
+                          date_to: filters.date_to || '',
+                          search: filters.search || '',
+                      });
+                      window.location.href = route('inventory.ledger.export') + '?' + params.toString();
+                  }}
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
+              >
+                  <Download size={20} />
+                  Export
               </button>
-            )}
+          )}
           </div>
 
           {/* Filters */}

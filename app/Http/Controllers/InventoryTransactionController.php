@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class InventoryTransactionController extends Controller implements HasMiddleware
 {
@@ -577,5 +578,205 @@ public function dashboard()
         } else {
             return 'good';
         }
+    }
+
+    public function exportDashboard()
+    {
+        // Get all products (Seeds and Items) - exclude Corn
+        $seeds = Seed::all();
+        $items = Item::all();
+
+        // Get all pending order lines
+        $pendingOrderLines = \App\Models\PartnerOrderLine::whereHas('partnerOrder', function ($q) {
+            $q->whereIn('status', ['pending', 'partially_fulfilled'])
+            ->whereHas('contract', function ($qc) {
+                $qc->where('status', 'active');
+            });
+        })->get();
+
+        // Build shortfall list
+        $shortfalls = [];
+
+        // Helper function to convert to kg
+        $convertToKg = function($qty, $unit) {
+            if ($unit === 'ton') return $qty * 1000;
+            if ($unit === 'sack') return $qty * 50;
+            return $qty; // kg, liter
+        };
+
+        // For Seeds
+        foreach ($seeds as $seed) {
+            $committedKg = $pendingOrderLines
+                ->where('product_type', 'seed')
+                ->where('product_id', $seed->id)
+                ->sum(function($line) use ($convertToKg) {
+                    return $convertToKg($line->qty - $line->delivered_qty, $line->unit);
+                });
+            
+            $availableKg = $seed->getCurrentStock();
+            $shortfallKg = $committedKg - $availableKg;
+            
+            if ($shortfallKg > 0) {
+                $shortfalls[] = [
+                    'type' => 'Seed',
+                    'id' => $seed->id,
+                    'name' => $seed->seed_variety,
+                    'unit' => 'kg',
+                    'on_hand' => round($availableKg, 2),
+                    'committed' => round($committedKg, 2),
+                    'shortfall' => round($shortfallKg, 2),
+                ];
+            }
+        }
+
+        // For Items
+        foreach ($items as $item) {
+            $committedInBaseUnit = $pendingOrderLines
+                ->where('product_type', 'App\\Models\\Item')
+                ->where('product_id', $item->id)
+                ->sum(function($line) use ($convertToKg) {
+                    return $convertToKg($line->qty - $line->delivered_qty, $line->unit);
+                });
+            
+            $availableInBaseUnit = $item->getCurrentStock();
+            $shortfallInBaseUnit = $committedInBaseUnit - $availableInBaseUnit;
+            
+            if ($shortfallInBaseUnit > 0) {
+                $shortfalls[] = [
+                    'type' => $item->type,
+                    'id' => $item->id,
+                    'name' => $item->name,
+                    'unit' => $item->base_unit ?? 'kg',
+                    'on_hand' => round($availableInBaseUnit, 2),
+                    'committed' => round($committedInBaseUnit, 2),
+                    'shortfall' => round($shortfallInBaseUnit, 2),
+                ];
+            }
+        }
+
+        // Build inventory list
+        $seedsList = Seed::active()->get()->map(function ($seed) {
+            $hasTransaction = InventoryTransaction::where('product_type', 'Seed')
+                ->where('product_id', $seed->id)
+                ->exists();
+            $currentStock = $hasTransaction ? $seed->getCurrentStock() : null;
+
+            return [
+                'id' => $seed->id,
+                'name' => $seed->seed_variety,
+                'type' => 'Seed',
+                'current_stock' => $currentStock,
+                'unit' => 'kg',
+                'status' => $hasTransaction ? $this->determineStockStatus($currentStock) : null,
+            ];
+        });
+
+        $itemsList = Item::active()->get()->map(function ($item) {
+            $hasTransaction = InventoryTransaction::where('product_type', 'item')
+                ->where('product_id', $item->id)
+                ->exists();
+            $currentStock = $hasTransaction ? $item->getCurrentStock() : null;
+
+            return [
+                'id' => $item->id,
+                'name' => $item->name,
+                'type' => $item->type,
+                'current_stock' => $currentStock,
+                'unit' => $item->base_unit,
+                'status' => $hasTransaction ? $this->determineStockStatus($currentStock) : null,
+            ];
+        });
+
+        $inventory = collect()
+            ->merge($seedsList)
+            ->merge($itemsList)
+            ->filter(function ($item) {
+                return strtolower($item['type']) !== 'corn';
+            })
+            ->values();
+
+        $pdf = Pdf::loadView('exports.inventory_dashboard_pdf', [
+            'inventory' => $inventory,
+            'shortfalls' => collect($shortfalls),
+            'user' => Auth::user(),
+            'generationDate' => now()->format('F d, Y - h:i A')
+        ])->setPaper('A4', 'landscape');
+
+        return $pdf->download('VigourSeed_InventoryDashboard_' . now()->format('Y-m-d') . '.pdf');
+    }
+
+    public function exportLedger(Request $request)
+    {
+        $query = InventoryTransaction::with(['contract', 'partnerOrder', 'creator'])
+            ->orderBy('created_at', 'desc');
+
+        // Apply filters
+        if ($request->filled('product_type')) {
+            $query->where('product_type', $request->product_type);
+        }
+
+        if ($request->filled('transaction_type')) {
+            $query->where('transaction_type', $request->transaction_type);
+        }
+
+        if ($request->filled('date_from')) {
+            $query->whereDate('created_at', '>=', $request->date_from);
+        }
+
+        if ($request->filled('date_to')) {
+            $query->whereDate('created_at', '<=', $request->date_to);
+        }
+
+        if ($request->filled('search')) {
+            $searchTerm = $request->search;
+            $seedIds = Seed::where('seed_variety', 'LIKE', "%{$searchTerm}%")->pluck('id');
+            $itemIds = Item::where('name', 'LIKE', "%{$searchTerm}%")->pluck('id');
+            
+            $query->where(function($q) use ($seedIds, $itemIds) {
+                $q->where(function($subQ) use ($seedIds) {
+                    $subQ->where('product_type', 'Seed')->whereIn('product_id', $seedIds);
+                })
+                ->orWhere(function($subQ) use ($itemIds) {
+                    $subQ->where('product_type', 'item')->whereIn('product_id', $itemIds);
+                });
+            });
+        }
+
+        $transactions = $query->get();
+
+        // Transform transactions to include product names and user names
+        $transactions->transform(function ($txn) {
+            if ($txn->product_type === 'Seed' || $txn->product_type === 'seed') {
+                $seed = $txn->seed;
+                $txn->product_name = $seed ? $seed->seed_variety : '-';
+            } elseif ($txn->product_type === 'item') {
+                $item = $txn->item;
+                $txn->product_name = $item ? $item->name : '-';
+            } else {
+                $txn->product_name = '-';
+            }
+            
+            $txn->user_name = $txn->creator
+                ? trim(($txn->creator->first_name ?? '') . ' ' . ($txn->creator->last_name ?? ''))
+                : '-';
+
+            return $txn;
+        });
+
+        $hasFilters = $request->filled('product_type') || 
+                    $request->filled('transaction_type') || 
+                    $request->filled('date_from') || 
+                    $request->filled('date_to') || 
+                    $request->filled('search');
+
+        $pdf = Pdf::loadView('exports.inventory_ledger_pdf', [
+            'transactions' => $transactions,
+            'filters' => $request->only(['product_type', 'transaction_type', 'date_from', 'date_to', 'search']),
+            'hasFilters' => $hasFilters,
+            'user' => Auth::user(),
+            'generationDate' => now()->format('F d, Y - h:i A')
+        ])->setPaper('A4', 'landscape');
+
+        return $pdf->download('VigourSeed_InventoryLedger_' . now()->format('Y-m-d') . '.pdf');
     }
 }

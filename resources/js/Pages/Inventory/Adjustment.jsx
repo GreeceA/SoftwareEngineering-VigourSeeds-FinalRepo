@@ -6,7 +6,8 @@ import { AlertCircle, Plus, Minus, Package } from 'lucide-react';
 const Adjustment = ({ auth, seeds, items }) => {
     const [selectedProductType, setSelectedProductType] = useState('seed');
     const [selectedProduct, setSelectedProduct] = useState(null);
-    const [adjustmentType, setAdjustmentType] = useState('add'); // 'add' or 'subtract'
+    const [adjustmentType, setAdjustmentType] = useState('add');
+    const [qtyError, setQtyError] = useState('');
 
     const { data, setData, post, processing, errors, reset } = useForm({
         product_type: 'seed',
@@ -17,6 +18,62 @@ const Adjustment = ({ auth, seeds, items }) => {
     });
 
     const products = selectedProductType === 'seed' ? seeds : items;
+
+    const handleQtyChange = (e) => {
+        let value = e.target.value;
+
+        // Block negative input for "Add Stock"
+        if (adjustmentType === 'add') {
+            if (value.startsWith('-')) {
+                value = value.substring(1);
+            }
+        }
+
+        // Block positive input for "Subtract Stock"  
+        if (adjustmentType === 'subtract') {
+            if (value && !value.startsWith('-') && value !== '0') {
+                value = '-' + value;
+            }
+        }
+
+        // Limit to 2 decimals
+        if (value && value.includes('.')) {
+            const parts = value.split('.');
+            const int = parts[0];
+            const dec = parts[1];
+            if (dec && dec.length > 2) {
+                value = int + '.' + dec.slice(0, 2);
+            }
+        }
+
+        // Validation for error display
+        let error = '';
+        if (adjustmentType === 'add') {
+            if (value === '' || parseFloat(value) <= 0) {
+                error = 'Enter a positive quantity to add stock.';
+            }
+        } else {
+            if (value === '' || parseFloat(value) >= 0) {
+                error = 'Enter a negative quantity to subtract stock.';
+            } else if (selectedProduct) {
+                // Check if subtraction will cause negative stock
+                const adjustmentAmount = Math.abs(parseFloat(value));
+                const currentStock = selectedProduct.current_stock || 0;
+                if (adjustmentAmount > currentStock) {
+                    error = `Cannot subtract ${adjustmentAmount} ${data.unit}. Only ${currentStock} ${data.unit} available in stock.`;
+                }
+            }
+        }
+
+        setQtyError(error);
+        setData('qty', value);
+    };
+
+    const calculateNewStock = () => {
+        if (!selectedProduct || !data.qty) return null;
+        const adjustment = adjustmentType === 'subtract' ? -Math.abs(parseFloat(data.qty)) : Math.abs(parseFloat(data.qty));
+        return (selectedProduct.current_stock || 0) + adjustment;
+    };
 
     // Suggested reasons based on adjustment type
     const suggestedReasons = {
@@ -51,7 +108,6 @@ const Adjustment = ({ auth, seeds, items }) => {
     const handleSubmit = (e) => {
         e.preventDefault();
         
-        // Make qty negative if subtracting
         const finalQty = adjustmentType === 'subtract' ? -Math.abs(parseFloat(data.qty)) : Math.abs(parseFloat(data.qty));
         
         post(route('inventory.adjustment.store'), {
@@ -64,12 +120,6 @@ const Adjustment = ({ auth, seeds, items }) => {
                 setSelectedProduct(null);
             },
         });
-    };
-
-    const calculateNewStock = () => {
-        if (!selectedProduct || !data.qty) return null;
-        const adjustment = adjustmentType === 'subtract' ? -Math.abs(parseFloat(data.qty)) : Math.abs(parseFloat(data.qty));
-        return (selectedProduct.current_stock || 0) + adjustment;
     };
 
     const handleReasonClick = (reason) => {
@@ -90,13 +140,11 @@ const Adjustment = ({ auth, seeds, items }) => {
         >
             <div className="min-h-screen bg-gray-50 p-6">
                 <div className="max-w-4xl mx-auto">
-                    {/* Header */}
                     <div className="mb-8">
                         <h1 className="text-3xl font-bold text-gray-900">Stock Adjustment</h1>
                         <p className="text-gray-600 mt-1">Manually adjust inventory levels for physical count corrections</p>
                     </div>
 
-                    {/* Info Banner */}
                     <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6 rounded-lg">
                         <div className="flex items-start gap-3">
                             <AlertCircle className="text-blue-600 mt-0.5" size={20} />
@@ -110,9 +158,7 @@ const Adjustment = ({ auth, seeds, items }) => {
                         </div>
                     </div>
 
-                    {/* Adjustment Form */}
                     <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-sm border p-6 space-y-6">
-                        {/* Product Type Selection */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Product Type
@@ -151,7 +197,6 @@ const Adjustment = ({ auth, seeds, items }) => {
                             </div>
                         </div>
 
-                        {/* Product Selection */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Select Product
@@ -173,7 +218,6 @@ const Adjustment = ({ auth, seeds, items }) => {
                             {errors.product_id && <p className="text-red-600 text-sm mt-1">{errors.product_id}</p>}
                         </div>
 
-                        {/* Current Stock Display */}
                         {selectedProduct && (
                             <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                                 <div className="flex items-center justify-between">
@@ -190,7 +234,6 @@ const Adjustment = ({ auth, seeds, items }) => {
                             </div>
                         )}
 
-                        {/* Adjustment Type */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Adjustment Type
@@ -198,7 +241,11 @@ const Adjustment = ({ auth, seeds, items }) => {
                             <div className="flex gap-4">
                                 <button
                                     type="button"
-                                    onClick={() => setAdjustmentType('add')}
+                                    onClick={() => {
+                                        setAdjustmentType('add');
+                                        setData('qty', ''); // Clear quantity
+                                        setQtyError(''); // Clear error
+                                    }}
                                     className={`flex-1 px-4 py-3 rounded-lg border-2 font-medium transition flex items-center justify-center gap-2 ${
                                         adjustmentType === 'add'
                                             ? 'border-green-500 bg-green-50 text-green-700'
@@ -208,9 +255,14 @@ const Adjustment = ({ auth, seeds, items }) => {
                                     <Plus size={20} />
                                     Add Stock
                                 </button>
+
                                 <button
                                     type="button"
-                                    onClick={() => setAdjustmentType('subtract')}
+                                    onClick={() => {
+                                        setAdjustmentType('subtract');
+                                        setData('qty', ''); // Clear quantity
+                                        setQtyError(''); // Clear error
+                                    }}
                                     className={`flex-1 px-4 py-3 rounded-lg border-2 font-medium transition flex items-center justify-center gap-2 ${
                                         adjustmentType === 'subtract'
                                             ? 'border-red-500 bg-red-50 text-red-700'
@@ -223,7 +275,6 @@ const Adjustment = ({ auth, seeds, items }) => {
                             </div>
                         </div>
 
-                        {/* Quantity */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Adjustment Quantity
@@ -232,11 +283,10 @@ const Adjustment = ({ auth, seeds, items }) => {
                                 <input
                                     type="number"
                                     step="0.01"
-                                    // min="0.01"
                                     value={data.qty}
-                                    onChange={(e) => setData('qty', e.target.value)}
-                                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                                    placeholder="Enter quantity"
+                                    onChange={handleQtyChange}
+                                    className={`flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent ${qtyError ? 'border-red-500' : 'border-gray-300'}`}
+                                    placeholder={adjustmentType === 'add' ? "e.g., 100" : "e.g., -50"}
                                     required
                                 />
                                 <input
@@ -246,10 +296,11 @@ const Adjustment = ({ auth, seeds, items }) => {
                                     className="w-24 px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700"
                                 />
                             </div>
-                            {errors.qty && <p className="text-red-600 text-sm mt-1">{errors.qty}</p>}
+                            {(qtyError || errors.qty) && (
+                                <p className="text-red-600 text-sm mt-1">{qtyError || errors.qty}</p>
+                            )}
                         </div>
 
-                        {/* New Stock Preview */}
                         {newStock !== null && selectedProduct && (
                             <div className={`rounded-lg p-4 border-2 ${
                                 newStock < 0 
@@ -265,18 +316,19 @@ const Adjustment = ({ auth, seeds, items }) => {
                                     {newStock.toLocaleString()} {data.unit}
                                 </p>
                                 {newStock < 0 && (
-                                    <p className="text-sm text-red-600 mt-2">⚠️ Warning: This will result in negative stock!</p>
+                                    <p className="text-sm text-red-600 mt-2 flex items-center gap-2">
+                                        <AlertCircle size={16} />
+                                        ⚠️ Error: Cannot subtract more than available stock!
+                                    </p>
                                 )}
                             </div>
                         )}
 
-                        {/* Reason/Notes */}
                         <div>
                             <label className="block text-sm font-medium text-gray-700 mb-2">
                                 Reason for Adjustment <span className="text-red-500">*</span>
                             </label>
                             
-                            {/* Suggested Reasons */}
                             <div className="mb-3">
                                 <p className="text-xs text-gray-600 mb-2">Quick select a common reason:</p>
                                 <div className="flex flex-wrap gap-2">
@@ -311,11 +363,10 @@ const Adjustment = ({ auth, seeds, items }) => {
                             {errors.notes && <p className="text-red-600 text-sm mt-1">{errors.notes}</p>}
                         </div>
 
-                        {/* Submit */}
                         <div className="flex gap-3 pt-4">
                             <button
                                 type="submit"
-                                disabled={processing || !selectedProduct}
+                                disabled={processing || !selectedProduct || !!qtyError}
                                 className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-medium transition"
                             >
                                 {processing ? 'Recording...' : 'Record Adjustment'}
