@@ -6,8 +6,6 @@ export default function Show({ auth, item, recentInventoryLogs, partnerOrders })
     const { auth: authData } = usePage().props;
     const permissions = authData?.user?.can || [];
 
-    
-
     // Helper to format currency for display
     const formatPrice = (price) => {
         return new Intl.NumberFormat('en-PH', {

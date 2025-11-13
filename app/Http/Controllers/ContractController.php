@@ -51,7 +51,7 @@ class ContractController extends Controller implements HasMiddleware
         // Apply sorting
         $sortBy = $request->get('sort_by', 'id');
         $sortDir = $request->get('sort_dir', 'desc');
-        
+
         $validSortColumns = ['id', 'contract_name', 'signing_date', 'effective_date', 'expiration_date', 'status'];
         if (in_array($sortBy, $validSortColumns)) {
             $query->orderBy($sortBy, $sortDir);
@@ -60,7 +60,7 @@ class ContractController extends Controller implements HasMiddleware
         }
 
         $perPage = min($request->get('per_page', 15), 100); // Cap at 100
-        
+
         $contracts = $query->paginate($perPage)
             ->through(fn ($contract) => [
                 'id' => $contract->id,
@@ -100,7 +100,7 @@ class ContractController extends Controller implements HasMiddleware
             ->where('status', 'active')
             ->orderBy('name')
             ->get();
-        
+
         $seeds = Seed::select('id', 'seed_variety', 'price_per_unit', 'growth_cycle', 'soil_type', 'status')
             ->orderBy('seed_variety')
             ->get();
@@ -156,10 +156,9 @@ class ContractController extends Controller implements HasMiddleware
 
             return redirect()->route('contracts.index')
                 ->with('success', 'Contract created successfully.');
-
         } catch (\Exception $e) {
             DB::rollBack();
-            
+
             // Clean up uploaded file if transaction fails
             if (isset($validated['contract_file']) && Storage::disk('public')->exists($validated['contract_file'])) {
                 Storage::disk('public')->delete($validated['contract_file']);
@@ -243,7 +242,7 @@ class ContractController extends Controller implements HasMiddleware
         $expected_unit = $commitment?->buyback_unit ?? 'kg';
 
         // Helper for unit conversion
-        $toKg = function($amount, $unit) {
+        $toKg = function ($amount, $unit) {
             if ($unit === 'kg') return $amount;
             if ($unit === 'sack') return $amount * 50;
             if ($unit === 'ton') return $amount * 1000;
@@ -422,47 +421,46 @@ class ContractController extends Controller implements HasMiddleware
         $validated = $request->validated();
 
         if ($isPartiallyEditable && $contract->status === 'suspended' && isset($validated['seeds'])) {
-        // Get total received buyback in kg
-        $totalReceivedKg = $contract->buybackTransactions->sum(function ($tx) {
-            if ($tx->unit === 'kg') return $tx->qty;
-            if ($tx->unit === 'sack') return $tx->qty * 50;
-            if ($tx->unit === 'ton') return $tx->qty * 1000;
-            return $tx->qty;
-        });
+            // Get total received buyback in kg
+            $totalReceivedKg = $contract->buybackTransactions->sum(function ($tx) {
+                if ($tx->unit === 'kg') return $tx->qty;
+                if ($tx->unit === 'sack') return $tx->qty * 50;
+                if ($tx->unit === 'ton') return $tx->qty * 1000;
+                return $tx->qty;
+            });
 
-        // Get new expected buyback in kg
-        $totalExpectedKg = collect($validated['seeds'])->sum(function ($seed) {
-            $unit = $seed['buyback_unit'] ?? null;
-            $amount = $seed['expected_buyback_amount'] ?? 0;
-            if ($unit === 'kg') return $amount;
-            if ($unit === 'sack') return $amount * 50;
-            if ($unit === 'ton') return $amount * 1000;
-            return $amount;
-        });
+            // Get new expected buyback in kg
+            $totalExpectedKg = collect($validated['seeds'])->sum(function ($seed) {
+                $unit = $seed['buyback_unit'] ?? null;
+                $amount = $seed['expected_buyback_amount'] ?? 0;
+                if ($unit === 'kg') return $amount;
+                if ($unit === 'sack') return $amount * 50;
+                if ($unit === 'ton') return $amount * 1000;
+                return $amount;
+            });
 
-if ($totalExpectedKg < $totalReceivedKg) {
-    // Conversion helper (define it HERE, before using)
-    $toKg = function($amount, $unit) {
-        if ($unit === 'kg') return $amount;
-        if ($unit === 'sack') return $amount * 50;
-        if ($unit === 'ton') return $amount * 1000;
-        return $amount;
-    };
+            if ($totalExpectedKg < $totalReceivedKg) {
+                // Conversion helper (define it HERE, before using)
+                $toKg = function ($amount, $unit) {
+                    if ($unit === 'kg') return $amount;
+                    if ($unit === 'sack') return $amount * 50;
+                    if ($unit === 'ton') return $amount * 1000;
+                    return $amount;
+                };
 
-    // Find the first seed commitment for the error message
-    $firstSeed = $validated['seeds'][0] ?? null;
-    $amount = $firstSeed['expected_buyback_amount'] ?? 0;
-    $unit = $firstSeed['buyback_unit'] ?? '[NO BUYBACK UNIT]'; 
-    
-    // Now call $toKg
-    $converted = $toKg($amount, $unit);
+                // Find the first seed commitment for the error message
+                $firstSeed = $validated['seeds'][0] ?? null;
+                $amount = $firstSeed['expected_buyback_amount'] ?? 0;
+                $unit = $firstSeed['buyback_unit'] ?? '[NO BUYBACK UNIT]';
 
-    return redirect()->back()->withInput()->withErrors([
-        'seeds' => "Expected buyback amount ({$amount} {$unit} = {$converted} kg) cannot be less than total received ({$totalReceivedKg} kg)."
-    ]);
-}
-        
-    }
+                // Now call $toKg
+                $converted = $toKg($amount, $unit);
+
+                return redirect()->back()->withInput()->withErrors([
+                    'seeds' => "Expected buyback amount ({$amount} {$unit} = {$converted} kg) cannot be less than total received ({$totalReceivedKg} kg)."
+                ]);
+            }
+        }
 
         DB::beginTransaction();
 
@@ -544,7 +542,6 @@ if ($totalExpectedKg < $totalReceivedKg) {
 
             return redirect()->route('contracts.show', $contract->id)
                 ->with('success', 'Contract updated successfully.');
-
         } catch (\Exception $e) {
             DB::rollBack();
 
@@ -585,7 +582,6 @@ if ($totalExpectedKg < $totalReceivedKg) {
 
             return redirect()->route('contracts.index')
                 ->with('success', 'Contract cancelled successfully.');
-
         } catch (\Exception $e) {
             Log::error("Failed to cancel contract", [
                 'contract_id' => $contract->id,
@@ -612,7 +608,7 @@ if ($totalExpectedKg < $totalReceivedKg) {
         }
 
         $validStatuses = ['draft', 'under_review', 'active', 'suspended', 'terminated', 'cancelled', 'completed'];
-        
+
         if (!in_array($status, $validStatuses)) {
             return redirect()->back()->withErrors([
                 'status' => 'Invalid status value.'
@@ -664,33 +660,33 @@ if ($totalExpectedKg < $totalReceivedKg) {
             $contract->update(['status' => $status]);
 
             if ($status === 'active') {
-            // Check if an order already exists for this contract
-            $existingOrder = \App\Models\PartnerOrder::where('contract_id', $contract->id)->first();
-            if (!$existingOrder) {
-                $order = \App\Models\PartnerOrder::create([
-                    'partner_id' => $contract->partner_id,
-                    'contract_id' => $contract->id,
-                    'order_date' => now(),
-                    'status' => 'pending',
-                    'notes' => "Auto-generated partner order for seed fulfillment (Contract: {$contract->contract_name}). Deliver seed commitments as specified in the contract.",
-                    'created_by' => auth()->id(),
-                ]);
-
-                // Add seed commitments as order lines
-                foreach ($contract->contractSeedCommitments as $commitment) {
-                    \App\Models\PartnerOrderLine::create([
-                        'partner_order_id' => $order->id,
-                        'product_type' => 'seed',
-                        'product_id' => $commitment->seed_id,
-                        'product_name' => $commitment->seed->seed_variety, // <-- Add this line
-                        'qty' => $commitment->seed_quantity,
-                        'unit' => $commitment->unit,
-                        'price_per_unit' => $commitment->seed_price_at_contract,
-                        'delivered_qty' => 0,
+                // Check if an order already exists for this contract
+                $existingOrder = \App\Models\PartnerOrder::where('contract_id', $contract->id)->first();
+                if (!$existingOrder) {
+                    $order = \App\Models\PartnerOrder::create([
+                        'partner_id' => $contract->partner_id,
+                        'contract_id' => $contract->id,
+                        'order_date' => now(),
+                        'status' => 'pending',
+                        'notes' => "Auto-generated partner order for seed fulfillment (Contract: {$contract->contract_name}). Deliver seed commitments as specified in the contract.",
+                        'created_by' => auth()->id(),
                     ]);
+
+                    // Add seed commitments as order lines
+                    foreach ($contract->contractSeedCommitments as $commitment) {
+                        \App\Models\PartnerOrderLine::create([
+                            'partner_order_id' => $order->id,
+                            'product_type' => 'seed',
+                            'product_id' => $commitment->seed_id,
+                            'product_name' => $commitment->seed->seed_variety,
+                            'qty' => $commitment->seed_quantity,
+                            'unit' => $commitment->unit,
+                            'price_per_unit' => $commitment->seed_price_at_contract,
+                            'delivered_qty' => 0,
+                        ]);
+                    }
                 }
             }
-        }
 
             Log::info("Contract status changed", [
                 'contract_id' => $contract->id,
@@ -701,7 +697,6 @@ if ($totalExpectedKg < $totalReceivedKg) {
 
             return redirect()->back()
                 ->with('success', "Contract status successfully changed to {$status}.");
-
         } catch (\Exception $e) {
             Log::error("Failed to change contract status", [
                 'contract_id' => $contract->id,
@@ -743,7 +738,6 @@ if ($totalExpectedKg < $totalReceivedKg) {
 
             return redirect()->back()
                 ->with('success', 'Contract email successfully sent to partner and internal team!');
-
         } catch (\Exception $e) {
             Log::error("Failed to send contract email", [
                 'contract_id' => $contract->id,
@@ -863,19 +857,19 @@ if ($totalExpectedKg < $totalReceivedKg) {
             'partner:id,name',
             'seedCommitments.seed:id,seed_variety',
         ])
-        ->withSum('seedCommitments as total_expected_buyback', 'expected_buyback_amount')
-        ->withSum('buybackTransactions as total_delivered_buyback', 'qty');
+            ->withSum('seedCommitments as total_expected_buyback', 'expected_buyback_amount')
+            ->withSum('buybackTransactions as total_delivered_buyback', 'qty');
 
         // Apply filters
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
                 $q->where('contract_name', 'like', "%{$request->search}%")
-                ->orWhereHas('partner', function ($q) use ($request) {
-                    $q->where('name', 'like', "%{$request->search}%");
-                })
-                ->orWhereHas('seedCommitments.seed', function ($q) use ($request) {
-                    $q->where('seed_variety', 'like', "%{$request->search}%");
-                });
+                    ->orWhereHas('partner', function ($q) use ($request) {
+                        $q->where('name', 'like', "%{$request->search}%");
+                    })
+                    ->orWhereHas('seedCommitments.seed', function ($q) use ($request) {
+                        $q->where('seed_variety', 'like', "%{$request->search}%");
+                    });
             });
         }
         if ($request->filled('status') && $request->status !== 'all') {
@@ -904,72 +898,72 @@ if ($totalExpectedKg < $totalReceivedKg) {
     }
 
     public function exportContractProfilePDF(Contract $contract)
-{
-    $contract->load([
-        'partner',
-        'farm',
-        'contractSeedCommitments.seed',
-        'buybackTransactions.creator',
-        'partnerOrders.lines.product',
-        'fieldVisits.assignee',
-        'fieldVisits.growthReports',
-        'fieldVisits.damageReports'
-    ]);
+    {
+        $contract->load([
+            'partner',
+            'farm',
+            'contractSeedCommitments.seed',
+            'buybackTransactions.creator',
+            'partnerOrders.lines.product',
+            'fieldVisits.assignee',
+            'fieldVisits.growthReports',
+            'fieldVisits.damageReports'
+        ]);
 
-    $seedCommitments = $contract->contractSeedCommitments;
-    $buybackTransactions = $contract->buybackTransactions;
-    $partner = $contract->partner;
-    $farm = $contract->farm;
-    $partnerOrders = $contract->partnerOrders ?? [];
-    $fieldVisits = $contract->fieldVisits ?? [];
+        $seedCommitments = $contract->contractSeedCommitments;
+        $buybackTransactions = $contract->buybackTransactions;
+        $partner = $contract->partner;
+        $farm = $contract->farm;
+        $partnerOrders = $contract->partnerOrders ?? [];
+        $fieldVisits = $contract->fieldVisits ?? [];
 
-    // Helper for unit conversion
-    $toKg = function($amount, $unit) {
-        if ($unit === 'kg') return $amount;
-        if ($unit === 'sack') return $amount * 50;
-        if ($unit === 'ton') return $amount * 1000;
-        return $amount;
-    };
+        // Helper for unit conversion
+        $toKg = function ($amount, $unit) {
+            if ($unit === 'kg') return $amount;
+            if ($unit === 'sack') return $amount * 50;
+            if ($unit === 'ton') return $amount * 1000;
+            return $amount;
+        };
 
-    // Calculate expected buyback in kg
-    $expected_kg = $seedCommitments->sum(function ($item) use ($toKg) {
-        return $toKg($item->expected_buyback_amount, $item->buyback_unit);
-    });
-
-    // Calculate actual delivered in kg
-    $actual_kg = $buybackTransactions->sum(function ($tx) use ($toKg) {
-        return $toKg($tx->qty, $tx->unit);
-    });
-
-    $remaining_kg = max($expected_kg - $actual_kg, 0);
-    $fulfillment_percentage = $expected_kg > 0 ? ($actual_kg / $expected_kg) * 100 : 0;
-
-    // Calculate financial summary
-    $total_outflow_value = $partnerOrders->sum(function ($order) {
-        return $order->lines->sum(function ($line) {
-            return $line->qty * $line->price_per_unit;
+        // Calculate expected buyback in kg
+        $expected_kg = $seedCommitments->sum(function ($item) use ($toKg) {
+            return $toKg($item->expected_buyback_amount, $item->buyback_unit);
         });
-    });
 
-    $total_inflow_value = $buybackTransactions->sum('total_value');
-    $net_balance = $total_inflow_value - $total_outflow_value;
+        // Calculate actual delivered in kg
+        $actual_kg = $buybackTransactions->sum(function ($tx) use ($toKg) {
+            return $toKg($tx->qty, $tx->unit);
+        });
 
-    return \Barryvdh\DomPDF\Facade\Pdf::loadView('exports.contract_profile_pdf', [
-        'contract' => $contract,
-        'seedCommitments' => $seedCommitments,
-        'buybackTransactions' => $buybackTransactions,
-        'partner' => $partner,
-        'farm' => $farm,
-        'partnerOrders' => $partnerOrders,
-        'fieldVisits' => $fieldVisits,
-        'expected_kg' => $expected_kg,
-        'actual_kg' => $actual_kg,
-        'remaining_kg' => $remaining_kg,
-        'fulfillment_percentage' => $fulfillment_percentage,
-        'total_outflow_value' => $total_outflow_value,
-        'total_inflow_value' => $total_inflow_value,
-        'net_balance' => $net_balance,
-    ])->setPaper('A4', 'portrait')
-      ->download('Contract_Report_' . $contract->contract_name . '_' . now()->format('Ymd') . '.pdf');
-}
+        $remaining_kg = max($expected_kg - $actual_kg, 0);
+        $fulfillment_percentage = $expected_kg > 0 ? ($actual_kg / $expected_kg) * 100 : 0;
+
+        // Calculate financial summary
+        $total_outflow_value = $partnerOrders->sum(function ($order) {
+            return $order->lines->sum(function ($line) {
+                return $line->qty * $line->price_per_unit;
+            });
+        });
+
+        $total_inflow_value = $buybackTransactions->sum('total_value');
+        $net_balance = $total_inflow_value - $total_outflow_value;
+
+        return \Barryvdh\DomPDF\Facade\Pdf::loadView('exports.contract_profile_pdf', [
+            'contract' => $contract,
+            'seedCommitments' => $seedCommitments,
+            'buybackTransactions' => $buybackTransactions,
+            'partner' => $partner,
+            'farm' => $farm,
+            'partnerOrders' => $partnerOrders,
+            'fieldVisits' => $fieldVisits,
+            'expected_kg' => $expected_kg,
+            'actual_kg' => $actual_kg,
+            'remaining_kg' => $remaining_kg,
+            'fulfillment_percentage' => $fulfillment_percentage,
+            'total_outflow_value' => $total_outflow_value,
+            'total_inflow_value' => $total_inflow_value,
+            'net_balance' => $net_balance,
+        ])->setPaper('A4', 'portrait')
+            ->download('Contract_Report_' . $contract->contract_name . '_' . now()->format('Ymd') . '.pdf');
+    }
 }

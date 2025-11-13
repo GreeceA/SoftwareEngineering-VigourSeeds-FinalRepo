@@ -58,7 +58,7 @@ class BuybackTransaction extends Model
      */
     public function getQtyInKgAttribute(): float
     {
-        return match($this->unit) {
+        return match ($this->unit) {
             'ton' => $this->qty * 1000,
             'sack' => $this->qty * 50,
             default => $this->qty,

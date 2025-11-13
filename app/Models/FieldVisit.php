@@ -25,7 +25,7 @@ class FieldVisit extends Model
     ];
 
     protected $casts = [
-        'date_visit' => 'date:Y-m-d', // <-- FIXED: Force Y-m-d format
+        'date_visit' => 'date:Y-m-d', 
     ];
 
     /**

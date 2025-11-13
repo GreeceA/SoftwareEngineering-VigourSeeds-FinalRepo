@@ -12,7 +12,7 @@ class ContractHelper
      */
     public static function getStatusColor(string $status): string
     {
-        return match($status) {
+        return match ($status) {
             'draft' => 'gray',
             'under_review' => 'blue',
             'active' => 'green',
@@ -71,7 +71,7 @@ class ContractHelper
     {
         $score = self::calculateHealthScore($contract);
 
-        return match(true) {
+        return match (true) {
             $score >= 80 => 'low',
             $score >= 60 => 'medium',
             $score >= 40 => 'high',
@@ -167,7 +167,7 @@ class ContractHelper
         $month = $contract->signing_date->format('m');
         $partnerId = str_pad($contract->partner_id, 4, '0', STR_PAD_LEFT);
         $contractId = str_pad($contract->id, 5, '0', STR_PAD_LEFT);
-        
+
         return "CT-{$year}{$month}-{$partnerId}-{$contractId}";
     }
 
@@ -177,9 +177,9 @@ class ContractHelper
     public static function getContractSummary(Contract $contract): array
     {
         return [
-            'total_seed_cost' => $contract->contractSeedCommitments->sum(fn($c) => $c->getTotalSeedCost()),
+            'total_seed_cost' => $contract->contractSeedCommitments->sum(fn ($c) => $c->getTotalSeedCost()),
             'total_expected_buyback' => $contract->getTotalExpectedBuyback(),
-            'total_buyback_value' => $contract->contractSeedCommitments->sum(fn($c) => $c->getTotalBuybackValue()),
+            'total_buyback_value' => $contract->contractSeedCommitments->sum(fn ($c) => $c->getTotalBuybackValue()),
             'fulfillment_percentage' => $contract->getBuybackFulfillmentPercentage(),
             'remaining_buyback' => $contract->getRemainingBuyback(),
             'days_remaining' => $contract->getDaysUntilExpiration(),
@@ -246,7 +246,7 @@ class ContractHelper
      */
     public static function getNextAction(Contract $contract): ?array
     {
-        return match($contract->status) {
+        return match ($contract->status) {
             'draft' => [
                 'action' => 'submit_for_review',
                 'label' => 'Submit for Review',

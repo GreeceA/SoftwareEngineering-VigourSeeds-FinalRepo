@@ -46,7 +46,7 @@ class CornProduct extends Model
     public function getTotalBuybackQty(): float
     {
         return $this->buybackTransactions->sum(function ($transaction) {
-            return match($transaction->unit) {
+            return match ($transaction->unit) {
                 'ton' => $transaction->qty * 1000,
                 'sack' => $transaction->qty * 50,
                 default => $transaction->qty,

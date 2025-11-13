@@ -191,6 +191,7 @@ class PartnerOrderController extends Controller implements HasMiddleware
                 ->with('error', 'Failed to create order: ' . $e->getMessage());
         }
     }
+
     /**
      * Auto-generate partner order from contract seed commitments
      */
@@ -205,7 +206,7 @@ class PartnerOrderController extends Controller implements HasMiddleware
         DB::beginTransaction();
         try {
             $contract = Contract::with('seedCommitments.seed')->findOrFail($validated['contract_id']);
-            
+
             // Create partner order
             $order = PartnerOrder::create([
                 'partner_id' => $contract->partner_id,
@@ -219,7 +220,7 @@ class PartnerOrderController extends Controller implements HasMiddleware
             // Create order lines from selected commitments
             foreach ($validated['commitment_ids'] as $commitmentId) {
                 $commitment = $contract->seedCommitments()->findOrFail($commitmentId);
-                
+
                 PartnerOrderLine::create([
                     'partner_order_id' => $order->id,
                     'product_type' => 'App\\Models\\Seed',
@@ -246,78 +247,78 @@ class PartnerOrderController extends Controller implements HasMiddleware
      * Display specific partner order with details
      */
     public function show($id)
-{
-    $partnerOrder = PartnerOrder::with([
-        'partner',
-        'contract',
-        'lines.product',
-        'inventoryTransactions.product',
-        'creator'
-    ])->findOrFail($id);
+    {
+        $partnerOrder = PartnerOrder::with([
+            'partner',
+            'contract',
+            'lines.product',
+            'inventoryTransactions.product',
+            'creator'
+        ])->findOrFail($id);
 
-    $deliveryTransactions = \App\Models\InventoryTransaction::with(['creator', 'seed', 'item'])
-        ->where('partner_order_id', $partnerOrder->id)
-        ->orderBy('created_at', 'desc')
-        ->get()
-        ->map(function ($tx) use ($partnerOrder) {
-            // Get product name
-            $productName = '-';
-            if ($tx->product_type === 'seed' || $tx->product_type === 'App\\Models\\Seed') {
-                $productName = $tx->seed?->seed_variety ?? '-';
-            } elseif ($tx->product_type === 'item' || $tx->product_type === 'App\\Models\\Item') {
-                $productName = $tx->item?->name ?? '-';
-            }
-
-            // Normalize transaction product type
-            $txTypeNormalized = $tx->product_type;
-            if ($txTypeNormalized === 'App\\Models\\Seed') {
-                $txTypeNormalized = 'seed';
-            } elseif ($txTypeNormalized === 'App\\Models\\Item') {
-                $txTypeNormalized = 'item';
-            }
-
-            // Find the matching order line
-            $orderLine = $partnerOrder->lines->first(function ($line) use ($tx, $txTypeNormalized) {
-                // Normalize line product type
-                $lineTypeNormalized = $line->product_type;
-                if ($lineTypeNormalized === 'App\\Models\\Seed') {
-                    $lineTypeNormalized = 'seed';
-                } elseif ($lineTypeNormalized === 'App\\Models\\Item') {
-                    $lineTypeNormalized = 'item';
+        $deliveryTransactions = \App\Models\InventoryTransaction::with(['creator', 'seed', 'item'])
+            ->where('partner_order_id', $partnerOrder->id)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function ($tx) use ($partnerOrder) {
+                // Get product name
+                $productName = '-';
+                if ($tx->product_type === 'seed' || $tx->product_type === 'App\\Models\\Seed') {
+                    $productName = $tx->seed?->seed_variety ?? '-';
+                } elseif ($tx->product_type === 'item' || $tx->product_type === 'App\\Models\\Item') {
+                    $productName = $tx->item?->name ?? '-';
                 }
 
-                // Match both product_id and normalized product_type
-                return $line->product_id == $tx->product_id 
-                    && $lineTypeNormalized === $txTypeNormalized;
+                // Normalize transaction product type
+                $txTypeNormalized = $tx->product_type;
+                if ($txTypeNormalized === 'App\\Models\\Seed') {
+                    $txTypeNormalized = 'seed';
+                } elseif ($txTypeNormalized === 'App\\Models\\Item') {
+                    $txTypeNormalized = 'item';
+                }
+
+                // Find the matching order line
+                $orderLine = $partnerOrder->lines->first(function ($line) use ($tx, $txTypeNormalized) {
+                    // Normalize line product type
+                    $lineTypeNormalized = $line->product_type;
+                    if ($lineTypeNormalized === 'App\\Models\\Seed') {
+                        $lineTypeNormalized = 'seed';
+                    } elseif ($lineTypeNormalized === 'App\\Models\\Item') {
+                        $lineTypeNormalized = 'item';
+                    }
+
+                    // Match both product_id and normalized product_type
+                    return $line->product_id == $tx->product_id
+                        && $lineTypeNormalized === $txTypeNormalized;
+                });
+
+                $pricePerUnit = $orderLine ? $orderLine->price_per_unit : 0;
+
+                // Convert quantity to base unit (kg/liter) for value calculation
+                $qtyBase = abs($tx->qty);
+                if ($tx->unit === 'sack') {
+                    $qtyBase = $qtyBase * 50;
+                } elseif ($tx->unit === 'ton') {
+                    $qtyBase = $qtyBase * 1000;
+                }
+
+                // Calculate value
+                $value = $qtyBase * $pricePerUnit;
+
+                return [
+                    'id' => $tx->id,
+                    'product_name' => $productName,
+                    'transaction_type' => $tx->transaction_type,
+                    'quantity' => abs($tx->qty),
+                    'unit' => $tx->unit,
+                    'date' => $tx->created_at->format('Y-m-d H:i'),
+                    'notes' => $tx->notes,
+                    'delivered_by' => $tx->creator
+                        ? trim(($tx->creator->first_name ?? '') . ' ' . ($tx->creator->last_name ?? ''))
+                        : '-',
+                    'value' => $value,
+                ];
             });
-
-            $pricePerUnit = $orderLine ? $orderLine->price_per_unit : 0;
-
-            // Convert quantity to base unit (kg/liter) for value calculation
-            $qtyBase = abs($tx->qty);
-            if ($tx->unit === 'sack') {
-                $qtyBase = $qtyBase * 50;
-            } elseif ($tx->unit === 'ton') {
-                $qtyBase = $qtyBase * 1000;
-            }
-
-            // Calculate value
-            $value = $qtyBase * $pricePerUnit;
-
-            return [
-                'id' => $tx->id,
-                'product_name' => $productName,
-                'transaction_type' => $tx->transaction_type,
-                'quantity' => abs($tx->qty),
-                'unit' => $tx->unit,
-                'date' => $tx->created_at->format('Y-m-d H:i'),
-                'notes' => $tx->notes,
-                'delivered_by' => $tx->creator
-                    ? trim(($tx->creator->first_name ?? '') . ' ' . ($tx->creator->last_name ?? ''))
-                    : '-',
-                'value' => $value,
-            ];
-        });
 
         return Inertia::render('PartnerOrders/Show', [
             'auth' => ['user' => auth()->user()],
@@ -428,7 +429,7 @@ class PartnerOrderController extends Controller implements HasMiddleware
         }
 
         if ($request->filled('contract_status')) {
-            $query->whereHas('contract', function($q) use ($request) {
+            $query->whereHas('contract', function ($q) use ($request) {
                 $q->where('status', $request->contract_status);
             });
         }
@@ -450,15 +451,15 @@ class PartnerOrderController extends Controller implements HasMiddleware
 
             $order->total_value = $totalValue;
             $order->fulfillment_percentage = $order->getFulfillmentPercentage();
-            
+
             return $order;
         });
 
         $totalValue = $orders->sum('total_value');
 
-        $hasFilters = $request->filled('status') || 
-                    $request->filled('partner_id') || 
-                    $request->filled('contract_status');
+        $hasFilters = $request->filled('status') ||
+                      $request->filled('partner_id') ||
+                      $request->filled('contract_status');
 
         $partnerName = '';
         if ($request->filled('partner_id')) {
@@ -516,7 +517,7 @@ class PartnerOrderController extends Controller implements HasMiddleware
                     } elseif ($lineTypeNormalized === 'App\\Models\\Item') {
                         $lineTypeNormalized = 'item';
                     }
-                    return $line->product_id == $tx->product_id 
+                    return $line->product_id == $tx->product_id
                         && $lineTypeNormalized === $txTypeNormalized;
                 });
 
@@ -553,7 +554,7 @@ class PartnerOrderController extends Controller implements HasMiddleware
             // Get product type and name
             $productType = '';
             $productName = '';
-            
+
             if ($line->product_type === 'seed' || $line->product_type === 'App\\Models\\Seed') {
                 $productType = 'seed';
                 $productName = $line->product?->seed_variety ?? '-';

@@ -31,56 +31,6 @@ class Seed extends Model
         return $query->where('status', 'active');
     }
 
-    public function contractSeeds()
-    {
-        return $this->hasMany(ContractSeedCommitment::class);
-    }
-
-    public function inventoryTransactions()
-    {
-        return $this->morphMany(InventoryTransaction::class, 'product');
-    }
-
-    public function orderLines()
-    {
-        return $this->morphMany(PartnerOrderLine::class, 'product');
-    }
-
-     public function getCurrentStock()
-    {
-        $transactions = \App\Models\InventoryTransaction::where('product_type', 'Seed')
-            ->where('product_id', $this->id)
-            ->get();
-
-        $stock = 0;
-        foreach ($transactions as $txn) {
-            $qty = $txn->qty;
-            // Convert to kg if needed
-            if ($txn->unit === 'sack') {
-                $qty = $qty * 50;
-            } elseif ($txn->unit === 'ton') {
-                $qty = $qty * 1000;
-            }
-            if ($txn->transaction_type === 'inbound') {
-                $stock += abs($qty); // Always positive
-            } elseif ($txn->transaction_type === 'outbound') {
-                $stock -= abs($qty); // Always subtract positive value
-            } elseif ($txn->transaction_type === 'adjustment') {
-                $stock += $qty; // ✅ Keep the sign - can be positive or negative
-            }
-        }
-        return $stock; // in kg
-    }
-    
-    /**
-     * Check if sufficient stock is available
-     */
-    public function hasStock($qty)
-    {
-        return $this->getCurrentStock() >= $qty;
-    }
-
-    
     // Filter for archived records.
     public function scopeArchived($query)
     {
@@ -97,6 +47,21 @@ class Seed extends Model
         });
     }
 
+    public function contractSeeds()
+    {
+        return $this->hasMany(ContractSeedCommitment::class);
+    }
+
+    public function inventoryTransactions()
+    {
+        return $this->morphMany(InventoryTransaction::class, 'product');
+    }
+
+    public function orderLines()
+    {
+        return $this->morphMany(PartnerOrderLine::class, 'product');
+    }
+
     public function cornProduct(): HasOne
     {
         return $this->hasOne(CornProduct::class);
@@ -106,7 +71,42 @@ class Seed extends Model
     {
         return $this->hasMany(ContractSeedCommitment::class);
     }
-    
+
+    public function getCurrentStock()
+    {
+        $transactions = \App\Models\InventoryTransaction::where('product_type', 'Seed')
+            ->where('product_id', $this->id)
+            ->get();
+
+        $stock = 0;
+        foreach ($transactions as $txn) {
+            $qty = $txn->qty;
+            // Convert to kg if needed
+            if ($txn->unit === 'sack') {
+                $qty = $qty * 50;
+            } elseif ($txn->unit === 'ton') {
+                $qty = $qty * 1000;
+            }
+
+            if ($txn->transaction_type === 'inbound') {
+                $stock += abs($qty);
+            } elseif ($txn->transaction_type === 'outbound') {
+                $stock -= abs($qty); 
+            } elseif ($txn->transaction_type === 'adjustment') {
+                $stock += $qty; 
+            }
+        }
+        return $stock; // in kg
+    }
+
+    /**
+     * Check if sufficient stock is available
+     */
+    public function hasStock($qty)
+    {
+        return $this->getCurrentStock() >= $qty;
+    }
+
     protected static function boot()
     {
         parent::boot();

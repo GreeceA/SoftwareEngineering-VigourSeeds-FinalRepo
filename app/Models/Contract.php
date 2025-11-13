@@ -15,10 +15,10 @@ class Contract extends Model
     protected $fillable = [
         'partner_id',
         'farm_id',
-        'contract_name', 
+        'contract_name',
         'contract_file',
         'original_file_name',
-        'signing_date', 
+        'signing_date',
         'effective_date',
         'expiration_date',
         'buyback_price_per_unit',
@@ -27,9 +27,9 @@ class Contract extends Model
     ];
 
     protected $casts = [
-        'signing_date' => 'date', 
-        'effective_date' => 'date',
-        'expiration_date' => 'date',
+        'signing_date'           => 'date',
+        'effective_date'         => 'date',
+        'expiration_date'        => 'date',
         'buyback_price_per_unit' => 'decimal:4',
     ];
 
@@ -64,32 +64,32 @@ class Contract extends Model
         return $this->hasMany(BuybackTransaction::class);
     }
 
+    public function fieldVisits(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(FieldVisit::class, 'contract_ID', 'id');
+    }
+
     // Status Transition Logic
     public function canTransitionTo(string $newStatus): bool
     {
         $transitions = [
-            'draft' => ['under_review', 'cancelled'],
+            'draft'        => ['under_review', 'cancelled'],
             'under_review' => ['draft', 'active', 'cancelled'],
-            'active' => ['suspended', 'terminated', 'completed'],
-            'suspended' => ['active', 'terminated'], 
-            'terminated' => ['completed'],
-            'cancelled' => ['completed'],
-            'completed' => [], 
+            'active'       => ['suspended', 'terminated', 'completed'],
+            'suspended'    => ['active', 'terminated'],
+            'terminated'   => ['completed'],
+            'cancelled'    => ['completed'],
+            'completed'    => [],
         ];
 
         return in_array($newStatus, $transitions[$this->status] ?? []);
     }
 
-    public function fieldVisits(): \Illuminate\Database\Eloquent\Relations\HasMany
-    {
-        return $this->hasMany(FieldVisit::class, 'contract_ID', 'id');
-    }
-    
     public function canBeEdited(): bool
     {
         return in_array($this->status, ['draft', 'under_review']);
     }
-    
+
     public function canBePartiallyEdited(): bool
     {
         return in_array($this->status, ['active', 'suspended']);
@@ -120,7 +120,7 @@ class Contract extends Model
     {
         // Sum all buyback transactions in kg
         return $this->buybackTransactions->sum(function ($transaction) {
-            return match($transaction->unit) {
+            return match ($transaction->unit) {
                 'ton' => $transaction->qty * 1000,
                 'sack' => $transaction->qty * 50,
                 default => $transaction->qty,
@@ -132,7 +132,7 @@ class Contract extends Model
     {
         $expected = $this->getTotalExpectedBuyback();
         $actual = $this->getTotalActualBuyback();
-        
+
         return $expected > 0 ? round(($actual / $expected) * 100, 2) : 0;
     }
 
@@ -154,9 +154,9 @@ class Contract extends Model
 
     public function isEffective(): bool
     {
-        return $this->effective_date && 
-               $this->effective_date->isPast() && 
-               (!$this->expiration_date || $this->expiration_date->isFuture());
+        return $this->effective_date &&
+            $this->effective_date->isPast() &&
+            (!$this->expiration_date || $this->expiration_date->isFuture());
     }
 
     public function getDaysUntilExpiration(): ?int
@@ -199,12 +199,12 @@ class Contract extends Model
     {
         return $query->where(function ($q) use ($search) {
             $q->where('contract_name', 'like', "%{$search}%")
-              ->orWhereHas('partner', function ($q) use ($search) {
-                  $q->where('name', 'like', "%{$search}%");
-              })
-              ->orWhereHas('seedCommitments.seed', function ($q) use ($search) {
-                  $q->where('seed_variety', 'like', "%{$search}%");
-              });
+                ->orWhereHas('partner', function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%");
+                })
+                ->orWhereHas('seedCommitments.seed', function ($q) use ($search) {
+                    $q->where('seed_variety', 'like', "%{$search}%");
+                });
         });
     }
 

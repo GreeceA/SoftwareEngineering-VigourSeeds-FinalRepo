@@ -9,7 +9,7 @@ use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
-use Barryvdh\DomPDF\Facade\Pdf; 
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class SeedController extends Controller implements HasMiddleware
 {
@@ -60,10 +60,10 @@ class SeedController extends Controller implements HasMiddleware
                     'status' => $commitment->contract->status,
                 ];
             });
-            
+
             // Add current stock
             $seed->current_stock = $seed->getCurrentStock();
-            
+
             return $seed;
         });
 
@@ -83,7 +83,7 @@ class SeedController extends Controller implements HasMiddleware
         $validated = $request->validated();
         $validated['status'] = 'active';
         Seed::create($validated);
-        
+
         return redirect()->route('seeds.index')->with('success', 'Seed created successfully!');
     }
 
@@ -142,9 +142,9 @@ class SeedController extends Controller implements HasMiddleware
     {
         // Check if seed is used in any ongoing contracts
         $ongoingStatuses = ['draft', 'under_review', 'active', 'suspended'];
-        
+
         $hasOngoingContracts = $seed->contractCommitments()
-            ->whereHas('contract', function($query) use ($ongoingStatuses) {
+            ->whereHas('contract', function ($query) use ($ongoingStatuses) {
                 $query->whereIn('status', $ongoingStatuses);
             })
             ->exists();
@@ -196,10 +196,10 @@ class SeedController extends Controller implements HasMiddleware
     public function export(Request $request)
     {
         $format = $request->query('format', 'pdf');
-        
+
         // Load seeds with relationships and calculated stock
-        $seeds = Seed::with(['cornProduct', 'contractCommitments' => function($query) {
-            $query->whereHas('contract', function($q) {
+        $seeds = Seed::with(['cornProduct', 'contractCommitments' => function ($query) {
+            $query->whereHas('contract', function ($q) {
                 $q->where('status', 'active');
             });
         }])
@@ -209,10 +209,10 @@ class SeedController extends Controller implements HasMiddleware
             ->map(function ($seed) {
                 // Calculate current stock from inventory transactions
                 $seed->stock_on_hand = $seed->getCurrentStock();
-                
+
                 // Count active contracts via contract commitments
                 $seed->contracts_count = $seed->contractCommitments->count();
-                
+
                 return $seed;
             });
 
@@ -228,7 +228,7 @@ class SeedController extends Controller implements HasMiddleware
         $seed->load([
             'cornProduct',
             'contractCommitments.contract.partner',
-            'inventoryTransactions' => function($query) {
+            'inventoryTransactions' => function ($query) {
                 $query->orderBy('created_at', 'desc');
             }
         ]);
@@ -238,7 +238,7 @@ class SeedController extends Controller implements HasMiddleware
 
         // Get active contracts count
         $activeContractsCount = $seed->contractCommitments()
-            ->whereHas('contract', function($q) {
+            ->whereHas('contract', function ($q) {
                 $q->where('status', 'active');
             })->count();
 
@@ -247,7 +247,7 @@ class SeedController extends Controller implements HasMiddleware
 
         // Get all contract commitments
         $contracts = $seed->contractCommitments()
-            ->whereHas('contract', function($q) {
+            ->whereHas('contract', function ($q) {
                 $q->where('status', 'active');
             })
             ->with('contract.partner')

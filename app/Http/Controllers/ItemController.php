@@ -6,7 +6,7 @@ use App\Http\Requests\ItemRequest;
 use App\Models\Item;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use App\Models\InventoryTransaction; // <-- ADD THIS LINE
+use App\Models\InventoryTransaction; 
 use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -24,57 +24,57 @@ class ItemController extends Controller implements HasMiddleware
     }
 
     // Display a listing of the resource.
-public function index(Request $request)
-{
-    $perPage = $request->get('per_page', 10);
-    
-    $sortable = ['id', 'name', 'price_per_unit'];
-    $sortBy = in_array($request->get('sort_by'), $sortable) ? $request->get('sort_by') : 'id';
-    $sortDir = $request->get('sort_dir') === 'asc' ? 'asc' : 'desc';
+    public function index(Request $request)
+    {
+        $perPage = $request->get('per_page', 10);
 
-    $query = Item::query()
-        ->when($request->has('status') && in_array($request->status, ['active', 'archived']), function ($query) use ($request) {
-            $query->where('status', $request->status);
-        })
-        ->when($request->has('search') && $request->search, function ($query) use ($request) {
-            $query->where(function($q) use ($request) {
-                $q->where('name', 'like', '%' . $request->search . '%')
-                  ->orWhere('description', 'like', '%' . $request->search . '%');
-            });
-        })
-        ->orderBy($sortBy, $sortDir);
+        $sortable = ['id', 'name', 'price_per_unit'];
+        $sortBy = in_array($request->get('sort_by'), $sortable) ? $request->get('sort_by') : 'id';
+        $sortDir = $request->get('sort_dir') === 'asc' ? 'asc' : 'desc';
 
-    $items = $query->paginate($perPage)->withQueryString();
+        $query = Item::query()
+            ->when($request->has('status') && in_array($request->status, ['active', 'archived']), function ($query) use ($request) {
+                $query->where('status', $request->status);
+            })
+            ->when($request->has('search') && $request->search, function ($query) use ($request) {
+                $query->where(function ($q) use ($request) {
+                    $q->where('name', 'like', '%' . $request->search . '%')
+                        ->orWhere('description', 'like', '%' . $request->search . '%');
+                });
+            })
+            ->orderBy($sortBy, $sortDir);
 
-    // Transform data to include contract/order information and current stock
-    $items->getCollection()->transform(function ($item) {
-        // Get partner orders for this item
-        $partnerOrders = \App\Models\PartnerOrderLine::where('product_type', 'App\Models\Item')
-            ->where('product_id', $item->id)
-            ->with('partnerOrder.contract')
-            ->get()
-            ->map(function($line) {
-                return [
-                    'id' => $line->partner_order_id,
-                    'status' => $line->partnerOrder->status,
-                    'contract_status' => $line->partnerOrder->contract?->status,
-                ];
-            });
+        $items = $query->paginate($perPage)->withQueryString();
 
-        // Add orders array for frontend modal
-        $item->partner_orders = $partnerOrders;
-        
-        // Add current stock
-        $item->current_stock = $item->getCurrentStock();
-        
-        return $item;
-    });
+        // Transform data to include contract/order information and current stock
+        $items->getCollection()->transform(function ($item) {
+            // Get partner orders for this item
+            $partnerOrders = \App\Models\PartnerOrderLine::where('product_type', 'App\Models\Item')
+                ->where('product_id', $item->id)
+                ->with('partnerOrder.contract')
+                ->get()
+                ->map(function ($line) {
+                    return [
+                        'id' => $line->partner_order_id,
+                        'status' => $line->partnerOrder->status,
+                        'contract_status' => $line->partnerOrder->contract?->status,
+                    ];
+                });
 
-    return Inertia::render('Items/Index', [
-        'items' => $items,
-        'filters' => $request->only(['search', 'status', 'sort_by', 'sort_dir', 'per_page']),
-    ]);
-}
+            // Add orders array for frontend modal
+            $item->partner_orders = $partnerOrders;
+
+            // Add current stock
+            $item->current_stock = $item->getCurrentStock();
+
+            return $item;
+        });
+
+        return Inertia::render('Items/Index', [
+            'items' => $items,
+            'filters' => $request->only(['search', 'status', 'sort_by', 'sort_dir', 'per_page']),
+        ]);
+    }
 
     // Show the form for creating a new resource.
     public function create()
@@ -92,66 +92,66 @@ public function index(Request $request)
     }
 
     // Display the specified resource.
-public function show(Item $item)
-{
-    // Calculate stock on hand
-    $stockOnHand = $item->getCurrentStock();
-    
-    // Calculate total stock value
-    $totalStockValue = $stockOnHand * $item->price_per_unit;
-    
-    // Get recent inventory transactions (last 10)
-    $recentInventoryLogs = InventoryTransaction::where('product_type', 'item')
-        ->where('product_id', $item->id)
-        ->with('creator')
-        ->orderBy('created_at', 'desc')
-        ->limit(10)
-        ->get()
-        ->map(function($txn) {
-            return [
-                'id' => $txn->id,
-                'date' => $txn->created_at->format('Y-m-d'),
-                'transaction_type' => $txn->transaction_type,
-                'quantity' => abs($txn->qty), // Always positive for display
-                'unit' => $txn->unit,
-                'user' => $txn->creator 
-                    ? trim("{$txn->creator->first_name} {$txn->creator->last_name}")
-                    : 'System User',
-                'notes' => $txn->notes,
-            ];
-        });
-    
-    // Get partner orders containing this item
-    $partnerOrders = \App\Models\PartnerOrderLine::where('product_type', 'App\Models\Item')
-        ->where('product_id', $item->id)
-        ->with(['partnerOrder.partner', 'partnerOrder.contract.farm'])
-        ->get()
-        ->map(function($line) use ($item) {
-            return [
-                'id' => $line->partner_order_id,
-                'partner_name' => $line->partnerOrder->partner->name ?? 'N/A',
-                'farm_name' => $line->partnerOrder->contract?->farm?->location_name ?? 'N/A',
-                'order_date' => $line->partnerOrder->order_date,
-                'status' => $line->partnerOrder->status,
-                'qty_ordered' => $line->qty,
-                'qty_delivered' => $line->delivered_qty ?? 0,
-                'unit' => $line->unit,
-                'price' => $line->price_per_unit,
-                'total_value' => $line->qty * $line->price_per_unit,
-            ];
-        })
-        ->sortByDesc('order_date')
-        ->values();
-    
-    return Inertia::render('Items/Show', [
-        'item' => array_merge($item->toArray(), [
-            'stock_on_hand' => $stockOnHand,
-            'total_stock_value' => $totalStockValue,
-        ]),
-        'recentInventoryLogs' => $recentInventoryLogs,
-        'partnerOrders' => $partnerOrders,
-    ]);
-}
+    public function show(Item $item)
+    {
+        // Calculate stock on hand
+        $stockOnHand = $item->getCurrentStock();
+
+        // Calculate total stock value
+        $totalStockValue = $stockOnHand * $item->price_per_unit;
+
+        // Get recent inventory transactions (last 10)
+        $recentInventoryLogs = InventoryTransaction::where('product_type', 'item')
+            ->where('product_id', $item->id)
+            ->with('creator')
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get()
+            ->map(function ($txn) {
+                return [
+                    'id' => $txn->id,
+                    'date' => $txn->created_at->format('Y-m-d'),
+                    'transaction_type' => $txn->transaction_type,
+                    'quantity' => abs($txn->qty), // Always positive for display
+                    'unit' => $txn->unit,
+                    'user' => $txn->creator
+                        ? trim("{$txn->creator->first_name} {$txn->creator->last_name}")
+                        : 'System User',
+                    'notes' => $txn->notes,
+                ];
+            });
+
+        // Get partner orders containing this item
+        $partnerOrders = \App\Models\PartnerOrderLine::where('product_type', 'App\Models\Item')
+            ->where('product_id', $item->id)
+            ->with(['partnerOrder.partner', 'partnerOrder.contract.farm'])
+            ->get()
+            ->map(function ($line) use ($item) {
+                return [
+                    'id' => $line->partner_order_id,
+                    'partner_name' => $line->partnerOrder->partner->name ?? 'N/A',
+                    'farm_name' => $line->partnerOrder->contract?->farm?->location_name ?? 'N/A',
+                    'order_date' => $line->partnerOrder->order_date,
+                    'status' => $line->partnerOrder->status,
+                    'qty_ordered' => $line->qty,
+                    'qty_delivered' => $line->delivered_qty ?? 0,
+                    'unit' => $line->unit,
+                    'price' => $line->price_per_unit,
+                    'total_value' => $line->qty * $line->price_per_unit,
+                ];
+            })
+            ->sortByDesc('order_date')
+            ->values();
+
+        return Inertia::render('Items/Show', [
+            'item' => array_merge($item->toArray(), [
+                'stock_on_hand' => $stockOnHand,
+                'total_stock_value' => $totalStockValue,
+            ]),
+            'recentInventoryLogs' => $recentInventoryLogs,
+            'partnerOrders' => $partnerOrders,
+        ]);
+    }
 
 
     // Show the form for editing the specified resource.
@@ -194,7 +194,7 @@ public function show(Item $item)
         // Check if item is used in any active/pending partner orders
         $hasActiveOrders = \App\Models\PartnerOrderLine::where('product_type', 'App\Models\Item')
             ->where('product_id', $item->id)
-            ->whereHas('partnerOrder', function($query) {
+            ->whereHas('partnerOrder', function ($query) {
                 $query->whereIn('status', ['pending', 'confirmed', 'partially_fulfilled']);
             })
             ->exists();
@@ -207,10 +207,10 @@ public function show(Item $item)
 
         // Check if item is used in any ongoing contracts
         $ongoingStatuses = ['draft', 'under_review', 'active', 'suspended'];
-        
+
         $hasOngoingContracts = \App\Models\PartnerOrderLine::where('product_type', 'App\Models\Item')
             ->where('product_id', $item->id)
-            ->whereHas('partnerOrder.contract', function($query) use ($ongoingStatuses) {
+            ->whereHas('partnerOrder.contract', function ($query) use ($ongoingStatuses) {
                 $query->whereIn('status', $ongoingStatuses);
             })
             ->exists();
@@ -250,14 +250,14 @@ public function show(Item $item)
                 ],
             ], 422);
         }
-        
+
         return response()->json(['success' => true]);
     }
 
     public function export(Request $request)
     {
         $format = $request->query('format', 'pdf');
-        
+
         // Load items with relationships and calculated stock
         $items = Item::query()
             ->select('id', 'name', 'type', 'status', 'price_per_unit', 'base_unit', 'created_at')
@@ -266,20 +266,20 @@ public function show(Item $item)
             ->map(function ($item) {
                 // Calculate current stock from inventory transactions
                 $item->stock_on_hand = $item->getCurrentStock();
-                
+
                 // Count pending orders using the correct relationship
                 $item->pending_orders_count = \App\Models\PartnerOrderLine::where('product_type', 'App\Models\Item')
                     ->where('product_id', $item->id)
-                    ->whereHas('partnerOrder', function($q) {
+                    ->whereHas('partnerOrder', function ($q) {
                         $q->whereIn('status', ['pending', 'confirmed', 'partially_fulfilled']);
                     })
                     ->count();
-                
+
                 return $item;
             });
 
         // Calculate total stock value
-        $totalStockValue = $items->sum(function($item) {
+        $totalStockValue = $items->sum(function ($item) {
             return $item->stock_on_hand * $item->price_per_unit;
         });
 
@@ -288,11 +288,11 @@ public function show(Item $item)
                 'items' => $items,
                 'totalStockValue' => $totalStockValue,
             ])->setPaper('a4', 'landscape');
-            
+
             return $pdf->download('VigourSeed_ItemList_' . now()->format('Y-m-d') . '.pdf');
         }
     }
-    
+
     public function exportProfile(Item $item)
     {
         // Load transactions with proper filter
@@ -308,11 +308,11 @@ public function show(Item $item)
         // Calculate committed stock (pending/partially fulfilled orders)
         $committedStock = \App\Models\PartnerOrderLine::where('product_type', 'App\Models\Item')
             ->where('product_id', $item->id)
-            ->whereHas('partnerOrder', function($q) {
+            ->whereHas('partnerOrder', function ($q) {
                 $q->whereIn('status', ['pending', 'confirmed', 'partially_fulfilled'])
-                ->whereHas('contract', function($qc) {
-                    $qc->where('status', 'active');
-                });
+                    ->whereHas('contract', function ($qc) {
+                        $qc->where('status', 'active');
+                    });
             })
             ->sum(\DB::raw('qty - COALESCE(delivered_qty, 0)'));
 
@@ -327,7 +327,7 @@ public function show(Item $item)
             ->where('product_id', $item->id)
             ->with(['partnerOrder.partner', 'partnerOrder.contract'])
             ->get()
-            ->map(function($line) {
+            ->map(function ($line) {
                 return [
                     'order_id' => $line->partner_order_id,
                     'partner_name' => $line->partnerOrder->partner->name ?? 'N/A',

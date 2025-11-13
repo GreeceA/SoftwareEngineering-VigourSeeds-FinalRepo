@@ -23,7 +23,7 @@ export default function FieldVisitForm({ auth, contracts, users, fieldVisit = nu
         farm_ID: fieldVisit?.farm_ID ?? '',
         user_ID: fieldVisit?.user_ID ?? '',
         date_visit: fieldVisit?.date_visit
-            ? fieldVisit.date_visit.slice(0, 10) // <-- FIXED: always get YYYY-MM-DD
+            ? fieldVisit.date_visit.slice(0, 10) 
             : '',
         status: fieldVisit?.status ?? 'ongoing',
         remarks: fieldVisit?.remarks ?? '',

@@ -16,7 +16,7 @@ class StoreFieldVisitRequest extends FormRequest
         return [
             'contract_ID' => ['required', 'exists:contracts,id'],
             'farm_ID' => ['nullable', 'exists:partner_farms,id'],
-            'user_ID' => ['required', 'exists:users,id'], // Changed from 'nullable' to 'required'
+            'user_ID' => ['required', 'exists:users,id'], 
             'date_visit'  => ['required', 'date', 'after_or_equal:today'],
             'status' => ['required', 'in:ongoing,completed,cancelled'],
             'remarks' => ['nullable', 'string', 'max:2000'],

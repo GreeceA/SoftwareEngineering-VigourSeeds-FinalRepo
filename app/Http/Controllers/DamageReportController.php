@@ -56,25 +56,25 @@ class DamageReportController extends Controller
     public function update(UpdateDamageReportRequest $request, $id)
     {
         $report = DamageReport::findOrFail($id);
-        
+
         // Check if field visit is still ongoing
         $fieldVisit = $report->fieldVisit;
         if ($fieldVisit->status !== 'ongoing') {
             return back()->with('error', 'Cannot edit reports from completed or cancelled field visits.');
         }
-        
+
         $report->update($request->validated());
 
         // Check if request is from the report show page or field visit show page
         $referer = $request->headers->get('referer');
-        
+
         // If coming from damage-reports.show, stay on that page
         if (str_contains($referer, 'damage-reports/' . $id)) {
             return redirect()
                 ->route('damage-reports.show', $id)
                 ->with('success', 'Damage report updated successfully.');
         }
-        
+
         // Otherwise, go back to field visit show page (default behavior)
         return redirect()
             ->route('field-visits.show', $report->field_visit_ID)
@@ -85,15 +85,15 @@ class DamageReportController extends Controller
     {
         $damageReport = DamageReport::findOrFail($id);
         $fieldVisitId = $damageReport->field_visit_ID;
-        
+
         // Check if field visit is still ongoing
         $fieldVisit = $damageReport->fieldVisit;
         if ($fieldVisit->status !== 'ongoing') {
             return back()->with('error', 'Cannot delete reports from completed or cancelled field visits.');
         }
-        
+
         $damageReport->delete();
-        
+
         return redirect()
             ->route('field-visits.show', $fieldVisitId)
             ->with('success', 'Damage report deleted successfully.');

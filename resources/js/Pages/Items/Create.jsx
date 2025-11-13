@@ -3,7 +3,6 @@ import { Head, Link } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import ItemForm from "@/Pages/Items/ItemForm.jsx";
 
-
 export default function Create({ auth }) {
     return (
         <AuthenticatedLayout

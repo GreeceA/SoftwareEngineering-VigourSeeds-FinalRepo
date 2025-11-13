@@ -44,6 +44,7 @@ class Item extends Model
         // Assumes 'product_type' is 'App\Models\Item' or your morphMap name
         return $this->morphMany(PartnerOrderLine::class, 'product');
     }
+
     /**
      * Calculate current stock balance
      */
@@ -127,7 +128,7 @@ class Item extends Model
     {
         return $query->where('type', 'fertilizer');
     }
-    
+
     public function scopePesticides($query)
     {
         return $query->where('type', 'pesticide');

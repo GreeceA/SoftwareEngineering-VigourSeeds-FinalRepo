@@ -43,7 +43,17 @@ class InventoryTransaction extends Model
     {
         return $this->belongsTo(\App\Models\CornProduct::class, 'product_id');
     }
-    
+
+    public function seed()
+    {
+        return $this->belongsTo(Seed::class, 'product_id');
+    }
+
+    public function item()
+    {
+        return $this->belongsTo(Item::class, 'product_id');
+    }
+
     /**
      * Get the contract associated with this transaction
      */
@@ -58,6 +68,11 @@ class InventoryTransaction extends Model
     public function partnerOrder()
     {
         return $this->belongsTo(PartnerOrder::class);
+    }
+
+    public function partnerOrderLine()
+    {
+        return $this->belongsTo(PartnerOrderLine::class, 'partner_order_line_id');
     }
 
     /**
@@ -99,15 +114,4 @@ class InventoryTransaction extends Model
     {
         return $query->where('product_type', $type);
     }
-
-    public function seed() {
-        return $this->belongsTo(Seed::class, 'product_id');
-    }
-    public function item() {
-        return $this->belongsTo(Item::class, 'product_id');
-    }
-    public function partnerOrderLine() {
-        return $this->belongsTo(PartnerOrderLine::class, 'partner_order_line_id');
-    }
-    
 }

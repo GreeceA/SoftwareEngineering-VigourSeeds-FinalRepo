@@ -17,10 +17,10 @@ class HandleInertiaRequests extends Middleware
     public function share(Request $request): array
     {
         $shared = parent::share($request);
-        
+
         // Get the authenticated user model (not the array)
         $user = $request->user();
-        
+
         // If user is authenticated, add notifications
         if ($user) {
             // Fix avatar URL in the shared auth array
@@ -29,7 +29,7 @@ class HandleInertiaRequests extends Middleware
                 $avatarPath = ltrim($avatarPath, '/');
                 $shared['auth']['user']['avatar'] = "http://localhost/dashboard/SoftwareEngineering-VigourSeeds-FinalRepo/public/storage/" . $avatarPath;
             }
-            
+
             // Add notifications (use the actual User model, not the array)
             $shared['notifications'] = $user->unreadNotifications()
                 ->latest()
@@ -38,7 +38,7 @@ class HandleInertiaRequests extends Middleware
         } else {
             $shared['notifications'] = [];
         }
-        
+
         return $shared;
     }
 }

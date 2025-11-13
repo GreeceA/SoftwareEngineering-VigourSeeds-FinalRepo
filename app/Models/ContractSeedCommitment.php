@@ -11,7 +11,7 @@ class ContractSeedCommitment extends Model
 {
     use HasFactory;
 
-    protected $table = 'contract_seed_commitments'; 
+    protected $table = 'contract_seed_commitments';
 
     protected $fillable = [
         'contract_id',
@@ -30,7 +30,7 @@ class ContractSeedCommitment extends Model
         'planting_date' => 'date',
         'expected_first_harvest_date' => 'date',
         'seed_quantity' => 'decimal:2',
-        'seed_price_at_contract' => 'decimal:2', 
+        'seed_price_at_contract' => 'decimal:2',
         'expected_buyback_amount' => 'integer',
         'agreed_cycles' => 'integer',
     ];
@@ -60,7 +60,7 @@ class ContractSeedCommitment extends Model
 
         $dates = [];
         $harvestDate = $this->expected_first_harvest_date;
-        
+
         for ($i = 0; $i < $this->agreed_cycles; $i++) {
             $dates[] = $harvestDate->copy();
             $harvestDate = $harvestDate->addDays($this->seed->growth_cycle);
@@ -72,7 +72,7 @@ class ContractSeedCommitment extends Model
     public function getNextExpectedHarvestDate(): ?Carbon
     {
         $harvestDates = $this->getExpectedHarvestDates();
-        
+
         foreach ($harvestDates as $date) {
             if ($date->isFuture()) {
                 return $date;
@@ -91,7 +91,7 @@ class ContractSeedCommitment extends Model
     {
         $buybackValue = $this->getTotalBuybackValue();
         $seedCost = $this->getTotalSeedCost();
-        
+
         if ($seedCost <= 0) {
             return 0;
         }

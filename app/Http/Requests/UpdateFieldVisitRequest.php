@@ -8,7 +8,7 @@ class UpdateFieldVisitRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true; // Handled by auth middleware
+        return true; 
     }
 
     /**
@@ -18,17 +18,17 @@ class UpdateFieldVisitRequest extends FormRequest
     {
         return [
             // Cannot change contract_ID or farm_ID - these are locked after creation
-            
+
             // You can re-assign the visit to another user
             'user_ID' => 'required|integer|exists:users,id',
-            
+
             // You can reschedule the visit (but only to today or future)
             'date_visit' => 'required|date|after_or_equal:today',
-            
+
             // This is the main reason for editing:
             // to mark it as 'completed' or 'cancelled'
             'status' => 'required|string|in:ongoing,completed,cancelled',
-            
+
             // You can always add or change remarks
             'remarks' => 'nullable|string|max:2000',
         ];

@@ -33,12 +33,32 @@ class PartnerOrderLine extends Model
         return $this->belongsTo(PartnerOrder::class);
     }
 
-    /**
-     * Get the product (Seed, Item, or CornProduct) for this line
-     */
-   
-    
-    
+    public function product()
+    {
+        if ($this->product_type === 'seed' || $this->product_type === 'Seed' || $this->product_type === 'App\\Models\\Seed') {
+            return $this->belongsTo(\App\Models\Seed::class, 'product_id');
+        }
+        return $this->belongsTo(\App\Models\Item::class, 'product_id');
+    }
+
+    public function seed()
+    {
+        return $this->belongsTo(\App\Models\Seed::class, 'product_id');
+    }
+
+    public function item()
+    {
+        return $this->belongsTo(\App\Models\Item::class, 'product_id');
+    }
+
+    public function getProductAttribute()
+    {
+        if ($this->product_type === 'seed' || $this->product_type === 'Seed' || $this->product_type === 'App\\Models\\Seed') {
+            return \App\Models\Seed::find($this->product_id);
+        }
+        return \App\Models\Item::find($this->product_id);
+    }
+
     /**
      * Calculate remaining quantity to be delivered
      */
@@ -77,17 +97,17 @@ class PartnerOrderLine extends Model
     public function addDelivery($qty)
     {
         $newDeliveredQty = $this->delivered_qty + $qty;
-        
+
         if ($newDeliveredQty > $this->qty) {
             throw new \Exception("Delivered quantity cannot exceed ordered quantity");
         }
-        
+
         $this->delivered_qty = $newDeliveredQty;
         $this->save();
-        
+
         // Update parent order status
         $this->partnerOrder->updateStatus();
-        
+
         return $this;
     }
 
@@ -104,31 +124,4 @@ class PartnerOrderLine extends Model
                 return $qty * $price;
         }
     }
-    
-    public function product()
-    {
-        if ($this->product_type === 'seed' || $this->product_type === 'Seed' || $this->product_type === 'App\\Models\\Seed') {
-            return $this->belongsTo(\App\Models\Seed::class, 'product_id');
-        }
-        return $this->belongsTo(\App\Models\Item::class, 'product_id');
-    }
-
-    public function seed()
-    {
-        return $this->belongsTo(\App\Models\Seed::class, 'product_id');
-    }
-
-    public function item()
-    {
-        return $this->belongsTo(\App\Models\Item::class, 'product_id');
-    }
-    
-    public function getProductAttribute()
-    {
-        if ($this->product_type === 'seed' || $this->product_type === 'Seed' || $this->product_type === 'App\\Models\\Seed') {
-            return \App\Models\Seed::find($this->product_id);
-        }
-        return \App\Models\Item::find($this->product_id);
-    }
-        
 }

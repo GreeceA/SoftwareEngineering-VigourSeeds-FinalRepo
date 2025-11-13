@@ -1,11 +1,10 @@
-import ApplicationLogo from '@/Components/ApplicationLogo';
 import Dropdown from '@/Components/Dropdown';
 import NavLink from '@/Components/NavLink';
 import ResponsiveNavLink from '@/Components/ResponsiveNavLink';
 import { Link, usePage, router } from '@inertiajs/react';
 import { useState } from 'react';
 import Vlogo from '@/assets/vigour-logo.png';
-import { route } from 'ziggy-js'; 
+import { route } from 'ziggy-js';
 import usePermissionRefresh from '@/hooks/usePermissionRefresh';
 
 export default function AuthenticatedLayout({ header, children }) {
@@ -13,7 +12,7 @@ export default function AuthenticatedLayout({ header, children }) {
     const permissions = user?.can || [];
     const { notifications } = usePage().props;
     const [showNotifications, setShowNotifications] = useState(false);
-    
+
     // Get full name from first_name and last_name
     const fullName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.email;
 
@@ -23,12 +22,11 @@ export default function AuthenticatedLayout({ header, children }) {
     const [openInventoryDropdown, setOpenInventoryDropdown] = useState(false);
     const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false);
 
-    
     const handleNotificationClick = (notification) => {
         // Mark as read and navigate to URL
         router.post(
-            route('notifications.mark-as-read', notification.id), 
-            {}, 
+            route('notifications.mark-as-read', notification.id),
+            {},
             {
                 preserveScroll: true,
                 onSuccess: () => {
@@ -39,7 +37,6 @@ export default function AuthenticatedLayout({ header, children }) {
         );
     };
 
-    const [open, setOpen] = useState(false);
     return (
         <div className="min-h-screen bg-gray-50">
             <nav className="border-b border-gray-100 bg-white">
@@ -49,112 +46,109 @@ export default function AuthenticatedLayout({ header, children }) {
                             <div className="flex shrink-0 items-center">
                                 <Link href="http://localhost/dashboard/SoftwareEngineering-VigourSeeds-FinalRepo/public/dashboard">
                                     <img
-                                        src={Vlogo}   alt="Vigour Seeds Logo"  className="block h-9 w-auto"
+                                        src={Vlogo}
+                                        alt="Vigour Seeds Logo"
+                                        className="block h-9 w-auto"
                                     />
                                 </Link>
                             </div>
 
-                            
-
                             <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                                <div className="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                                    {/* DASHBOARD */}
-                                    <NavLink 
-                                        href={route('dashboard')}
-                                        active={route().current('dashboard')}
-                                    >
-                                        Dashboard
-                                    </NavLink>
-                                </div>
+                                {/* DASHBOARD */}
+                                <NavLink
+                                    href={route('dashboard')}
+                                    active={route().current('dashboard')}
+                                >
+                                    Dashboard
+                                </NavLink>
 
                                 {/* Users Section - Only show if user has any user-related permissions */}
-                                {(permissions.includes('view users') || 
-                                  permissions.includes('create users') || 
-                                  permissions.includes('edit users') || 
-                                  permissions.includes('deactivate users') ||
-                                  permissions.includes('view permissions') ||
-                                  permissions.includes('view roles')) && (
-                                    <div className="relative hidden sm:-my-px sm:ms-10 sm:flex">
-                                        {/* Show main Users nav link */}
-                                        <NavLink
-                                            href={route("users.index")}
-                                            active={route().current("users.index")}
-                                            className="inline-flex items-center"
-                                        >
-                                            Users
-                                        </NavLink>
-
-                                        {/* Dropdown toggle button */}
-                                        <button
-                                            type="button"
-                                            onClick={(e) => {
-                                                e.preventDefault();
-                                                setOpenUsersDropdown(!openUsersDropdown);
-                                            }}
-                                            className="ml-2 focus:outline-none"
-                                        >
-                                            <svg
-                                                className={`h-4 w-4 transition-transform duration-200 ${
-                                                    openUsersDropdown ? "rotate-180" : "rotate-0"
-                                                }`}
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                viewBox="0 0 20 20"
-                                                fill="#111827"
+                                {(permissions.includes('view users') ||
+                                    permissions.includes('create users') ||
+                                    permissions.includes('edit users') ||
+                                    permissions.includes('deactivate users') ||
+                                    permissions.includes('view permissions') ||
+                                    permissions.includes('view roles')) && (
+                                        <div className="relative hidden sm:-my-px sm:ms-10 sm:flex">
+                                            {/* Show main Users nav link */}
+                                            <NavLink
+                                                href={route("users.index")}
+                                                active={route().current("users.index")}
+                                                className="inline-flex items-center"
                                             >
-                                                <path
-                                                    fillRule="evenodd"
-                                                    d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-                                                    clipRule="evenodd"
-                                                />
-                                            </svg>
-                                        </button>
+                                                Users
+                                            </NavLink>
 
-                                        {/* Dropdown menu - show items based on specific permissions */}
-                                        {openUsersDropdown && (
-                                            <div className="absolute top-5 left-0 mt-10 w-48 rounded-md bg-gray-50 shadow-lg text-sans text-[14px]">
-                                                {/* All Users - only if user has 'view users' */}
-                                                {permissions.includes('view users') && (
-                                                    <Link
-                                                        href={route("users.index")}
-                                                        className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
-                                                    >
-                                                        All Users
-                                                    </Link>
-                                                )}
-                                                
-                                                {/* Add User - only if user has 'create users' */}
-                                                {permissions.includes('create users') && permissions.includes('view users') && (
-                                                    <Link
-                                                        href={route("users.create")}
-                                                        className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
-                                                    >
-                                                        Add User
-                                                    </Link>
-                                                )}
-                                                
-                                                {/* User Permissions - only if user has 'view permissions' */}
-                                                {permissions.includes('view permissions') && (
-                                                    <Link
-                                                        href={route("permissions.index")}
-                                                        className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
-                                                    >
-                                                        User Permissions 
-                                                    </Link>
-                                                )}
-                                                
-                                                {/* User Roles - only if user has 'view roles' */}
-                                                {permissions.includes('view roles') && (
-                                                    <Link
-                                                        href={route("roles.index")}
-                                                        className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
-                                                    >
-                                                        User Roles
-                                                    </Link>
-                                                )}
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
+                                            {/* Dropdown toggle button */}
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    setOpenUsersDropdown(!openUsersDropdown);
+                                                }}
+                                                className="ml-2 focus:outline-none"
+                                            >
+                                                <svg
+                                                    className={`h-4 w-4 transition-transform duration-200 ${openUsersDropdown ? "rotate-180" : "rotate-0"
+                                                        }`}
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    viewBox="0 0 20 20"
+                                                    fill="#111827"
+                                                >
+                                                    <path
+                                                        fillRule="evenodd"
+                                                        d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+                                                        clipRule="evenodd"
+                                                    />
+                                                </svg>
+                                            </button>
+
+                                            {/* Dropdown menu - show items based on specific permissions */}
+                                            {openUsersDropdown && (
+                                                <div className="absolute top-5 left-0 mt-10 w-48 rounded-md bg-gray-50 shadow-lg text-sans text-[14px]">
+                                                    {/* All Users - only if user has 'view users' */}
+                                                    {permissions.includes('view users') && (
+                                                        <Link
+                                                            href={route("users.index")}
+                                                            className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
+                                                        >
+                                                            All Users
+                                                        </Link>
+                                                    )}
+
+                                                    {/* Add User - only if user has 'create users' */}
+                                                    {permissions.includes('create users') && permissions.includes('view users') && (
+                                                        <Link
+                                                            href={route("users.create")}
+                                                            className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
+                                                        >
+                                                            Add User
+                                                        </Link>
+                                                    )}
+
+                                                    {/* User Permissions - only if user has 'view permissions' */}
+                                                    {permissions.includes('view permissions') && (
+                                                        <Link
+                                                            href={route("permissions.index")}
+                                                            className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
+                                                        >
+                                                            User Permissions
+                                                        </Link>
+                                                    )}
+
+                                                    {/* User Roles - only if user has 'view roles' */}
+                                                    {permissions.includes('view roles') && (
+                                                        <Link
+                                                            href={route("roles.index")}
+                                                            className="block px-4 py-2 text-gray-700 hover:bg-gray-200 font-regular"
+                                                        >
+                                                            User Roles
+                                                        </Link>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 {/* PARTNERS - Only show if user has 'view partners' permission */}
                                 {permissions.includes('view partners') && (
                                     <NavLink
@@ -212,9 +206,8 @@ export default function AuthenticatedLayout({ header, children }) {
                                             className="ml-2 focus:outline-none"
                                         >
                                             <svg
-                                                className={`h-4 w-4 transition-transform duration-200 ${
-                                                    openInventoryDropdown ? "rotate-180" : "rotate-0"
-                                                }`}
+                                                className={`h-4 w-4 transition-transform duration-200 ${openInventoryDropdown ? "rotate-180" : "rotate-0"
+                                                    }`}
                                                 xmlns="http://www.w3.org/2000/svg"
                                                 viewBox="0 0 20 20"
                                                 fill="#111827"
@@ -239,7 +232,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                                         Inventory Ledger
                                                     </Link>
                                                 )}
-                                                
+
                                                 {/* Partner Orders - only if user has 'view inventory' */}
                                                 {permissions.includes('view inventory') && (
                                                     <Link
@@ -249,7 +242,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                                         Partner Orders
                                                     </Link>
                                                 )}
-                                                
+
                                                 {/* Buyback Tracking - only if user has 'view inventory' */}
                                                 {permissions.includes('view inventory') && (
                                                     <Link
@@ -273,7 +266,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                     </NavLink>
                                 )}
                             </div>
-                        </div> 
+                        </div>
 
                         {/* ✅ RIGHT SIDE - Desktop View */}
                         <div className="hidden sm:ms-6 sm:flex sm:items-center gap-4">
@@ -297,11 +290,11 @@ export default function AuthenticatedLayout({ header, children }) {
                                 {showNotifications && (
                                     <>
                                         {/* Backdrop */}
-                                        <div 
-                                            className="fixed inset-0 z-40" 
+                                        <div
+                                            className="fixed inset-0 z-40"
                                             onClick={() => setShowNotifications(false)}
                                         ></div>
-                                        
+
                                         {/* Dropdown Panel */}
                                         <div className="absolute right-0 mt-2 w-96 rounded-lg bg-white shadow-xl ring-1 ring-black ring-opacity-5 z-50">
                                             <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-[#37692F] to-[#4a8a3f]">
@@ -369,7 +362,6 @@ export default function AuthenticatedLayout({ header, children }) {
                         </div>
 
                         {/* ✅ USER DROPDOWN - Desktop */}
-                        {/* Debug notifications */}
                         <div className="hidden sm:ms-6 sm:flex sm:items-center">
                             <div className="relative ms-3">
                                 <Dropdown>
@@ -393,7 +385,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                                         </div>
                                                     )}
                                                 </div>
-                                                
+
                                                 {/* Full Name */}
                                                 {fullName}
 
@@ -431,6 +423,7 @@ export default function AuthenticatedLayout({ header, children }) {
                             </div>
                         </div>
 
+                        {/* ✅ MOBILE HAMBURGER */}
                         <div className="-me-2 flex items-center sm:hidden">
                             <button
                                 onClick={() =>
@@ -474,6 +467,7 @@ export default function AuthenticatedLayout({ header, children }) {
                     </div>
                 </div>
 
+                {/* ✅ MOBILE NAVIGATION DROPDOWN */}
                 <div
                     className={
                         (showingNavigationDropdown ? 'block' : 'hidden') +
@@ -504,7 +498,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                         {(user.first_name?.[0] || user.email[0]).toUpperCase()}
                                     </div>
                                 )}
-                                
+
                                 <div>
                                     <div className="text-base font-medium text-gray-800">
                                         {fullName}
@@ -541,9 +535,6 @@ export default function AuthenticatedLayout({ header, children }) {
             )}
 
             <main>
-                {/* <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <img src= {DashLogo}    alt="Background Logo"   className="w-[400px] h-auto"/>
-                </div> */}
                 {children}
             </main>
         </div>

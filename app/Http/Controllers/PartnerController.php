@@ -89,8 +89,8 @@ class PartnerController extends Controller implements HasMiddleware
         if ($request->partner_type === 'organization' && $request->contact_persons) {
             foreach ($request->contact_persons as $contact) {
                 $partner->contactPersons()->create([
-                    'name'         => $contact['name'],
-                    'email'        => $contact['email'] ?? null,
+                    'name' => $contact['name'],
+                    'email' => $contact['email'] ?? null,
                     'phone_number' => $contact['phone_number'] ?? null,
                 ]);
             }
@@ -101,9 +101,9 @@ class PartnerController extends Controller implements HasMiddleware
             foreach ($request->farms as $farm) {
                 $partner->farms()->create([
                     'location_name' => $farm['location_name'],
-                    'address'       => $farm['address'],
-                    'area_size'     => $farm['area_size'] ?? null,
-                    'soil_type'     => $farm['soil_type'] ?? null,
+                    'address' => $farm['address'],
+                    'area_size' => $farm['area_size'] ?? null,
+                    'soil_type' => $farm['soil_type'] ?? null,
                 ]);
             }
         }
@@ -121,17 +121,17 @@ class PartnerController extends Controller implements HasMiddleware
                 ...$partner->toArray(),
                 'contact_persons' => $partner->contactPersons->map(function ($c) {
                     return [
-                        'name'         => $c->name,
-                        'email'        => $c->email,
+                        'name' => $c->name,
+                        'email' => $c->email,
                         'phone_number' => $c->phone_number,
                     ];
                 }),
                 'farms' => $partner->farms->map(function ($f) {
                     return [
                         'location_name' => $f->location_name,
-                        'address'       => $f->address,
-                        'area_size'     => $f->area_size,
-                        'soil_type'     => $f->soil_type,
+                        'address' => $f->address,
+                        'area_size' => $f->area_size,
+                        'soil_type' => $f->soil_type,
                     ];
                 }),
                 'contracts' => $partner->contracts->map(function ($contract) {
@@ -157,18 +157,18 @@ class PartnerController extends Controller implements HasMiddleware
                 ...$partner->toArray(),
                 'contact_persons' => $partner->contactPersons->map(function ($c) {
                     return [
-                        'name'         => $c->name,
-                        'email'        => $c->email,
+                        'name' => $c->name,
+                        'email' => $c->email,
                         'phone_number' => $c->phone_number,
                     ];
                 }),
                 'farms' => $partner->farms->map(function ($f) {
                     return [
                         'location_name' => $f->location_name,
-                        'address'       => $f->address,
-                        'area_size'     => $f->area_size,
-                        'soil_type'     => $f->soil_type,
-                        'contract_id'   => $f->contracts->isNotEmpty() ? $f->contracts->first()->id : null, // <-- Add this line
+                        'address' => $f->address,
+                        'area_size' => $f->area_size,
+                        'soil_type' => $f->soil_type,
+                        'contract_id' => $f->contracts->isNotEmpty() ? $f->contracts->first()->id : null,
                     ];
                 }),
             ],
@@ -185,8 +185,8 @@ class PartnerController extends Controller implements HasMiddleware
         if ($request->partner_type === 'organization' && $request->contact_persons) {
             foreach ($request->contact_persons as $contact) {
                 $partner->contactPersons()->create([
-                    'name'         => $contact['name'],
-                    'email'        => $contact['email'] ?? null,
+                    'name' => $contact['name'],
+                    'email' => $contact['email'] ?? null,
                     'phone_number' => $contact['phone_number'] ?? null,
                 ]);
             }
@@ -208,9 +208,9 @@ class PartnerController extends Controller implements HasMiddleware
                 if (empty($farmData['id'])) {
                     $partner->farms()->create([
                         'location_name' => $farmData['location_name'],
-                        'address'       => $farmData['address'],
-                        'area_size'     => $farmData['area_size'] ?? null,
-                        'soil_type'     => $farmData['soil_type'] ?? null,
+                        'address' => $farmData['address'],
+                        'area_size' => $farmData['area_size'] ?? null,
+                        'soil_type' => $farmData['soil_type'] ?? null,
                     ]);
                 }
             }
@@ -227,7 +227,7 @@ class PartnerController extends Controller implements HasMiddleware
         //     ->with('success', 'Partner deleted successfully.');
     }
 
-    //  Status Modification 
+    // Status Modification
     public function deactivate(Partner $partner)
     {
         // Check for ongoing contracts
@@ -334,7 +334,6 @@ class PartnerController extends Controller implements HasMiddleware
                 ->setPaper('a4', 'landscape');
             return $pdf->download('VigourSeed_PartnerList_' . now()->format('Y-m-d') . '.pdf');
         }
-
     }
 
     public function exportProfile(Partner $partner)
@@ -352,5 +351,4 @@ class PartnerController extends Controller implements HasMiddleware
             ->header('Content-Type', 'application/pdf')
             ->header('Content-Disposition', 'attachment; filename="VigourSeed_Partner_' . $partner->id . '_' . now()->format('Y-m-d') . '.pdf"');
     }
-
 }

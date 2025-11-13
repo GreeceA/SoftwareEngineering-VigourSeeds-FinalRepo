@@ -18,7 +18,7 @@ class UpdatePasswordRequest extends FormRequest
             'password' => [
                 'required',
                 'string',
-                'min:8',           // only require minimum 8 characters
+                'min:8',          
                 'confirmed',
             ],
         ];

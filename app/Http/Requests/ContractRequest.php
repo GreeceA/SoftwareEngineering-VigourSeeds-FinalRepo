@@ -40,7 +40,7 @@ class ContractRequest extends FormRequest
                         $farm = \App\Models\PartnerFarm::where('id', $value)
                             ->where('partner_id', $partnerId)
                             ->first();
-                        
+
                         if (!$farm) {
                             $fail('The selected farm does not belong to the chosen partner.');
                         }
@@ -71,7 +71,7 @@ class ContractRequest extends FormRequest
                     if ($effectiveDate && $value) {
                         $duration = \Carbon\Carbon::parse($effectiveDate)
                             ->diffInDays(\Carbon\Carbon::parse($value));
-                        
+
                         if ($duration < 30) {
                             $fail('Contract duration must be at least 30 days.');
                         }
@@ -97,7 +97,7 @@ class ContractRequest extends FormRequest
                 'max:5120', // 5MB
             ],
             'original_file_name' => ['nullable', 'string', 'max:255'],
-            
+
             // Seed commitment rules
             'seeds' => ['required', 'array', 'min:1', 'max:1'],
             'seeds.*.seed_id' => ['required', 'exists:seeds,id'],
@@ -138,14 +138,14 @@ class ContractRequest extends FormRequest
                     $plantingDate = $this->input("seeds.{$index}.planting_date");
                     $seedId = $this->input("seeds.{$index}.seed_id");
                     $expirationDate = $this->input('expiration_date');
-                    
+
                     if ($plantingDate && $seedId && $expirationDate && $value) {
                         $seed = \App\Models\Seed::find($seedId);
                         if ($seed && $seed->growth_cycle) {
                             $totalDays = \Carbon\Carbon::parse($plantingDate)
                                 ->diffInDays(\Carbon\Carbon::parse($expirationDate));
                             $maxCycles = floor($totalDays / $seed->growth_cycle);
-                            
+
                             if ($value > $maxCycles) {
                                 $fail("Maximum {$maxCycles} cycles are possible within the contract duration.");
                             }
@@ -169,12 +169,12 @@ class ContractRequest extends FormRequest
                     'required',
                     'date',
                     'after:' . $contract->effective_date->format('Y-m-d'),
-                        // Only allow extending expiration date if suspended
-                        function ($attribute, $value, $fail) use ($contract) {
-                            if ($contract->status === 'suspended' && $value < $contract->expiration_date->format('Y-m-d')) {
-                                $fail('You can only extend the expiration date. Shortening is not allowed while suspended.');
-                            }
-                        },
+                    // Only allow extending expiration date if suspended
+                    function ($attribute, $value, $fail) use ($contract) {
+                        if ($contract->status === 'suspended' && $value < $contract->expiration_date->format('Y-m-d')) {
+                            $fail('You can only extend the expiration date. Shortening is not allowed while suspended.');
+                        }
+                    },
                 ],
                 'buyback_price_per_unit' => [
                     'required',
@@ -221,65 +221,65 @@ class ContractRequest extends FormRequest
             'contract_name.required' => 'The contract name is required.',
             'contract_name.unique' => 'A contract with this name already exists.',
             'contract_name.max' => 'The contract name cannot exceed 255 characters.',
-            
+
             'partner_id.required' => 'Please select a partner.',
             'partner_id.exists' => 'The selected partner does not exist.',
-            
+
             'farm_id.required' => 'Please select a farm location.',
             'farm_id.exists' => 'The selected farm does not exist.',
-            
+
             'signing_date.required' => 'The signing date is required.',
             'signing_date.before_or_equal' => 'The signing date cannot be in the future.',
             'signing_date.after_or_equal' => 'The signing date cannot be more than one week in the past.',
-            
+
             'effective_date.required' => 'The effective date is required.',
             'effective_date.after_or_equal' => 'The effective date must be on or after the signing date.',
-            
+
             'expiration_date.required' => 'The expiration date is required.',
             'expiration_date.after' => 'The expiration date must be after the effective date.',
-            
+
             'buyback_price_per_unit.required' => 'The buyback price is required.',
             'buyback_price_per_unit.min' => 'The buyback price must be greater than zero.',
             'buyback_price_per_unit.max' => 'The buyback price is too large.',
             'buyback_price_per_unit.regex' => 'The buyback price can have a maximum of 4 decimal places.',
-            
+
             'contract_file.required' => 'A contract file (PDF, DOC, DOCX) is required.',
             'contract_file.mimes' => 'The contract file must be a PDF, DOC, or DOCX.',
             'contract_file.max' => 'The contract file must not exceed 5MB.',
-            
+
             // Seed commitment fields
             'seeds.required' => 'At least one seed commitment is required.',
             'seeds.max' => 'Only one seed variety is allowed per contract.',
-            
+
             'seeds.*.seed_id.required' => 'Please select a seed variety.',
             'seeds.*.seed_id.exists' => 'The selected seed does not exist.',
-            
+
             'seeds.*.seed_quantity.required' => 'The seed quantity is required.',
             'seeds.*.seed_quantity.min' => 'The seed quantity must be at least 0.01.',
             'seeds.*.seed_quantity.max' => 'The seed quantity is too large.',
-            
+
             'seeds.*.unit.required' => 'Please select a unit for seed quantity.',
             'seeds.*.unit.in' => 'The selected unit is invalid.',
-            
+
             'seeds.*.planting_date.required' => 'The planting date is required.',
             'seeds.*.planting_date.after' => 'The planting date must be after the effective date.',
             'seeds.*.planting_date.before' => 'The planting date must be before the expiration date.',
-            
+
             'seeds.*.expected_first_harvest_date.required' => 'The expected harvest date is required.',
             'seeds.*.expected_first_harvest_date.after' => 'The harvest date must be after the planting date.',
             'seeds.*.expected_first_harvest_date.before_or_equal' => 'The harvest date cannot exceed the contract expiration date.',
-            
+
             'seeds.*.agreed_cycles.required' => 'The number of agreed cycles is required.',
             'seeds.*.agreed_cycles.min' => 'At least one cycle is required.',
             'seeds.*.agreed_cycles.max' => 'The number of cycles is too large.',
-            
+
             'seeds.*.expected_buyback_amount.required' => 'The expected buyback amount is required.',
             'seeds.*.expected_buyback_amount.min' => 'The buyback amount must be at least 1.',
             'seeds.*.expected_buyback_amount.max' => 'The buyback amount is too large.',
-            
+
             'seeds.*.buyback_unit.required' => 'Please select a buyback unit.',
             'seeds.*.buyback_unit.in' => 'The buyback unit must be kg or ton.',
-            
+
             // Partial edit
             'seeds.*.id.required' => 'The commitment ID is required.',
             'seeds.*.id.exists' => 'The selected commitment does not exist.',

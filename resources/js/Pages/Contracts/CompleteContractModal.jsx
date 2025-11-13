@@ -22,7 +22,7 @@ export default function CompleteContractModal({
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50 p-4">
             <div className="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
                 {/* Success Icon */}
-                <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-green-100 mx-auto">
+                <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
                     <CheckCircleIcon className="h-10 w-10 text-green-600" />
                 </div>
 
@@ -45,64 +45,55 @@ export default function CompleteContractModal({
 
                 {/* Requirements List */}
                 <div className="mb-6 space-y-3">
-                    <div className={`flex items-center gap-3 rounded-lg border p-3 ${
-                        hasCompletedFieldVisit 
-                            ? 'border-green-200 bg-green-50' 
+                    <div className={`flex items-center gap-3 rounded-lg border p-3 ${hasCompletedFieldVisit
+                            ? 'border-green-200 bg-green-50'
                             : 'border-red-200 bg-red-50'
-                    }`}>
-                        <div className={`flex h-6 w-6 items-center justify-center rounded-full ${
-                            hasCompletedFieldVisit ? 'bg-green-500' : 'bg-red-500'
                         }`}>
+                        <div className={`flex h-6 w-6 items-center justify-center rounded-full ${hasCompletedFieldVisit ? 'bg-green-500' : 'bg-red-500'
+                            }`}>
                             <span className="text-xs font-bold text-white">
                                 {hasCompletedFieldVisit ? '✓' : '✗'}
                             </span>
                         </div>
                         <div>
-                            <p className={`text-sm font-medium ${
-                                hasCompletedFieldVisit ? 'text-green-800' : 'text-red-800'
-                            }`}>
+                            <p className={`text-sm font-medium ${hasCompletedFieldVisit ? 'text-green-800' : 'text-red-800'
+                                }`}>
                                 At least 1 field visit marked as <strong>completed</strong>
                             </p>
                         </div>
                     </div>
 
-                    <div className={`flex items-center gap-3 rounded-lg border p-3 ${
-                        allOrdersFulfilled 
-                            ? 'border-green-200 bg-green-50' 
+                    <div className={`flex items-center gap-3 rounded-lg border p-3 ${allOrdersFulfilled
+                            ? 'border-green-200 bg-green-50'
                             : 'border-red-200 bg-red-50'
-                    }`}>
-                        <div className={`flex h-6 w-6 items-center justify-center rounded-full ${
-                            allOrdersFulfilled ? 'bg-green-500' : 'bg-red-500'
                         }`}>
+                        <div className={`flex h-6 w-6 items-center justify-center rounded-full ${allOrdersFulfilled ? 'bg-green-500' : 'bg-red-500'
+                            }`}>
                             <span className="text-xs font-bold text-white">
                                 {allOrdersFulfilled ? '✓' : '✗'}
                             </span>
                         </div>
                         <div>
-                            <p className={`text-sm font-medium ${
-                                allOrdersFulfilled ? 'text-green-800' : 'text-red-800'
-                            }`}>
+                            <p className={`text-sm font-medium ${allOrdersFulfilled ? 'text-green-800' : 'text-red-800'
+                                }`}>
                                 All partner orders are <strong>fulfilled</strong>
                             </p>
                         </div>
                     </div>
 
-                    <div className={`flex items-center gap-3 rounded-lg border p-3 ${
-                        buybackFulfilled 
-                            ? 'border-green-200 bg-green-50' 
+                    <div className={`flex items-center gap-3 rounded-lg border p-3 ${buybackFulfilled
+                            ? 'border-green-200 bg-green-50'
                             : 'border-red-200 bg-red-50'
-                    }`}>
-                        <div className={`flex h-6 w-6 items-center justify-center rounded-full ${
-                            buybackFulfilled ? 'bg-green-500' : 'bg-red-500'
                         }`}>
+                        <div className={`flex h-6 w-6 items-center justify-center rounded-full ${buybackFulfilled ? 'bg-green-500' : 'bg-red-500'
+                            }`}>
                             <span className="text-xs font-bold text-white">
                                 {buybackFulfilled ? '✓' : '✗'}
                             </span>
                         </div>
                         <div>
-                            <p className={`text-sm font-medium ${
-                                buybackFulfilled ? 'text-green-800' : 'text-red-800'
-                            }`}>
+                            <p className={`text-sm font-medium ${buybackFulfilled ? 'text-green-800' : 'text-red-800'
+                                }`}>
                                 All buyback commitments are <strong>fulfilled</strong>
                             </p>
                         </div>
@@ -121,11 +112,10 @@ export default function CompleteContractModal({
                 {/* Buttons */}
                 <div className="mt-8 flex justify-center space-x-4">
                     <button
-                        className={`flex-1 rounded-lg px-5 py-3 text-sm font-medium font-poppins text-white transition-colors ${
-                            canComplete
+                        className={`flex-1 rounded-lg px-5 py-3 text-sm font-medium font-poppins text-white transition-colors ${canComplete
                                 ? 'bg-green-600 hover:bg-green-700'
                                 : 'bg-gray-400 cursor-not-allowed'
-                        }`}
+                            }`}
                         onClick={() => canComplete && onConfirm('completed')}
                         disabled={!canComplete || processing}
                     >

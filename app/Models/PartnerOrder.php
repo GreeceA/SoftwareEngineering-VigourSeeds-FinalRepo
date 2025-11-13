@@ -89,7 +89,7 @@ class PartnerOrder extends Model
     {
         $totalQty = $this->lines->sum('qty');
         $deliveredQty = $this->lines->sum('delivered_qty');
-        
+
         return $totalQty > 0 ? ($deliveredQty / $totalQty) * 100 : 0;
     }
 
@@ -109,7 +109,7 @@ class PartnerOrder extends Model
         } else {
             $this->status = 'pending';
         }
-        
+
         $this->save();
     }
 

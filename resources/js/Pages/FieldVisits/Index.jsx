@@ -143,7 +143,7 @@ export default function Index({ auth, fieldVisits, filters, contracts }) {
             }
         >
             <Head title="Field Visit Management" />
-            
+
             <div className="px-6 pt-6">
                 <nav className="text-sm text-gray-600">
                     <Link
@@ -374,11 +374,11 @@ export default function Index({ auth, fieldVisits, filters, contracts }) {
                                         <td className="px-6 py-4">
                                             <div className="font-poppins text-[13px] font-normal text-gray-900">
                                                 {visit.date_visit
-                                                    ? (function(d){
-                                                          const dt = new Date(d);
-                                                          return isNaN(dt) ? d : dt.toISOString().slice(0,10);
-                                                      })(visit.date_visit)
-                                                      : 'N/A'}
+                                                    ? (function (d) {
+                                                        const dt = new Date(d);
+                                                        return isNaN(dt) ? d : dt.toISOString().slice(0, 10);
+                                                    })(visit.date_visit)
+                                                    : 'N/A'}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
@@ -496,10 +496,9 @@ export default function Index({ auth, fieldVisits, filters, contracts }) {
                                             preserveScroll
                                             preserveState
                                             className={
-                                                `border px-3 py-2 text-sm font-medium ${
-                                                    link.active
-                                                        ? 'z-10 border-[#37692F] bg-[#37692F] text-white'
-                                                        : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                                                `border px-3 py-2 text-sm font-medium ${link.active
+                                                    ? 'z-10 border-[#37692F] bg-[#37692F] text-white'
+                                                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
                                                 } ${!link.url ? 'pointer-events-none opacity-50' : ''}`
                                             }
                                             dangerouslySetInnerHTML={{ __html: link.label }}

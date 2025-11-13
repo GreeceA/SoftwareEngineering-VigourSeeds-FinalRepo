@@ -18,7 +18,6 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 use Barryvdh\DomPDF\Facade\Pdf;
 
-
 class FieldVisitController extends Controller implements HasMiddleware
 {
     public static function middleware(): array
@@ -108,7 +107,7 @@ class FieldVisitController extends Controller implements HasMiddleware
     public function show($id)
     {
         $fieldVisit = FieldVisit::with([
-            'contract.farm', // <-- add this line
+            'contract.farm',
             'assignee',
             'growthReports',
             'damageReports'
@@ -121,7 +120,7 @@ class FieldVisitController extends Controller implements HasMiddleware
 
         return Inertia::render('FieldVisits/Show', [
             'fieldVisit' => $fieldVisit,
-            'farm' => $farm, // <-- pass farm as a separate prop if you want
+            'farm' => $farm,
         ]);
     }
 
@@ -129,7 +128,6 @@ class FieldVisitController extends Controller implements HasMiddleware
     {
         $fieldVisit = FieldVisit::with(['contract.farm'])->findOrFail($id);
 
-        // 🛑 THE "WHEN" CONDITION 🛑
         // Only allow editing if status is 'ongoing'
         if ($fieldVisit->status === 'completed') {
             return redirect()
@@ -163,7 +161,6 @@ class FieldVisitController extends Controller implements HasMiddleware
     {
         $fieldVisit = FieldVisit::findOrFail($id);
 
-        // 🛑 THE "WHEN" CONDITION 🛑
         // Check the *current* status of the visit (the one from the database)
         if ($fieldVisit->status === 'completed') {
             return back()->with('error', 'This field visit is already completed and cannot be edited. Completed visits are locked as historical records.');
@@ -173,7 +170,6 @@ class FieldVisitController extends Controller implements HasMiddleware
             return back()->with('error', 'This field visit is cancelled and cannot be edited. Cancelled visits are locked as historical records.');
         }
 
-        // Update only the allowed fields
         $fieldVisit->update($request->validated());
 
         return redirect()
@@ -199,7 +195,7 @@ class FieldVisitController extends Controller implements HasMiddleware
             return back()->with('error', 'Field visit is already completed.');
         }
 
-        if (! $fieldVisit->damageReports()->exists() && ! $fieldVisit->growthReports()->exists()) {
+        if (!$fieldVisit->damageReports()->exists() && !$fieldVisit->growthReports()->exists()) {
             return back()->with('error', 'Cannot complete: at least one Damage or Growth Report is required.');
         }
 
@@ -225,11 +221,13 @@ class FieldVisitController extends Controller implements HasMiddleware
         return back()->with('success', 'Field visit cancelled successfully.');
     }
 
+
+
     public function addGrowthReport(StoreGrowthReportRequest $request, $fieldVisitId)
     {
         $fieldVisit = FieldVisit::findOrFail($fieldVisitId);
 
-        if (method_exists($fieldVisit, 'canAddReports') && ! $fieldVisit->canAddReports()) {
+        if (method_exists($fieldVisit, 'canAddReports') && !$fieldVisit->canAddReports()) {
             return back()->with('error', 'Reports can only be added to ongoing field visits.');
         }
 
@@ -249,7 +247,7 @@ class FieldVisitController extends Controller implements HasMiddleware
     {
         $fieldVisit = FieldVisit::findOrFail($fieldVisitId);
 
-        if (method_exists($fieldVisit, 'canAddReports') && ! $fieldVisit->canAddReports()) {
+        if (method_exists($fieldVisit, 'canAddReports') && !$fieldVisit->canAddReports()) {
             return back()->with('error', 'Reports can only be added to ongoing field visits.');
         }
 

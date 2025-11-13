@@ -1,11 +1,10 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertia/react';
 import { useState, useRef, useEffect } from 'react';
 import { debounce } from 'lodash';
 import '../../../css/fonts.css';
 import { ChevronDownIcon, FunnelIcon, ArrowsUpDownIcon } from '@heroicons/react/24/outline';
 import dayjs from 'dayjs';
-
 
 export default function Index({ auth, contracts, filters }) {
     const { auth: authData } = usePage().props;
@@ -136,6 +135,7 @@ export default function Index({ auth, contracts, filters }) {
                             </svg>
                             Export as PDF
                         </button>
+                        
                         {/* Status Filter Dropdown */}
                         <div className="relative" ref={filterRef}>
                             <button

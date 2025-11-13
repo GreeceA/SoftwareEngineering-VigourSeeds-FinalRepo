@@ -3,11 +3,11 @@ import { Head, Link, useForm, router, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { ArrowTopRightOnSquareIcon, DocumentTextIcon, CalendarIcon, UserIcon, MapPinIcon, CubeIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 import { CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/solid';
-import DraftActiveModal from './Draft-ActiveModal'; 
+import DraftActiveModal from './Draft-ActiveModal';
 import ContractFilePreviewModal from './ContractFilePreviewModal';
 import ActivateContractModal from './ActivateContractModal';
 import CancelContractModal from './CancelContractModal';
-import SendEmailModal from './SendEmailModal'; 
+import SendEmailModal from './SendEmailModal';
 import CompleteContractModal from './CompleteContractModal';
 import TerminateContractModal from './TerminateContractModal';
 import SuspendContractModal from './SuspendContractModal';
@@ -16,14 +16,14 @@ import SuspendContractModal from './SuspendContractModal';
 export default function Show({ auth, contract }) {
     const { auth: authData } = usePage().props;
     const permissions = authData?.user?.can || [];
-    
+
     const [showCancelModal, setShowCancelModal] = useState(false);
     const [showStatusModal, setShowStatusModal] = useState(false);
     const [statusToTransition, setStatusToTransition] = useState('');
     const [showFilePreview, setShowFilePreview] = useState(false);
     const [showSendEmailModal, setShowSendEmailModal] = useState(false);
     const [showCompleteModal, setShowCompleteModal] = useState(false);
-    const [showTerminateModal, setShowTerminateModal] = useState(false); // ✅ Add this
+    const [showTerminateModal, setShowTerminateModal] = useState(false);
 
     const { post, processing } = useForm();
 
@@ -52,35 +52,35 @@ export default function Show({ auth, contract }) {
     };
 
     // Helper to convert to kg
-const toKg = (amount, unit) => {
-    if (unit === 'kg') return amount;
-    if (unit === 'sack') return amount * 50;
-    if (unit === 'ton') return amount * 1000;
-    return amount;
-};
+    const toKg = (amount, unit) => {
+        if (unit === 'kg') return amount;
+        if (unit === 'sack') return amount * 50;
+        if (unit === 'ton') return amount * 1000;
+        return amount;
+    };
 
-// Calculate total expected buyback (sum all commitments, convert to kg)
-const totalExpectedBuyback = contract.contract_commitments
-    ? contract.contract_commitments.reduce((sum, c) => sum + toKg(Number(c.expected_buyback_amount), c.buyback_unit), 0)
-    : 0;
+    // Calculate total expected buyback (sum all commitments, convert to kg)
+    const totalExpectedBuyback = contract.contract_commitments
+        ? contract.contract_commitments.reduce((sum, c) => sum + toKg(Number(c.expected_buyback_amount), c.buyback_unit), 0)
+        : 0;
 
-// Calculate total received (sum all buyback transactions, convert to kg)
-const totalReceivedBuyback = contract.buyback_transactions
-    ? contract.buyback_transactions.reduce((sum, tx) => sum + toKg(Number(tx.qty), tx.unit), 0)
-    : 0;
+    // Calculate total received (sum all buyback transactions, convert to kg)
+    const totalReceivedBuyback = contract.buyback_transactions
+        ? contract.buyback_transactions.reduce((sum, tx) => sum + toKg(Number(tx.qty), tx.unit), 0)
+        : 0;
 
-// Calculate remaining
-const remainingBuyback = Math.max(totalExpectedBuyback - totalReceivedBuyback, 0);
+    // Calculate remaining
+    const remainingBuyback = Math.max(totalExpectedBuyback - totalReceivedBuyback, 0);
 
-// Calculate fulfillment percentage
-const buybackFulfillmentPercentage = totalExpectedBuyback > 0
-    ? (totalReceivedBuyback / totalExpectedBuyback) * 100
-    : 0;
+    // Calculate fulfillment percentage
+    const buybackFulfillmentPercentage = totalExpectedBuyback > 0
+        ? (totalReceivedBuyback / totalExpectedBuyback) * 100
+        : 0;
 
-// Calculate total value
-const totalBuybackValue = contract.buyback_transactions
-    ? contract.buyback_transactions.reduce((sum, tx) => sum + (Number(tx.total_value) || 0), 0)
-    : 0;
+    // Calculate total value
+    const totalBuybackValue = contract.buyback_transactions
+        ? contract.buyback_transactions.reduce((sum, tx) => sum + (Number(tx.total_value) || 0), 0)
+        : 0;
 
     const handleTransitionConfirm = (newStatus) => {
         router.post(route('contracts.change-status', contract.id), { status: newStatus }, {
@@ -88,12 +88,12 @@ const totalBuybackValue = contract.buyback_transactions
                 setShowStatusModal(false);
                 setStatusToTransition('');
                 setShowCompleteModal(false);
-                setShowTerminateModal(false); // ✅ Add this
+                setShowTerminateModal(false);
             },
             onError: (errors) => {
                 setShowStatusModal(false);
                 setStatusToTransition('');
-                setShowTerminateModal(false); // ✅ Add this
+                setShowTerminateModal(false);
                 const errorMsg = errors.status || errors.error || "An unknown error occurred.";
                 alert(`Transition Failed: ${errorMsg}`);
             }
@@ -113,13 +113,11 @@ const totalBuybackValue = contract.buyback_transactions
         });
     };
 
-    
-
     const formatPrice = (price, decimals = 2) => {
         if (price === null || price === undefined) return '-';
-        return parseFloat(price).toLocaleString('en-PH', { 
-            style: 'currency', 
-            currency: 'PHP', 
+        return parseFloat(price).toLocaleString('en-PH', {
+            style: 'currency',
+            currency: 'PHP',
             minimumFractionDigits: decimals,
             maximumFractionDigits: decimals,
         });
@@ -162,11 +160,10 @@ const totalBuybackValue = contract.buyback_transactions
                         {permissions.includes('edit contracts') && (contract.can_be_edited || contract.can_be_partially_edited) && (
                             <Link
                                 href={route('contracts.edit', contract.id)}
-                                className={`inline-flex items-center rounded-lg bg-[#37692F] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#2a5624] ${
-                                    ['cancelled', 'active'].includes(contract.status)
+                                className={`inline-flex items-center rounded-lg bg-[#37692F] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#2a5624] ${['cancelled', 'active'].includes(contract.status)
                                         ? 'pointer-events-none opacity-50 cursor-not-allowed'
                                         : ''
-                                }`}
+                                    }`}
                                 tabIndex={['cancelled', 'active'].includes(contract.status) ? -1 : 0}
                                 aria-disabled={['cancelled', 'active'].includes(contract.status)}
                             >
@@ -216,7 +213,7 @@ const totalBuybackValue = contract.buyback_transactions
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                     {/* Left Column - Main Content */}
                     <div className="space-y-6 lg:col-span-2">
-                        {/* Quick Actions Card - around line 193 */}
+                        {/* Quick Actions Card */}
                         <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
                             <h2 className="mb-4 text-lg font-semibold text-gray-900">Quick Actions</h2>
                             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -267,7 +264,6 @@ const totalBuybackValue = contract.buyback_transactions
                                         <span className="text-sm font-medium text-yellow-900">Suspend Contract</span>
                                     </button>
                                 )}
-
 
                                 {/* Reactivate Contract - Only when suspended */}
                                 {permissions.includes('edit contracts') && contract.status === 'suspended' && contract.available_transitions?.includes('active') && (
@@ -375,7 +371,7 @@ const totalBuybackValue = contract.buyback_transactions
                                                         <ArrowTopRightOnSquareIcon className="h-3 w-3" />
                                                     </Link>
                                                 </div>
-                                                
+
                                                 <div className="space-y-2 text-sm">
                                                     <div className="flex justify-between">
                                                         <span className="text-gray-600">Quantity:</span>
@@ -455,8 +451,8 @@ const totalBuybackValue = contract.buyback_transactions
                                                         </span>
                                                         <div className="mt-2">
                                                             <div className="w-24 bg-gray-200 rounded-full h-2">
-                                                                <div 
-                                                                    className="bg-green-600 h-2 rounded-full" 
+                                                                <div
+                                                                    className="bg-green-600 h-2 rounded-full"
                                                                     style={{ width: `${order.fulfillment_percentage}%` }}
                                                                 ></div>
                                                             </div>
@@ -578,64 +574,62 @@ const totalBuybackValue = contract.buyback_transactions
                                 <p className="text-gray-500">No field visit recorded.</p>
                             </div>
                         )}
-                        
+
+                        {/* Buyback Summary Card */}
                         <div className="rounded-xl bg-white p-6 shadow-sm border border-gray-200">
-    <div className="mb-6 flex items-center justify-between">
-        <div>
-            <h2 className="text-lg font-semibold text-gray-900">Buyback Summary</h2>
-            <p className="text-sm text-gray-600 mt-1">Buyback fulfillment overview</p>
-        </div>
-        <Link
-            href={route('buybacks.show', contract.id)}
-            className="inline-flex items-center gap-2 rounded-lg bg-[#37692F] px-4 py-2 text-sm font-medium text-white hover:bg-[#2a5624] transition"
-        >
-            View
-            <ArrowTopRightOnSquareIcon className="h-4 w-4" />
-        </Link>
-    </div>
-    <div className="space-y-3 mb-4">
-        <div className="flex justify-between items-center">
-            <span className="text-gray-600">Total Expected</span>
-            <span className="font-semibold text-lg">{totalExpectedBuyback.toLocaleString()} kg</span>
-        </div>
-        <div className="flex justify-between items-center">
-            <span className="text-gray-600">Total Received</span>
-            <span className="font-semibold text-lg text-green-600">
-                {totalReceivedBuyback.toLocaleString()} kg
-            </span>
-        </div>
-        <div className="flex justify-between items-center">
-            <span className="text-gray-600">Remaining</span>
-            <span className={`font-semibold text-lg ${buybackFulfillmentPercentage >= 100 ? 'text-green-600' : 'text-yellow-600'}`}>
-                {remainingBuyback.toLocaleString()} kg
-            </span>
-        </div>
-        <div className="flex justify-between items-center">
-            <span className="text-gray-600">Fulfillment</span>
-            <span className="font-semibold text-lg">{buybackFulfillmentPercentage.toFixed(1)}%</span>
-        </div>
-        <div className="w-full bg-gray-200 rounded-full h-3">
-            <div
-                className={`h-3 rounded-full transition-all ${
-                    buybackFulfillmentPercentage >= 100 ? 'bg-green-600' : 
-                    buybackFulfillmentPercentage >= 75 ? 'bg-blue-600' : 
-                    buybackFulfillmentPercentage >= 50 ? 'bg-yellow-600' : 'bg-red-600'
-                }`}
-                style={{ width: `${Math.min(buybackFulfillmentPercentage, 100)}%` }}
-            />
-        </div>
-        <div className="flex justify-between items-center pt-3 border-t">
-            <span className="text-gray-900 font-medium">Total Value</span>
-            <span className="font-bold text-xl text-green-600">
-                ₱{totalBuybackValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </span>
-        </div>
-    </div>
-</div>
-                    
+                            <div className="mb-6 flex items-center justify-between">
+                                <div>
+                                    <h2 className="text-lg font-semibold text-gray-900">Buyback Summary</h2>
+                                    <p className="text-sm text-gray-600 mt-1">Buyback fulfillment overview</p>
+                                </div>
+                                <Link
+                                    href={route('buybacks.show', contract.id)}
+                                    className="inline-flex items-center gap-2 rounded-lg bg-[#37692F] px-4 py-2 text-sm font-medium text-white hover:bg-[#2a5624] transition"
+                                >
+                                    View
+                                    <ArrowTopRightOnSquareIcon className="h-4 w-4" />
+                                </Link>
+                            </div>
+                            <div className="space-y-3 mb-4">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-gray-600">Total Expected</span>
+                                    <span className="font-semibold text-lg">{totalExpectedBuyback.toLocaleString()} kg</span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-gray-600">Total Received</span>
+                                    <span className="font-semibold text-lg text-green-600">
+                                        {totalReceivedBuyback.toLocaleString()} kg
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-gray-600">Remaining</span>
+                                    <span className={`font-semibold text-lg ${buybackFulfillmentPercentage >= 100 ? 'text-green-600' : 'text-yellow-600'}`}>
+                                        {remainingBuyback.toLocaleString()} kg
+                                    </span>
+                                </div>
+                                <div className="flex justify-between items-center">
+                                    <span className="text-gray-600">Fulfillment</span>
+                                    <span className="font-semibold text-lg">{buybackFulfillmentPercentage.toFixed(1)}%</span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-3">
+                                    <div
+                                        className={`h-3 rounded-full transition-all ${buybackFulfillmentPercentage >= 100 ? 'bg-green-600' :
+                                                buybackFulfillmentPercentage >= 75 ? 'bg-blue-600' :
+                                                    buybackFulfillmentPercentage >= 50 ? 'bg-yellow-600' : 'bg-red-600'
+                                            }`}
+                                        style={{ width: `${Math.min(buybackFulfillmentPercentage, 100)}%` }}
+                                    />
+                                </div>
+                                <div className="flex justify-between items-center pt-3 border-t">
+                                    <span className="text-gray-900 font-medium">Total Value</span>
+                                    <span className="font-bold text-xl text-green-600">
+                                        ₱{totalBuybackValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
-
-
 
                     {/* Right Column - Sidebar */}
                     <div className="space-y-6">
@@ -768,7 +762,7 @@ const totalBuybackValue = contract.buyback_transactions
                 </div>
             </div>
 
-            {/* Modals - Fix the order */}
+            {/* Modals */}
             {showStatusModal && statusToTransition === 'suspended' ? (
                 <SuspendContractModal
                     contract={contract}
@@ -796,8 +790,8 @@ const totalBuybackValue = contract.buyback_transactions
 
             {showFilePreview && (
                 <ContractFilePreviewModal
-                    fileUrl={contract.contract_file 
-                        ? `http://localhost/dashboard/SoftwareEngineering-VigourSeeds-FinalRepo/storage/app/public/contracts/${contract.contract_file.split('/').pop()}` 
+                    fileUrl={contract.contract_file
+                        ? `http://localhost/dashboard/SoftwareEngineering-VigourSeeds-FinalRepo/storage/app/public/contracts/${contract.contract_file.split('/').pop()}`
                         : null}
                     onClose={handleClosePreview}
                     contract={contract}
