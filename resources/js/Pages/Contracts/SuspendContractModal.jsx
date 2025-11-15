@@ -3,8 +3,8 @@ import { ExclamationTriangleIcon } from '@heroicons/react/24/solid';
 
 export default function SuspendContractModal({ contract, onCancel, onConfirm, processing }) {
     return (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black bg-opacity-50 p-4">
-            <div className="mx-4 w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+        <div className="fixed inset-0 z-[9999] flex items-start justify-center bg-black bg-opacity-50 p-4 overflow-y-auto">
+            <div className="mx-4 my-8 w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
                 {/* Warning Icon */}
                 <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-yellow-100 mx-auto">
                     <ExclamationTriangleIcon className="h-10 w-10 text-yellow-600" />

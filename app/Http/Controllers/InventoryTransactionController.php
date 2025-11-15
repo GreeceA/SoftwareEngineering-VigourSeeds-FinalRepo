@@ -158,7 +158,7 @@ class InventoryTransactionController extends Controller implements HasMiddleware
             }
             DB::commit();
 
-            return redirect()->route('inventory.ledger')
+            return redirect()->route('inventory.dashboard')
                 ->with('success', 'Stock received successfully');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -241,13 +241,19 @@ class InventoryTransactionController extends Controller implements HasMiddleware
 
         DB::beginTransaction();
         try {
-            $orderLine = PartnerOrderLine::with('partnerOrder')->findOrFail($validated['partner_order_line_id']);
+            $orderLine = PartnerOrderLine::with('partnerOrder.contract')->findOrFail($validated['partner_order_line_id']);
+
+            // Normalize product type for comparison
+            $productType = strtolower(str_replace('App\\Models\\', '', $orderLine->product_type));
+            $isSeed = in_array($productType, ['seed', 'seeds']);
 
             // Get product
-            if ($orderLine->product_type === 'seed' || $orderLine->product_type === 'App\\Models\\Seed') {
+            if ($isSeed) {
                 $product = Seed::findOrFail($orderLine->product_id);
+                $baseUnit = 'kg';
             } else {
                 $product = Item::findOrFail($orderLine->product_id);
+                $baseUnit = $product->base_unit ?? 'kg';
             }
 
             // Convert qty to base unit
@@ -261,26 +267,31 @@ class InventoryTransactionController extends Controller implements HasMiddleware
             // Check available stock
             $availableStock = $product->getCurrentStock();
             if ($qtyInBaseUnit > $availableStock) {
-                return back()->withErrors(['qty' => 'Insufficient stock available']);
+                DB::rollBack();
+                return back()->withErrors(['qty' => "Insufficient stock. Available: {$availableStock} {$baseUnit}, Required: {$qtyInBaseUnit} {$baseUnit}"]);
             }
 
             // Check if exceeds remaining order
             $remaining = $orderLine->qty - $orderLine->delivered_qty;
             if ($validated['qty'] > $remaining) {
-                return back()->withErrors(['qty' => 'Quantity exceeds remaining order amount']);
+                DB::rollBack();
+                return back()->withErrors(['qty' => "Quantity exceeds remaining order. Remaining: {$remaining} {$orderLine->unit}"]);
             }
 
             // Create outbound transaction (STORE POSITIVE QTY)
             $transaction = InventoryTransaction::create([
-                'product_type' => $orderLine->product_type === 'App\\Models\\Seed' ? 'seed' : 'item',
+                'product_type' => $isSeed ? 'Seed' : 'item',
                 'product_id' => $orderLine->product_id,
                 'transaction_type' => 'outbound',
                 'qty' => $qtyInBaseUnit, // POSITIVE value in base unit
-                'unit' => ($orderLine->product_type === 'seed' || $orderLine->product_type === 'Seed') ? 'kg' : ($product->base_unit ?? 'kg'),
+                'unit' => $baseUnit,
                 'contract_id' => $orderLine->partnerOrder->contract_id,
                 'partner_order_id' => $orderLine->partner_order_id,
                 'partner_order_line_id' => $orderLine->id,
                 'notes' => $validated['notes'] ?? null,
+                'receipt_date' => now()->toDateString(), // Use current date for outbound
+                'manufacture_date' => null,
+                'expiration_date' => null,
                 'created_by' => Auth::id(),
             ]);
 
@@ -292,7 +303,7 @@ class InventoryTransactionController extends Controller implements HasMiddleware
             $orderLine->partnerOrder->updateStatus();
 
             DB::commit();
-            return redirect()->route('partner-orders.show', $orderLine->partner_order_id)
+            return redirect()->route('inventory.dashboard')
                 ->with('success', 'Stock delivered successfully');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -322,12 +333,15 @@ class InventoryTransactionController extends Controller implements HasMiddleware
                 'qty' => $validated['qty'],
                 'unit' => $validated['unit'],
                 'notes' => $validated['notes'],
+                'receipt_date' => now()->toDateString(), // Use current date for adjustment
+                'manufacture_date' => null,
+                'expiration_date' => null,
                 'created_by' => Auth::id(),
             ]);
 
             DB::commit();
 
-            return redirect()->route('inventory.ledger')
+            return redirect()->route('inventory.dashboard')
                 ->with('success', 'Inventory adjusted successfully');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -341,17 +355,18 @@ class InventoryTransactionController extends Controller implements HasMiddleware
      */
     public function dashboard()
     {
-        // Get all products (Seeds and Items)
-        $seeds = Seed::all();
-        $items = Item::all();
+        // Get all products (Seeds and Items) with active status only
+        $seeds = Seed::active()->get();
+        $items = Item::active()->get();
 
-        // Get all pending order lines
-        $pendingOrderLines = \App\Models\PartnerOrderLine::whereHas('partnerOrder', function ($q) {
-            $q->whereIn('status', ['pending', 'partially_fulfilled'])
-                ->whereHas('contract', function ($qc) {
-                    $qc->where('status', 'active');
-                });
-        })->get();
+        // Get all pending order lines with eager loading
+        $pendingOrderLines = \App\Models\PartnerOrderLine::with(['partnerOrder.contract'])
+            ->whereHas('partnerOrder', function ($q) {
+                $q->whereIn('status', ['pending', 'partially_fulfilled'])
+                    ->whereHas('contract', function ($qc) {
+                        $qc->where('status', 'active');
+                    });
+            })->get();
 
         // Build shortfall list
         $shortfalls = [];
@@ -414,10 +429,19 @@ class InventoryTransactionController extends Controller implements HasMiddleware
         }
 
         // Build inventory list for dashboard table
-        $seedsList = Seed::active()->get()->map(function ($seed) {
-            $hasTransaction = InventoryTransaction::where('product_type', 'Seed')
-                ->where('product_id', $seed->id)
-                ->exists();
+        // Pre-fetch which products have transactions to avoid N+1 queries
+        $seedsWithTransactions = InventoryTransaction::where('product_type', 'Seed')
+            ->pluck('product_id')
+            ->unique()
+            ->flip();
+        
+        $itemsWithTransactions = InventoryTransaction::where('product_type', 'item')
+            ->pluck('product_id')
+            ->unique()
+            ->flip();
+
+        $seedsList = $seeds->map(function ($seed) use ($seedsWithTransactions) {
+            $hasTransaction = isset($seedsWithTransactions[$seed->id]);
             $currentStock = $hasTransaction ? $seed->getCurrentStock() : null;
 
             return [
@@ -430,10 +454,8 @@ class InventoryTransactionController extends Controller implements HasMiddleware
             ];
         });
 
-        $itemsList = Item::active()->get()->map(function ($item) {
-            $hasTransaction = InventoryTransaction::where('product_type', 'item')
-                ->where('product_id', $item->id)
-                ->exists();
+        $itemsList = $items->map(function ($item) use ($itemsWithTransactions) {
+            $hasTransaction = isset($itemsWithTransactions[$item->id]);
             $currentStock = $hasTransaction ? $item->getCurrentStock() : null;
 
             return [

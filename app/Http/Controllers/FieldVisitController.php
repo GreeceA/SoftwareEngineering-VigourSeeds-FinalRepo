@@ -87,7 +87,6 @@ class FieldVisitController extends Controller implements HasMiddleware
             ->get();
 
         return Inertia::render('FieldVisits/FieldVisitForm', [
-            'auth' => ['user' => auth()->user()],
             'contracts' => $contracts,
             'users' => $users,
         ]);
@@ -150,7 +149,6 @@ class FieldVisitController extends Controller implements HasMiddleware
         $users = User::select('id', 'first_name', 'last_name')->get();
 
         return Inertia::render('FieldVisits/FieldVisitForm', [
-            'auth' => ['user' => auth()->user()],
             'fieldVisit' => $fieldVisit,
             'contracts' => $contracts,
             'users' => $users,

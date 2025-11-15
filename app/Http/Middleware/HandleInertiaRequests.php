@@ -16,22 +16,36 @@ class HandleInertiaRequests extends Middleware
 
     public function share(Request $request): array
     {
-        $shared = parent::share($request);
-
-        // Get the authenticated user model (not the array)
         $user = $request->user();
 
-        // If user is authenticated, add notifications
-        if ($user) {
-            // Add notifications (use the actual User model, not the array)
-            $shared['notifications'] = $user->unreadNotifications()
-                ->latest()
-                ->take(5)
-                ->get();
-        } else {
-            $shared['notifications'] = [];
+        // Convert avatar to full URL if it exists
+        $avatarUrl = null;
+        if ($user && $user->avatar) {
+            $avatarUrl = str_starts_with($user->avatar, 'http') 
+                ? $user->avatar 
+                : asset($user->avatar);
         }
 
-        return $shared;
+        return [
+            ...parent::share($request),
+            'auth' => [
+                'user' => $user ? [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'first_name' => $user->first_name,
+                    'last_name' => $user->last_name,
+                    'email' => $user->email,
+                    'email_verified_at' => $user->email_verified_at,
+                    'avatar' => $avatarUrl,
+                    // Load permissions and roles with the user
+                    'can' => $user->getAllPermissions()->pluck('name')->toArray(),
+                    'roles' => $user->getRoleNames()->toArray(),
+                ] : null,
+            ],
+            'notifications' => $user ? $user->unreadNotifications()
+                ->latest()
+                ->take(5)
+                ->get() : [],
+        ];
     }
 }

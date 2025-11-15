@@ -225,7 +225,6 @@ class PartnerOrderController extends Controller implements HasMiddleware
                     'partner_order_id' => $order->id,
                     'product_type' => 'App\\Models\\Seed',
                     'product_id' => $commitment->seed_id,
-                    'product_name' => $line->product?->name ?? '',
                     'qty' => $commitment->seed_quantity,
                     'unit' => $commitment->unit,
                     'price_per_unit' => $commitment->seed_price_at_contract,
@@ -263,27 +262,28 @@ class PartnerOrderController extends Controller implements HasMiddleware
             ->map(function ($tx) use ($partnerOrder) {
                 // Get product name
                 $productName = '-';
-                if ($tx->product_type === 'seed' || $tx->product_type === 'App\\Models\\Seed') {
+                $txTypeLower = strtolower($tx->product_type);
+                if ($txTypeLower === 'seed' || $tx->product_type === 'App\\Models\\Seed') {
                     $productName = $tx->seed?->seed_variety ?? '-';
-                } elseif ($tx->product_type === 'item' || $tx->product_type === 'App\\Models\\Item') {
+                } elseif ($txTypeLower === 'item' || $tx->product_type === 'App\\Models\\Item') {
                     $productName = $tx->item?->name ?? '-';
                 }
 
                 // Normalize transaction product type
-                $txTypeNormalized = $tx->product_type;
-                if ($txTypeNormalized === 'App\\Models\\Seed') {
+                $txTypeNormalized = strtolower($tx->product_type);
+                if ($txTypeNormalized === 'app\\models\\seed') {
                     $txTypeNormalized = 'seed';
-                } elseif ($txTypeNormalized === 'App\\Models\\Item') {
+                } elseif ($txTypeNormalized === 'app\\models\\item') {
                     $txTypeNormalized = 'item';
                 }
 
                 // Find the matching order line
                 $orderLine = $partnerOrder->lines->first(function ($line) use ($tx, $txTypeNormalized) {
                     // Normalize line product type
-                    $lineTypeNormalized = $line->product_type;
-                    if ($lineTypeNormalized === 'App\\Models\\Seed') {
+                    $lineTypeNormalized = strtolower($line->product_type);
+                    if ($lineTypeNormalized === 'app\\models\\seed') {
                         $lineTypeNormalized = 'seed';
-                    } elseif ($lineTypeNormalized === 'App\\Models\\Item') {
+                    } elseif ($lineTypeNormalized === 'app\\models\\item') {
                         $lineTypeNormalized = 'item';
                     }
 
@@ -321,7 +321,6 @@ class PartnerOrderController extends Controller implements HasMiddleware
             });
 
         return Inertia::render('PartnerOrders/Show', [
-            'auth' => ['user' => auth()->user()],
             'partnerOrder' => [
                 'id' => $partnerOrder->id,
                 'order_number' => $partnerOrder->order_number ?? 'PO-' . $partnerOrder->id,
@@ -495,26 +494,26 @@ class PartnerOrderController extends Controller implements HasMiddleware
             ->map(function ($tx) use ($partnerOrder) {
                 // Get product name
                 $productName = '-';
-                if ($tx->product_type === 'seed' || $tx->product_type === 'App\\Models\\Seed') {
+                if ($tx->product_type === 'seed' || $tx->product_type === 'Seed' || $tx->product_type === 'App\\Models\\Seed') {
                     $productName = $tx->seed?->seed_variety ?? '-';
-                } elseif ($tx->product_type === 'item' || $tx->product_type === 'App\\Models\\Item') {
+                } elseif ($tx->product_type === 'item' || $tx->product_type === 'Item' || $tx->product_type === 'App\\Models\\Item') {
                     $productName = $tx->item?->name ?? '-';
                 }
 
                 // Normalize transaction product type
-                $txTypeNormalized = $tx->product_type;
-                if ($txTypeNormalized === 'App\\Models\\Seed') {
+                $txTypeNormalized = strtolower($tx->product_type);
+                if ($txTypeNormalized === 'app\\models\\seed') {
                     $txTypeNormalized = 'seed';
-                } elseif ($txTypeNormalized === 'App\\Models\\Item') {
+                } elseif ($txTypeNormalized === 'app\\models\\item') {
                     $txTypeNormalized = 'item';
                 }
 
                 // Find the matching order line
                 $orderLine = $partnerOrder->lines->first(function ($line) use ($tx, $txTypeNormalized) {
-                    $lineTypeNormalized = $line->product_type;
-                    if ($lineTypeNormalized === 'App\\Models\\Seed') {
+                    $lineTypeNormalized = strtolower($line->product_type);
+                    if ($lineTypeNormalized === 'app\\models\\seed') {
                         $lineTypeNormalized = 'seed';
-                    } elseif ($lineTypeNormalized === 'App\\Models\\Item') {
+                    } elseif ($lineTypeNormalized === 'app\\models\\item') {
                         $lineTypeNormalized = 'item';
                     }
                     return $line->product_id == $tx->product_id

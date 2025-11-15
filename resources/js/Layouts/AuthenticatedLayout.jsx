@@ -44,7 +44,7 @@ export default function AuthenticatedLayout({ header, children }) {
                     <div className="flex h-16 justify-between">
                         <div className="flex">
                             <div className="flex shrink-0 items-center">
-                                <Link href="http://localhost/dashboard/SoftwareEngineering-VigourSeeds-FinalRepo/public/dashboard">
+                                <Link href={route('dashboard')}>
                                     <img
                                         src={Vlogo}
                                         alt="Vigour Seeds Logo"

@@ -19,7 +19,11 @@ class AppServiceProvider extends ServiceProvider
 
         \Illuminate\Database\Eloquent\Relations\Relation::morphMap([
             'seed' => \App\Models\Seed::class,
+            'Seed' => \App\Models\Seed::class,  // Support legacy capitalized version
             'item' => \App\Models\Item::class,
+            'Item' => \App\Models\Item::class,  // Support legacy capitalized version
+            'corn_product' => \App\Models\CornProduct::class,
+            'App\Models\CornProduct' => \App\Models\CornProduct::class,  // Support fully qualified version
         ]);
 
         Inertia::share('auth', function () {

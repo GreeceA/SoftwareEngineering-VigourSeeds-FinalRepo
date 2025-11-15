@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Package, TrendingUp, TrendingDown, AlertTriangle, Plus, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { usePage, Link } from '@inertiajs/react';
@@ -15,41 +15,56 @@ const InventoryDashboard = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
 
-    // Deduplicate inventory by type-id
-    const dedupedInventory = Array.from(
-        new Map(inventory.map(item => [`${item.type}-${item.id}`, item])).values()
-    );
+    // Deduplicate inventory by type-id (memoized)
+    const dedupedInventory = useMemo(() => {
+        return Array.from(
+            new Map(inventory.map(item => [`${item.type}-${item.id}`, item])).values()
+        );
+    }, [inventory]);
 
     // Only allow 'all', 'Seed', 'fertilizer', 'pesticide' filters
     const filterOptions = ['all', 'Seed', 'fertilizer', 'pesticide'];
     const statusOptions = ['all', 'good', 'low', 'critical'];
 
-    // Filtering logic
-    let filteredInventory = dedupedInventory.filter(item => item.type.toLowerCase() !== 'corn');
-    if (filter !== 'all') {
-        filteredInventory = filteredInventory.filter(item => item.type.toLowerCase() === filter.toLowerCase());
-    }
-    if (statusFilter !== 'all') {
-        filteredInventory = filteredInventory.filter(item => item.status === statusFilter);
-    }
-    if (search.trim() !== '') {
-        filteredInventory = filteredInventory.filter(item =>
-            item.name.toLowerCase().includes(search.trim().toLowerCase())
+    // Filtering and sorting logic (memoized)
+    const { filteredInventory, paginatedInventory, totalPages, startIndex, endIndex } = useMemo(() => {
+        // Filtering logic
+        let filtered = dedupedInventory.filter(item => item.type.toLowerCase() !== 'corn');
+        
+        if (filter !== 'all') {
+            filtered = filtered.filter(item => item.type.toLowerCase() === filter.toLowerCase());
+        }
+        if (statusFilter !== 'all') {
+            filtered = filtered.filter(item => item.status === statusFilter);
+        }
+        if (search.trim() !== '') {
+            const searchLower = search.trim().toLowerCase();
+            filtered = filtered.filter(item =>
+                item.name.toLowerCase().includes(searchLower)
+            );
+        }
+
+        // Sorting logic
+        filtered = filtered.sort((a, b) =>
+            sortOrder === 'asc'
+                ? (a.current_stock ?? 0) - (b.current_stock ?? 0)
+                : (b.current_stock ?? 0) - (a.current_stock ?? 0)
         );
-    }
 
-    // Sorting logic
-    filteredInventory = filteredInventory.sort((a, b) =>
-        sortOrder === 'asc'
-            ? (a.current_stock ?? 0) - (b.current_stock ?? 0)
-            : (b.current_stock ?? 0) - (a.current_stock ?? 0)
-    );
+        // Pagination calculations
+        const total = Math.ceil(filtered.length / itemsPerPage);
+        const start = (currentPage - 1) * itemsPerPage;
+        const end = start + itemsPerPage;
+        const paginated = filtered.slice(start, end);
 
-    // Pagination calculations
-    const totalPages = Math.ceil(filteredInventory.length / itemsPerPage);
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    const paginatedInventory = filteredInventory.slice(startIndex, endIndex);
+        return {
+            filteredInventory: filtered,
+            paginatedInventory: paginated,
+            totalPages: total,
+            startIndex: start,
+            endIndex: end
+        };
+    }, [dedupedInventory, filter, statusFilter, search, sortOrder, currentPage, itemsPerPage]);
 
     // Reset to page 1 when filter changes
     const handleFilterChange = (newFilter) => {

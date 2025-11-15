@@ -83,7 +83,7 @@ class BuybackController extends Controller implements HasMiddleware
     public function createInbound()
     {
         $contracts = Contract::active()
-            ->with(['partner', 'contractSeedCommitments.seed', 'buybackTransactions'])
+            ->with(['partner', 'contractSeedCommitments.seed.cornProduct', 'buybackTransactions'])
             ->whereHas('contractSeedCommitments')
             ->get()
             ->map(function ($contract) {
@@ -112,6 +112,7 @@ class BuybackController extends Controller implements HasMiddleware
                     'expected_kg' => $expected_kg,
                     'actual_kg' => round($actual_kg, 2),
                     'remaining_kg' => round($remaining_kg, 2),
+                    'remaining' => round($remaining_kg, 2), // Alias for backward compatibility
                     'unit' => 'kg',
                     'buyback_price' => $buyback_price,
                     'corn_product_id' => $cornProduct?->id,
@@ -151,9 +152,11 @@ class BuybackController extends Controller implements HasMiddleware
             $cornProduct = CornProduct::findOrFail($validated['corn_product_id']);
 
             // ✅ VALIDATE DELIVERY DATE AGAINST CONTRACT DATES
-            $deliveryDate = \Carbon\Carbon::parse($validated['delivery_date']);
-            $effectiveDate = $contract->effective_date ? \Carbon\Carbon::parse($contract->effective_date) : null;
-            $expirationDate = $contract->expiration_date ? \Carbon\Carbon::parse($contract->expiration_date) : null;
+            // Use startOfDay() to compare dates without time component
+            $deliveryDate = \Carbon\Carbon::parse($validated['delivery_date'])->startOfDay();
+            $effectiveDate = $contract->effective_date ? \Carbon\Carbon::parse($contract->effective_date)->startOfDay() : null;
+            $expirationDate = $contract->expiration_date ? \Carbon\Carbon::parse($contract->expiration_date)->startOfDay() : null;
+            $today = \Carbon\Carbon::today()->endOfDay();
 
             // 1. Check if delivery date is before contract effective date
             if ($effectiveDate && $deliveryDate->lt($effectiveDate)) {
@@ -162,7 +165,7 @@ class BuybackController extends Controller implements HasMiddleware
             }
 
             // 2. Check if delivery date is in the future
-            if ($deliveryDate->isFuture()) {
+            if ($deliveryDate->gt($today)) {
                 return back()->withInput()
                     ->with('error', "Delivery date cannot be in the future. Please select today or an earlier date.");
             }

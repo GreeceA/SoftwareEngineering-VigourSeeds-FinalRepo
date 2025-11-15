@@ -6,7 +6,7 @@ import Select from 'react-select';
 import { router } from '@inertiajs/react'; 
 
 const StockOutboundForm = () => {
-    const { auth, partnerOrders } = usePage().props;
+    const { auth, partnerOrders, errors: backendErrors } = usePage().props;
 
     const [formData, setFormData] = useState({
         partner_order_id: '',
@@ -18,6 +18,7 @@ const StockOutboundForm = () => {
     const [showSuccess, setShowSuccess] = useState(false);
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [selectedLine, setSelectedLine] = useState(null);
+    const [errorMessage, setErrorMessage] = useState('');
 
     const convertToBaseUnit = (qty, unit) => {
         if (unit === 'ton') return qty * 1000;
@@ -78,34 +79,27 @@ const StockOutboundForm = () => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
+        setErrorMessage('');
+        
         if (hasStockIssue()) {
-            alert('Insufficient stock available!');
+            setErrorMessage('Insufficient stock available!');
             return;
         }
         if (exceedsOrder()) {
-            alert('Quantity exceeds remaining order amount!');
+            setErrorMessage('Quantity exceeds remaining order amount!');
             return;
         }
         
         // FIXED: Use Inertia router to POST to backend
         router.post(route('inventory.outbound.store'), formData, {
+            preserveScroll: true,
             onSuccess: () => {
-                setShowSuccess(true);
-                setTimeout(() => {
-                    setShowSuccess(false);
-                    setFormData({
-                        partner_order_id: '',
-                        partner_order_line_id: '',
-                        qty: '',
-                        notes: ''
-                    });
-                    setSelectedOrder(null);
-                    setSelectedLine(null);
-                }, 2000);
+                // Redirect happens automatically to dashboard
             },
             onError: (errors) => {
                 console.error('Submission errors:', errors);
-                alert('Failed to deliver stock: ' + (errors.message || 'Unknown error'));
+                const errorMsg = errors.qty || errors.error || errors.message || 'Failed to deliver stock. Please try again.';
+                setErrorMessage(errorMsg);
             }
         });
     };
@@ -142,6 +136,30 @@ const StockOutboundForm = () => {
                                 <p className="font-medium text-green-900">Stock delivered successfully!</p>
                                 <p className="text-sm text-green-700">Partner order has been updated.</p>
                             </div>
+                        </div>
+                    )}
+
+                    {errorMessage && (
+                        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4 flex items-center gap-3">
+                            <AlertTriangle className="text-red-600" size={20} />
+                            <div>
+                                <p className="font-medium text-red-900">Delivery Failed</p>
+                                <p className="text-sm text-red-700">{errorMessage}</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {backendErrors && Object.keys(backendErrors).length > 0 && !errorMessage && (
+                        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+                            <div className="flex items-center gap-3 mb-2">
+                                <AlertTriangle className="text-red-600" size={20} />
+                                <p className="font-medium text-red-900">Validation Errors</p>
+                            </div>
+                            <ul className="list-disc list-inside text-sm text-red-700">
+                                {Object.entries(backendErrors).map(([key, value]) => (
+                                    <li key={key}>{value}</li>
+                                ))}
+                            </ul>
                         </div>
                     )}
 

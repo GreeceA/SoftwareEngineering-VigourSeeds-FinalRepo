@@ -266,14 +266,12 @@ const StockInboundForm = () => {
         }));
 
         router.post(route('inventory.inbound.store'), { products: cleanedProducts }, {
+            preserveScroll: true,
             onSuccess: () => {
-                setShowSuccess(true);
-                setTimeout(() => {
-                    setShowSuccess(false);
-                    setProducts([{ product_type: '', product_id: '', qty: '', unit: 'kg', notes: '', receipt_date: '', manufacture_date: '', expiration_date: '' }]);
-                    setFieldErrors([initialErrorState]);
-                    setFieldTouched([initialTouchedState]); 
-                }, 2000);
+                // Redirect happens automatically to dashboard
+            },
+            onError: (errors) => {
+                console.error('Submission errors:', errors);
             }
         });
     };
