@@ -53,7 +53,7 @@ export default function AuthenticatedLayout({ header, children }) {
         <div className="min-h-screen bg-gray-50">
             <nav className="bg-white shadow-md sticky top-0 z-50">
                 {/* MAIN HEADER - Logo and Title */}
-                <div className="relative border-b border-[#2d5526] bg-gradient-to-r from-[#37692F] to-[#4a8a3f] shadow-lg overflow-hidden">
+                <div className="relative border-b border-[#2d5526] bg-gradient-to-r from-[#37692F] to-[#4a8a3f] shadow-lg">
                     {/* Elegant geometric pattern overlay */}
                     <div className="absolute inset-0 opacity-10" style={{
                         backgroundImage: `
@@ -83,7 +83,7 @@ export default function AuthenticatedLayout({ header, children }) {
                             </div>
 
                             {/* Right Side - Notification Bell and User Dropdown */}
-                            <div className="hidden sm:flex sm:items-center gap-4">
+                            <div className="flex items-center gap-4">
                                 {/* NOTIFICATION BELL */}
                                 <div className="relative">
                                     <button
@@ -172,7 +172,7 @@ export default function AuthenticatedLayout({ header, children }) {
                                 </div>
 
                                 {/* USER DROPDOWN */}
-                                <div className="relative">
+                                <div className="relative z-[60]">
                                     <Dropdown>
                                         <Dropdown.Trigger>
                                             <span className="inline-flex rounded-md">
