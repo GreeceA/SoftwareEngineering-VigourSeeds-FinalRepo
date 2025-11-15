@@ -7,6 +7,7 @@ import { UserMinusIcon, ChevronDownIcon, FunnelIcon, ArrowsUpDownIcon, ArrowDown
 import DeactivateModal from './DeactivateModal';
 import ReactivateModal from './ReactivateModal';
 import UserInfoModal from './UserInfoModal';
+import Vlogo from '@/assets/vigour-logo.png';
 
 export default function Index({ auth, users, filters }) {
     const permissions = auth?.user?.can || [];
@@ -147,37 +148,65 @@ export default function Index({ auth, users, filters }) {
     }
 
     return (
-        <AuthenticatedLayout
-            user={auth.user}
-            header={
-                <h2 className="text-[25px] font-[800]" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                    <span className="text-[#37692F] font-[800]">VIGOUR SEEDS</span>
-                    <span className="text-[#333333] font-[400]"> | Users</span>
-                </h2>
-            }
-        >
+        <AuthenticatedLayout user={auth.user}>
             <Head title="Users" />
 
-            {/* Breadcrumb */}
-            <div className="px-6 pt-6">
-                <nav className="text-sm text-gray-600">
-                    <Link
-                        href={route('dashboard')}
-                        className="text-[#37692F] hover:underline"
-                    >
-                        Home
-                    </Link>{" "}
-                    / <span>Users</span>
-                </nav>
+            {/* Modern Page Header with Integrated Breadcrumb */}
+            <div className="relative bg-gradient-to-br from-white via-green-50/30 to-white border-b border-gray-200 overflow-hidden">
+                {/* Subtle decorative elements */}
+                <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-[#8fbc8f]/10 to-transparent rounded-full blur-3xl"></div>
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-[#a8d5a8]/10 to-transparent rounded-full blur-2xl"></div>
+                
+                <div className="relative px-6 py-6">
+                    {/* Breadcrumb */}
+                    <nav className="flex items-center space-x-2 text-sm mb-4">
+                        <a href={route('dashboard')} className="text-gray-500 hover:text-[#37692F] transition-colors duration-200 flex items-center">
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                            </svg>
+                            Home
+                        </a>
+                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                        <span className="text-[#37692F] font-medium">Users</span>
+                    </nav>
+
+                    {/* Header Content */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                            {/* Icon */}
+                            <div className="flex-shrink-0">
+                                <div className="w-16 h-16 bg-gradient-to-br from-[#37692F] to-[#4a8a3f] rounded-2xl flex items-center justify-center shadow-lg shadow-green-900/20">
+                                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                                    </svg>
+                                </div>
+                            </div>
+                            
+                            {/* Title & Description */}
+                            <div>
+                                <h1 className="text-3xl font-bold text-gray-900 mb-1">Employee Information</h1>
+                                <p className="text-gray-600">Manage user accounts and permissions</p>
+                            </div>
+                        </div>
+
+                        {/* Stats Badge */}
+                        <div className="hidden lg:flex items-center space-x-2 bg-indigo-50 border border-indigo-200 rounded-lg px-4 py-2">
+                            <svg className="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                            <span className="text-sm font-medium text-indigo-700">{users?.data?.length || 0} Users</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div className="p-6">
-                {/* Header Section */}
-                <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-2xl font-semibold text-gray-800">Employee Information</h1>
-                    <div className="flex space-x-3">
-                        {/* Export Dropdown */}
-                        <div className="relative" ref={exportRef}>
+                {/* Filters & Actions Section */}
+                <div className="flex justify-end items-center gap-3 mb-6">
+                    {/* Export Dropdown */}
+                    <div className="relative" ref={exportRef}>
                             <button
                                 onClick={() => { 
                                     setShowExportDropdown(!showExportDropdown); 
@@ -272,6 +301,7 @@ export default function Index({ auth, users, filters }) {
                                 </div>
                             )}
                         </div>
+                        
                         {/* Search Input */}
                         <div className="relative">
                             <input
@@ -289,7 +319,7 @@ export default function Index({ auth, users, filters }) {
                         {permissions.includes('create users') && (
                             <Link
                                 href={route('users.create')}
-                                className="bg-[#37692F] text-white px-4 py-2 rounded-md hover:bg-[#2a5624] flex items-center"
+                                className="bg-[#37692F] text-white px-4 py-2 rounded-md hover:bg-[#2a5624] flex items-center whitespace-nowrap"
                             >
                                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -297,7 +327,6 @@ export default function Index({ auth, users, filters }) {
                                 Add User
                             </Link>
                         )}
-                    </div>
                 </div>
                 {/* Users Table */}
                 <div className="overflow-x-auto bg-white shadow-lg rounded-lg">

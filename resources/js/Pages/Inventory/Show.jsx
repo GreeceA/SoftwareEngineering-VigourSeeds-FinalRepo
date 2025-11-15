@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Package, TrendingUp, TrendingDown, Calendar, User, FileText, ArrowLeft, Filter, Download } from 'lucide-react';
+import { HomeIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { usePage, Link } from '@inertiajs/react';
 
@@ -77,53 +78,50 @@ const Show = () => {
     };
 
     return (
-        <AuthenticatedLayout
-            user={auth.user}
-            header={
-                <h2 className="text-[25px] font-[800]" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                    <span className="text-[#37692F] font-[800]">VIGOUR SEEDS</span>
-                    <span className="text-[#333333] font-[400]"> | Product Transactions</span>
-                </h2>
-            }
-        >
-            <div className="min-h-screen bg-gray-50 p-6">
-                <div className="max-w-7xl mx-auto">
-                    {/* Back Button */}
-                    <Link
-                        href={route('inventory.dashboard')}
-                        className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6"
-                    >
-                        <ArrowLeft size={20} />
-                        Back to Dashboard
-                    </Link>
-
-                    {/* Product Header */}
-                    <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-                        <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-4">
-                                <div className="bg-blue-100 p-4 rounded-full">
-                                    <Package className="text-blue-600" size={32} />
-                                </div>
-                                <div>
-                                    <h1 className="text-3xl font-bold text-gray-900">{product.name}</h1>
-                                    <div className="flex items-center gap-3 mt-2">
-                                        <span className="px-3 py-1 text-sm font-medium rounded-full bg-gray-100 text-gray-800">
-                                            {product.type}
-                                        </span>
-                                        <span className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusColor(product.status)}`}>
-                                            {product.status}
-                                        </span>
-                                    </div>
-                                </div>
+        <AuthenticatedLayout user={auth.user}>
+            <div className="relative bg-gradient-to-br from-white via-green-50/30 to-white border-b border-gray-200 overflow-hidden">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-[#8fbc8f]/10 to-transparent rounded-full blur-3xl"></div>
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-[#a8d5a8]/10 to-transparent rounded-full blur-2xl"></div>
+                <div className="relative px-6 py-6">
+                    <nav className="flex items-center space-x-2 text-sm mb-4">
+                        <a href={route('dashboard')} className="text-gray-600 hover:text-gray-900 transition-colors flex items-center">
+                            <HomeIcon className="w-4 h-4" />
+                        </a>
+                        <ChevronRightIcon className="w-4 h-4 text-gray-400" />
+                        <a href={route('inventory.dashboard')} className="text-gray-600 hover:text-gray-900 transition-colors">
+                            Inventory
+                        </a>
+                        <ChevronRightIcon className="w-4 h-4 text-gray-400" />
+                        <span className="text-[#37692F] font-medium">{product.name}</span>
+                    </nav>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                            <div className="w-16 h-16 bg-gradient-to-br from-[#37692F] to-[#4a8a3f] rounded-2xl shadow-lg shadow-green-900/20 flex items-center justify-center">
+                                <Package className="text-white" size={32} />
                             </div>
-                            <div className="text-right">
-                                <p className="text-sm text-gray-600">Current Stock</p>
-                                <p className="text-3xl font-bold text-gray-900">
-                                    {product.current_stock.toLocaleString()} <span className="text-lg text-gray-600">{product.unit}</span>
-                                </p>
+                            <div>
+                                <h1 className="text-3xl font-bold text-gray-900 mb-1">{product.name}</h1>
+                                <div className="flex items-center gap-3">
+                                    <span className="px-3 py-1 text-sm font-medium rounded-full bg-white/80 text-gray-800">
+                                        {product.type}
+                                    </span>
+                                    <span className={`px-3 py-1 text-sm font-medium rounded-full ${getStatusColor(product.status)}`}>
+                                        {product.status}
+                                    </span>
+                                </div>
                             </div>
                         </div>
+                        <div className="text-right bg-white/80 rounded-lg px-6 py-4">
+                            <p className="text-sm text-gray-600 mb-1">Current Stock</p>
+                            <p className="text-3xl font-bold text-gray-900">
+                                {product.current_stock.toLocaleString()} <span className="text-lg text-gray-600">{product.unit}</span>
+                            </p>
+                        </div>
                     </div>
+                </div>
+            </div>
+            <div className="min-h-screen bg-gray-50 p-6">
+                <div className="max-w-7xl mx-auto">
 
                     {/* Summary Stats */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">

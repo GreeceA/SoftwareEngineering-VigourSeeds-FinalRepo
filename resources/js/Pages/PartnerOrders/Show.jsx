@@ -1,5 +1,6 @@
 import React from 'react';
 import { FileText, Leaf, TrendingUp, Calendar, MapPin, User, Download, ArrowLeft, Plus } from 'lucide-react';
+import { HomeIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { usePage, Link } from '@inertiajs/react';
 
@@ -64,24 +65,47 @@ const BuybackContractDetails = () => {
     const remainingKg = expectedTotalKg - deliveredTotalKg;
 
     return (
-        <AuthenticatedLayout
-            user={auth.user}
-            header={
-                <h2 className="text-[25px] font-[800]" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                    <span className="text-[#37692F] font-[800]">VIGOUR SEEDS</span>
-                    <span className="text-[#333333] font-[400]"> | Inventory Management</span>
-                </h2>
-            }
-        >
+        <AuthenticatedLayout user={auth.user}>
+            <div className="relative bg-gradient-to-br from-white via-green-50/30 to-white border-b border-gray-200 overflow-hidden">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-[#8fbc8f]/10 to-transparent rounded-full blur-3xl"></div>
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-[#a8d5a8]/10 to-transparent rounded-full blur-2xl"></div>
+                <div className="relative px-6 py-6">
+                    <nav className="flex items-center space-x-2 text-sm mb-4">
+                        <a href={route('dashboard')} className="text-gray-600 hover:text-gray-900 transition-colors flex items-center">
+                            <HomeIcon className="w-4 h-4" />
+                        </a>
+                        <ChevronRightIcon className="w-4 h-4 text-gray-400" />
+                        <a href={route('partner-orders.index')} className="text-gray-600 hover:text-gray-900 transition-colors">
+                            Partner Orders
+                        </a>
+                        <ChevronRightIcon className="w-4 h-4 text-gray-400" />
+                        <span className="text-[#37692F] font-medium">PO-{contract.contract_name}-{partnerOrder.id}</span>
+                    </nav>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                            <div className="w-16 h-16 bg-gradient-to-br from-[#37692F] to-[#4a8a3f] rounded-2xl shadow-lg shadow-green-900/20 flex items-center justify-center">
+                                <FileText className="text-white" size={32} />
+                            </div>
+                            <div>
+                                <h1 className="text-3xl font-bold text-gray-900 mb-1">PO-{contract.contract_name}-{partnerOrder.id}</h1>
+                                <p className="text-gray-600">{contract.partner_name || partnerOrder.partner?.name}</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className={`px-4 py-2 rounded-full text-sm font-medium capitalize ${
+                                partnerOrder.status === 'fulfilled' ? 'bg-green-100 text-green-800' :
+                                partnerOrder.status === 'partially_fulfilled' ? 'bg-blue-100 text-blue-800' :
+                                partnerOrder.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                                'bg-yellow-100 text-yellow-800'
+                            }`}>
+                                {partnerOrder.status?.replace('_', ' ')}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div className="min-h-screen bg-gray-50 p-6">
                 <div className="max-w-7xl mx-auto">
-                    <Link
-                        href={route('partner-orders.index')}
-                        className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 transition"
-                    >
-                        <ArrowLeft size={20} />
-                        Back to Orders
-                    </Link>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                         <div className="lg:col-span-2 bg-white rounded-lg shadow p-6">

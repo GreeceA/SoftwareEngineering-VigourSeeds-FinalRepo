@@ -6,21 +6,12 @@ import { usePage, router } from '@inertiajs/react';
 const BuybackInboundForm = () => {
     const { auth, contracts = [], cornProducts = [], flash = {} } = usePage().props;
     
-    // Helper to get today's date in YYYY-MM-DD format (local timezone)
-    const getTodayString = () => {
-        const today = new Date();
-        const year = today.getFullYear();
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        const day = String(today.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    };
-    
     const [formData, setFormData] = useState({
         contract_id: '',
         corn_product_id: '',
         qty: '',
         unit: 'kg',
-        delivery_date: getTodayString(),
+        delivery_date: new Date().toISOString().split('T')[0],
         notes: ''
     });
 
@@ -40,12 +31,6 @@ const BuybackInboundForm = () => {
     const handleContractChange = (contractId) => {
         const contract = contracts.find(c => c.id === parseInt(contractId));
         setSelectedContract(contract);
-        
-        console.log('=== Contract Selection Debug ===');
-        console.log('Selected Contract:', contract);
-        console.log('Corn Product ID from contract:', contract?.corn_product_id);
-        console.log('Corn Product Name from contract:', contract?.corn_product_name);
-        
         setFormData({
             ...formData,
             contract_id: contractId,
@@ -106,9 +91,8 @@ const BuybackInboundForm = () => {
 
     useEffect(() => {
         if (selectedContract && formData.delivery_date) {
-            // Parse dates in local timezone by appending 'T00:00:00'
-            const deliveryDate = new Date(formData.delivery_date + 'T00:00:00');
-            const effectiveDate = new Date(selectedContract.effective_date + 'T00:00:00');
+            const deliveryDate = new Date(formData.delivery_date);
+            const effectiveDate = new Date(selectedContract.effective_date);
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
@@ -124,7 +108,7 @@ const BuybackInboundForm = () => {
                 setDeliveryDateError('');
             }
 
-            const expirationDate = new Date(selectedContract.expiration_date + 'T00:00:00');
+            const expirationDate = new Date(selectedContract.expiration_date);
             if (deliveryDate > expirationDate) {
                 setShowExpirationWarning(true);
             } else {
@@ -149,15 +133,7 @@ const BuybackInboundForm = () => {
             : 0;
 
     return (
-        <AuthenticatedLayout
-            user={auth.user}
-            header={
-                <h2 className="text-[25px] font-[800]" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                    <span className="text-[#37692F] font-[800]">VIGOUR SEEDS</span>
-                    <span className="text-[#333333] font-[400]"> | Record Buyback Delivery</span>
-                </h2>
-            }
-        >
+        <AuthenticatedLayout user={auth.user}>
             <div className="min-h-screen bg-gray-50 p-6">
                 <div className="max-w-3xl mx-auto">
                     <div className="mb-6">
@@ -314,13 +290,13 @@ const BuybackInboundForm = () => {
                                                 Warning: Quantity entered exceeds the remaining expected buyback for this contract!
                                             </div>
                                         )}
-                                        {selectedContract.remaining_kg > 0 && (
+                                        {selectedContract.remaining > 0 && (
                                             <button
                                                 type="button"
-                                                onClick={() => handleQtyChange(selectedContract.remaining_kg.toFixed(2))}
+                                                onClick={() => handleQtyChange(selectedContract.remaining.toFixed(2))}
                                                 className="mt-2 text-xs px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition"
                                             >
-                                                Fill Remaining ({selectedContract.remaining_kg} kg)
+                                                Fill Remaining ({selectedContract.remaining} {selectedContract.unit})
                                             </button>
                                         )}
                                     </div>
@@ -356,7 +332,7 @@ const BuybackInboundForm = () => {
                                             value={formData.delivery_date}
                                             onChange={(e) => setFormData({...formData, delivery_date: e.target.value})}
                                             min={selectedContract?.effective_date || undefined}
-                                            max={getTodayString()}
+                                            max={new Date().toISOString().split('T')[0]}
                                             className="w-full pl-11 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                             required
                                         />
@@ -440,7 +416,7 @@ const BuybackInboundForm = () => {
                                         corn_product_id: '',
                                         qty: '',
                                         unit: 'kg',
-                                        delivery_date: getTodayString(),
+                                        delivery_date: new Date().toISOString().split('T')[0],
                                         notes: ''
                                     });
                                     setSelectedContract(null);

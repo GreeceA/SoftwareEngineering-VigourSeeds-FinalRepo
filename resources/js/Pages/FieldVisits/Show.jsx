@@ -212,15 +212,7 @@ export default function Show({ auth, fieldVisit }) {
     };
 
     return (
-        <AuthenticatedLayout
-            user={auth.user}
-            header={
-                <h2 className="text-[25px] font-[800]" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                    <span className="text-[#37692F] font-[800]">VIGOUR SEEDS</span>
-                    <span className="text-[#333333] font-[400]"> | Field Visit Details</span>
-                </h2>
-            }
-        >
+        <AuthenticatedLayout user={auth.user}>
             <Head title={`Field Visit #${fieldVisit.field_visit_ID}`} />
             
             {/* Breadcrumb */}

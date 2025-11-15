@@ -6,6 +6,7 @@ import '../../../css/fonts.css';
 import { ArchiveBoxIcon, ChevronDownIcon, FunnelIcon, ArrowsUpDownIcon, ArrowDownTrayIcon} from '@heroicons/react/24/outline';
 import ArchiveModal from '@/Pages/Seeds/ArchiveSeedsModal';
 import RestoreModal from '@/Pages/Seeds/ReactivateSeedsModal';
+import Vlogo from '@/assets/vigour-logo.png';
 
 export default function Index({ auth, seeds, filters }) {
     const { auth: authData } = usePage().props;
@@ -110,32 +111,63 @@ export default function Index({ auth, seeds, filters }) {
     };
 
     return (
-        <AuthenticatedLayout
-            user={auth.user}
-            header={
-                <h2 className="text-[25px] font-[800]" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                    <span className="text-[#37692F] font-[800]">VIGOUR SEEDS</span>
-                    <span className="text-[#333333] font-[400]"> | Seed Management</span>
-                </h2>
-            }
-        >
+        <AuthenticatedLayout user={auth.user}>
             <Head title="Seed Management" />
-            <div className="px-6 pt-6">
-                <nav className="text-sm text-gray-600">
-                    <Link
-                        href={route('dashboard')}
-                        className="text-[#37692F] hover:underline"
-                    >
-                        Home
-                    </Link>{" "}
-                    / <span>Seed Management</span>
-                </nav>
+            
+            {/* Modern Page Header with Integrated Breadcrumb */}
+            <div className="relative bg-gradient-to-br from-white via-green-50/30 to-white border-b border-gray-200 overflow-hidden">
+                {/* Subtle decorative elements */}
+                <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-[#8fbc8f]/10 to-transparent rounded-full blur-3xl"></div>
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-[#a8d5a8]/10 to-transparent rounded-full blur-2xl"></div>
+                
+                <div className="relative px-6 py-6">
+                    {/* Breadcrumb */}
+                    <nav className="flex items-center space-x-2 text-sm mb-4">
+                        <a href={route('dashboard')} className="text-gray-500 hover:text-[#37692F] transition-colors duration-200 flex items-center">
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                            </svg>
+                            Home
+                        </a>
+                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                        <span className="text-[#37692F] font-medium">Seed Management</span>
+                    </nav>
+
+                    {/* Header Content */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                            {/* Icon */}
+                            <div className="flex-shrink-0">
+                                <div className="w-16 h-16 bg-gradient-to-br from-[#37692F] to-[#4a8a3f] rounded-2xl flex items-center justify-center shadow-lg shadow-green-900/20">
+                                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                    </svg>
+                                </div>
+                            </div>
+                            
+                            {/* Title & Description */}
+                            <div>
+                                <h1 className="text-3xl font-bold text-gray-900 mb-1">Seed Management System</h1>
+                                <p className="text-gray-600">Track and manage seed inventory and varieties</p>
+                            </div>
+                        </div>
+
+                        {/* Stats Badge */}
+                        <div className="hidden lg:flex items-center space-x-2 bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2">
+                            <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                            </svg>
+                            <span className="text-sm font-medium text-emerald-700">{seeds?.data?.length || 0} Seeds</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div className="p-6">
-                {/* Header Section and Controls */}
-                <div className="mb-6 flex items-center justify-between">
-                    <h1 className="text-2xl font-semibold text-gray-800">Seed Management System</h1>
+                {/* Filters & Actions Section */}
+                <div className="mb-6 flex items-center justify-end">
                     <div className="flex space-x-3">
 
                         {/* Export Dropdown */}

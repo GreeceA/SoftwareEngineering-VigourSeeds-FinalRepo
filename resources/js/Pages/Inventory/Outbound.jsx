@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { ArrowUpCircle, AlertTriangle, CheckCircle, Package } from 'lucide-react';
+import { HomeIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { usePage, Link } from '@inertiajs/react'; 
-import Select from 'react-select';
-import { router } from '@inertiajs/react'; 
+import { usePage, Link, router } from '@inertiajs/react'; 
+import Select from 'react-select'; 
 
 const StockOutboundForm = () => {
     const { auth, partnerOrders, errors: backendErrors } = usePage().props;
@@ -108,26 +108,37 @@ const StockOutboundForm = () => {
                         formData.qty > 0 && !hasStockIssue() && !exceedsOrder();
 
     return (
-        <AuthenticatedLayout
-            user={auth.user}
-            header={
-                <h2 className="text-[25px] font-[800]" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                    <span className="text-[#37692F] font-[800]">VIGOUR SEEDS</span>
-                    <span className="text-[#333333] font-[400]"> | Inventory Management</span>
-                </h2>
-            }
-        >
+        <AuthenticatedLayout user={auth.user}>
+            <div className="relative bg-gradient-to-br from-white via-green-50/30 to-white border-b border-gray-200 overflow-hidden">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-[#8fbc8f]/10 to-transparent rounded-full blur-3xl"></div>
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-[#a8d5a8]/10 to-transparent rounded-full blur-2xl"></div>
+                <div className="relative px-6 py-6">
+                    <nav className="flex items-center space-x-2 text-sm mb-4">
+                        <a href={route('dashboard')} className="text-gray-600 hover:text-gray-900 transition-colors flex items-center">
+                            <HomeIcon className="w-4 h-4" />
+                        </a>
+                        <ChevronRightIcon className="w-4 h-4 text-gray-400" />
+                        <a href={route('inventory.dashboard')} className="text-gray-600 hover:text-gray-900 transition-colors">
+                            Inventory
+                        </a>
+                        <ChevronRightIcon className="w-4 h-4 text-gray-400" />
+                        <span className="text-[#37692F] font-medium">Stock Outbound</span>
+                    </nav>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                            <div className="w-16 h-16 bg-gradient-to-br from-[#37692F] to-[#4a8a3f] rounded-2xl shadow-lg shadow-green-900/20 flex items-center justify-center">
+                                <ArrowUpCircle className="text-white" size={32} />
+                            </div>
+                            <div>
+                                <h1 className="text-3xl font-bold text-gray-900 mb-1">Stock Outbound</h1>
+                                <p className="text-gray-600">Deliver stock to fulfill partner orders</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div className="min-h-screen bg-gray-50 p-6">
                 <div className="max-w-3xl mx-auto">
-                    <div className="mb-6">
-                        <div className="flex items-center gap-3 mb-2">
-                            <div className="bg-blue-100 p-2 rounded-lg">
-                                <ArrowUpCircle className="text-blue-600" size={24} />
-                            </div>
-                            <h1 className="text-3xl font-bold text-gray-900">Stock Outbound</h1>
-                        </div>
-                        <p className="text-gray-600">Deliver stock to fulfill partner orders</p>
-                    </div>
 
                     {showSuccess && (
                         <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">

@@ -59,64 +59,66 @@ export default function Show({ auth, item, recentInventoryLogs, partnerOrders })
     };
 
     return (
-        <AuthenticatedLayout
-            user={auth.user}
-            header={
-                <h2 className="text-[25px] font-[800]" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                    <span className="text-[#37692F] font-[800]">VIGOUR SEEDS</span>
-                    <span className="text-[#333333] font-[400]"> | Item Details</span>
-                </h2>
-            }
-        >
+        <AuthenticatedLayout user={auth.user}>
             <Head title={item.name} />
             
-            {/* Breadcrumb */}
-            <div className="px-6 pt-6">
-                <nav className="flex items-center space-x-2 text-sm text-gray-600">
-                    <Link
-                        href={route('dashboard')}
-                        className="text-[#37692F] hover:underline transition-colors duration-200"
-                    >
-                        Home
-                    </Link>
-                    <span className="text-gray-400">/</span>
-                    <Link
-                        href={route('items.index')}
-                        className="text-[#37692F] hover:underline transition-colors duration-200"
-                    >
-                        Items
-                    </Link>
-                    <span className="text-gray-400">/</span>
-                    <span className="text-gray-800 font-medium truncate max-w-xs">{item.name}</span>
-                </nav>
-            </div>
+            {/* Modern Page Header */}
+            <div className="relative bg-gradient-to-br from-white via-green-50/30 to-white border-b border-gray-200 overflow-hidden">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-[#8fbc8f]/10 to-transparent rounded-full blur-3xl"></div>
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-[#a8d5a8]/10 to-transparent rounded-full blur-2xl"></div>
+                
+                <div className="relative px-6 py-6">
+                    <nav className="flex items-center space-x-2 text-sm mb-4">
+                        <a href={route('dashboard')} className="text-gray-500 hover:text-[#37692F] transition-colors duration-200 flex items-center">
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                            </svg>
+                            Home
+                        </a>
+                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                        <Link href={route('items.index')} className="text-gray-500 hover:text-[#37692F] transition-colors duration-200">
+                            Items
+                        </Link>
+                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                        <span className="text-[#37692F] font-medium truncate max-w-xs">{item.name}</span>
+                    </nav>
 
-            <div className="p-6">
-                {/* Header Section */}
-                <div className="mb-8">
-                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
-                            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#37692F] to-[#4a8a3f] flex items-center justify-center shadow-lg">
-                                <span className="text-2xl font-bold text-white">
-                                    {item.name.charAt(0).toUpperCase()}
-                                </span>
-                            </div>
-                            <div>
-                                <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent font-poppins">
-                                    {item.name}
-                                </h1>
-                                <div className="flex items-center space-x-3 mt-2">
-                                    {/* Item Status Badge */}
-                                    <span className={`inline-flex items-center rounded-full border px-3 py-1 text-sm font-medium ${getStatusColor(item.status)}`}>
-                                        <div className={`w-2 h-2 rounded-full mr-2 ${item.status === 'active' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                                        {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-                                    </span>
-                                    {/* Item Type Badge */}
-                                    <span className={`inline-flex items-center rounded-full border px-3 py-1 text-sm font-medium ${getTypeColor(item.type)}`}>
-                                        {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
+                            <div className="flex-shrink-0">
+                                <div className="w-16 h-16 bg-gradient-to-br from-[#37692F] to-[#4a8a3f] rounded-2xl flex items-center justify-center shadow-lg shadow-green-900/20">
+                                    <span className="text-2xl font-bold text-white">
+                                        {item.name.charAt(0).toUpperCase()}
                                     </span>
                                 </div>
                             </div>
+                            <div>
+                                <h1 className="text-3xl font-bold text-gray-900 mb-1">{item.name}</h1>
+                                <p className="text-gray-600">View complete item details and inventory information</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="p-6">
+                {/* Action Buttons and Status Badges */}
+                <div className="mb-8">
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                        <div className="flex items-center space-x-3">
+                            {/* Item Status Badge */}
+                            <span className={`inline-flex items-center rounded-full border px-3 py-1 text-sm font-medium ${getStatusColor(item.status)}`}>
+                                <div className={`w-2 h-2 rounded-full mr-2 ${item.status === 'active' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                            </span>
+                            {/* Item Type Badge */}
+                            <span className={`inline-flex items-center rounded-full border px-3 py-1 text-sm font-medium ${getTypeColor(item.type)}`}>
+                                {item.type.charAt(0).toUpperCase() + item.type.slice(1)}
+                            </span>
                         </div>
                         
                         <div className="flex flex-wrap gap-3">

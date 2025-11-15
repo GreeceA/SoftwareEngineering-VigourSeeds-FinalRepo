@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ShoppingCart, Plus, Trash2, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
+import { HomeIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { usePage, Link, router } from '@inertiajs/react';
 
@@ -374,24 +375,37 @@ const CreatePartnerOrder = () => {
     };
 
     return (
-        <AuthenticatedLayout
-            user={auth.user}
-            header={
-                <h2 className="text-[25px] font-[800]" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                    <span className="text-[#37692F] font-[800]">VIGOUR SEEDS</span>
-                    <span className="text-[#333333] font-[400]"> | Inventory Management</span>
-                </h2>
-            }
-        >
+        <AuthenticatedLayout user={auth.user}>
+            <div className="relative bg-gradient-to-br from-white via-green-50/30 to-white border-b border-gray-200 overflow-hidden">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-[#8fbc8f]/10 to-transparent rounded-full blur-3xl"></div>
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-[#a8d5a8]/10 to-transparent rounded-full blur-2xl"></div>
+                <div className="relative px-6 py-6">
+                    <nav className="flex items-center space-x-2 text-sm mb-4">
+                        <a href={route('dashboard')} className="text-gray-600 hover:text-gray-900 transition-colors flex items-center">
+                            <HomeIcon className="w-4 h-4" />
+                        </a>
+                        <ChevronRightIcon className="w-4 h-4 text-gray-400" />
+                        <a href={route('partner-orders.index')} className="text-gray-600 hover:text-gray-900 transition-colors">
+                            Partner Orders
+                        </a>
+                        <ChevronRightIcon className="w-4 h-4 text-gray-400" />
+                        <span className="text-[#37692F] font-medium">Create Order</span>
+                    </nav>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                            <div className="w-16 h-16 bg-gradient-to-br from-[#37692F] to-[#4a8a3f] rounded-2xl shadow-lg shadow-green-900/20 flex items-center justify-center">
+                                <ShoppingCart className="text-white" size={32} />
+                            </div>
+                            <div>
+                                <h1 className="text-3xl font-bold text-gray-900 mb-1">Create Partner Order</h1>
+                                <p className="text-gray-600">Schedule new seed or item delivery to partners</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div className="min-h-screen bg-gray-50 p-6">
                 <div className="max-w-6xl mx-auto">
-                    <Link
-                        href={route('partner-orders.index')}
-                        className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 transition"
-                    >
-                        <ArrowLeft size={20} />
-                        Back to Orders
-                    </Link>
 
                     {showSuccess && (
                         <div className="mb-6 bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">

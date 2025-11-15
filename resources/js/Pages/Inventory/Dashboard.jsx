@@ -3,6 +3,7 @@ import { Package, TrendingUp, TrendingDown, AlertTriangle, Plus, ArrowRight, Che
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { usePage, Link } from '@inertiajs/react';
 import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import Vlogo from '@/assets/vigour-logo.png';
 
 const InventoryDashboard = () => {
     const { auth, inventory, shortfalls } = usePage().props;
@@ -93,27 +94,43 @@ const InventoryDashboard = () => {
     };
 
     return (
-        <AuthenticatedLayout
-            user={auth.user}
-            header={
-                <h2 className="text-[25px] font-[800]" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                    <span className="text-[#37692F] font-[800]">VIGOUR SEEDS</span>
-                    <span className="text-[#333333] font-[400]"> | Inventory Management</span>
-                </h2>
-            }
-        >
-            <div className="min-h-screen bg-gray-50 p-6">
-                <div className="max-w-7xl mx-auto">
-                    {/* Header */}
-                    <div className="flex justify-between items-center mb-8">
-                        <div>
-                            <h1 className="text-3xl font-bold text-gray-900">Inventory Dashboard</h1>
-                            <p className="text-gray-600 mt-1">Monitor and manage your stock levels</p>
+        <AuthenticatedLayout user={auth.user}>
+            {/* Modern Page Header */}
+            <div className="relative bg-gradient-to-br from-white via-green-50/30 to-white border-b border-gray-200 overflow-hidden">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-[#8fbc8f]/10 to-transparent rounded-full blur-3xl"></div>
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-[#a8d5a8]/10 to-transparent rounded-full blur-2xl"></div>
+                
+                <div className="relative px-6 py-6">
+                    <nav className="flex items-center space-x-2 text-sm mb-4">
+                        <a href={route('dashboard')} className="text-gray-500 hover:text-[#37692F] transition-colors duration-200 flex items-center">
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                            </svg>
+                            Home
+                        </a>
+                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                        <span className="text-[#37692F] font-medium">Inventory Dashboard</span>
+                    </nav>
+
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                            <div className="flex-shrink-0">
+                                <div className="w-16 h-16 bg-gradient-to-br from-[#37692F] to-[#4a8a3f] rounded-2xl flex items-center justify-center shadow-lg shadow-green-900/20">
+                                    <Package className="text-white" size={32} />
+                                </div>
+                            </div>
+                            <div>
+                                <h1 className="text-3xl font-bold text-gray-900 mb-1">Inventory Dashboard</h1>
+                                <p className="text-gray-600">Monitor and manage your stock levels</p>
+                            </div>
                         </div>
-                        <div className="flex gap-3">
+
+                        <div className="flex items-center gap-3">
                             <button
                                 onClick={() => window.location.href = route('inventory.export.dashboard')}
-                                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
+                                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2.5 rounded-lg flex items-center gap-2 transition-all shadow-sm hover:shadow-md"
                             >
                                 <ArrowDownTrayIcon className="w-5 h-5" />
                                 Export Dashboard
@@ -122,7 +139,7 @@ const InventoryDashboard = () => {
                             {permissions.includes('create inventory') && (
                                 <Link
                                     href={route('inventory.inbound.create')}
-                                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
+                                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg flex items-center gap-2 transition-all shadow-sm hover:shadow-md"
                                 >
                                     <Plus size={20} />
                                     Stock In
@@ -131,7 +148,7 @@ const InventoryDashboard = () => {
                             {permissions.includes('create inventory') && (
                                 <Link
                                     href={route('inventory.outbound.create')}
-                                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
+                                    className="bg-[#37692F] hover:bg-[#2a5624] text-white px-4 py-2.5 rounded-lg flex items-center gap-2 transition-all shadow-sm hover:shadow-md"
                                 >
                                     <ArrowRight size={20} />
                                     Stock Out
@@ -140,7 +157,7 @@ const InventoryDashboard = () => {
                             {permissions.includes('create inventory') && (
                                 <Link
                                     href={route('inventory.adjustment.create')}
-                                    className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition"
+                                    className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2.5 rounded-lg flex items-center gap-2 transition-all shadow-sm hover:shadow-md"
                                 >
                                     <AlertTriangle size={20} />
                                     Adjust Stock
@@ -148,6 +165,11 @@ const InventoryDashboard = () => {
                             )}
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <div className="p-6">
+                <div className="max-w-7xl mx-auto">
 
                     {/* Stock Shortfall Widget - Redesigned */}
                     {shortfalls && shortfalls.length > 0 && (

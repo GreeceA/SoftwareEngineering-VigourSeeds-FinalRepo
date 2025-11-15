@@ -537,17 +537,6 @@ export default function PartnerForm({ partner = null }) {
 
     return (
         <div className="p-6">
-            <div className="px-6 pt-6">
-                <nav className="text-sm text-gray-600">
-                    <Link
-                        href={route('dashboard')} 
-                        className="text-[#37692F] hover:underline"
-                    >
-                        Home
-                    </Link>{" "}
-                    / <Link href={route('partners.index')} className="text-[#37692F] hover:underline">Partners</Link> / <span>{partner ? 'Edit' : 'Create'} Partner</span>
-                </nav>
-            </div>
 
             <div className="mt-4 rounded-lg bg-white p-6 shadow-lg">
                 <h1 className="mb-6 text-2xl font-semibold text-gray-800">
