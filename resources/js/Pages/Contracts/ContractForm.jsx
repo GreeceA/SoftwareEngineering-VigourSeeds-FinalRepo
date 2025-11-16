@@ -611,6 +611,9 @@ export default function ContractForm({ partners, seeds, contract = null }) {
     const submit = (e) => {
     e.preventDefault();
 
+    // Sync selectedSeeds to data.seeds before validation
+    updateFormSeeds(selectedSeeds);
+
     if (selectedSeeds.length === 0) {
         setSeedSelectionError('Selecting a seed variety is required.');
         return;
@@ -638,25 +641,66 @@ export default function ContractForm({ partners, seeds, contract = null }) {
         .trim();
     let buybackPriceValue = cleanBuybackPrice === '' ? 0 : parseFloat(cleanBuybackPrice);
 
+    // Update buyback price in data
+    setData('buyback_price_per_unit', buybackPriceValue);
+
     const submissionData = {
         ...data,
         buyback_price_per_unit: buybackPriceValue,
-        _method: isEditing ? 'put' : 'post',
+        seeds: selectedSeeds.map(seed => ({
+            id: seed.id,
+            seed_id: seed.seed_id, 
+            seed_quantity: Number(String(seed.seed_quantity).replace(/,/g, '')),
+            unit: seed.unit,
+            seed_price_at_contract: seed.seed_price_at_contract,
+            planting_date: seed.planting_date,
+            expected_first_harvest_date: seed.expected_first_harvest_date,
+            agreed_cycles: seed.agreed_cycles,
+            expected_buyback_amount: Number(String(seed.expected_buyback_amount).replace(/,/g, '')),
+            buyback_unit: seed.buyback_unit,
+        })),
     };
 
-    if (isEditing && !(data.contract_file instanceof File)) {
-        delete submissionData.contract_file;
+    if (isEditing) {
+        submissionData._method = 'put';
+        if (!(data.contract_file instanceof File)) {
+            delete submissionData.contract_file;
+        }
     }
+
+    console.log('Submitting contract data:', submissionData);
 
     if (isEditing) {
         router.post(route('contracts.update', contract.id), submissionData, {
+            forceFormData: true,
+            preserveState: true,
+            preserveScroll: true,
             onSuccess: () => router.visit(route('contracts.show', contract.id)),
-            onError: (e) => console.error(e)
+            onError: (errors) => {
+                console.error('Contract update errors:', errors);
+                // Scroll to first error
+                const firstErrorField = Object.keys(errors)[0];
+                const errorElement = document.querySelector(`[name="${firstErrorField}"]`);
+                if (errorElement) {
+                    errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
         });
     } else {
         router.post(route('contracts.store'), submissionData, {
+            forceFormData: true,
+            preserveState: true,
+            preserveScroll: true,
             onSuccess: () => router.visit(route('contracts.index')),
-            onError: (e) => console.error(e)
+            onError: (errors) => {
+                console.error('Contract creation errors:', errors);
+                // Scroll to first error
+                const firstErrorField = Object.keys(errors)[0];
+                const errorElement = document.querySelector(`[name="${firstErrorField}"]`);
+                if (errorElement) {
+                    errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+            }
         });
     }
 };
@@ -896,11 +940,26 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                 type="file"
                                 ref={fileInputRef}
                                 onChange={(e) => {
-                                    setData('contract_file', e.target.files[0]);
-                                    setFieldErrors(prev => ({
-                                        ...prev,
-                                        contract_file: '', // Clear required error immediately
-                                    }));
+                                    const file = e.target.files[0];
+                                    if (file) {
+                                        // Check file size (5MB = 5 * 1024 * 1024 bytes)
+                                        const maxSize = 5 * 1024 * 1024;
+                                        if (file.size > maxSize) {
+                                            setFieldErrors(prev => ({
+                                                ...prev,
+                                                contract_file: 'The contract file must not exceed 5MB. Please upload a smaller file.',
+                                            }));
+                                            // Clear the file input
+                                            e.target.value = '';
+                                            setData('contract_file', null);
+                                        } else {
+                                            setData('contract_file', file);
+                                            setFieldErrors(prev => ({
+                                                ...prev,
+                                                contract_file: '', // Clear error if file is valid
+                                            }));
+                                        }
+                                    }
                                 }}
                                 onBlur={e => handleBlur('contract_file', data.contract_file)}
                                 accept=".pdf,.doc,.docx"
@@ -1075,6 +1134,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 mb-2">Planting Date *</label>
+                                                    <p className="text-xs text-gray-500 mb-2">Date when seeds will be planted</p>
                                                     <input
                                                         type="date"
                                                         value={seed.planting_date}
@@ -1092,12 +1152,12 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                                         Expected Harvest Date *
-                                                        {seed.planting_date && seed.growth_cycle && (
-                                                            <span className="block text-xs text-gray-500 font-normal mt-1">
-                                                                Earliest possible: {getHarvestMin(seed)}
-                                                            </span>
-                                                        )}
                                                     </label>
+                                                    {seed.planting_date && seed.growth_cycle && (
+                                                        <p className="text-xs text-gray-500 mb-2">
+                                                            Earliest possible: {getHarvestMin(seed)}
+                                                        </p>
+                                                    )}
                                                     <input
                                                         type="date"
                                                         value={seed.expected_first_harvest_date || ''}
@@ -1117,12 +1177,12 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                                         Agreed Cycles *
-                                                        {seed.expected_first_harvest_date && (
-                                                            <span className="block text-xs text-gray-500 font-normal mt-1">
-                                                                Maximum: {getMaxCycles(seed)} cycles
-                                                            </span>
-                                                        )}
                                                     </label>
+                                                    {seed.expected_first_harvest_date && (
+                                                        <p className="text-xs text-gray-500 mb-2">
+                                                            Maximum: {getMaxCycles(seed)} cycles
+                                                        </p>
+                                                    )}
                                                     <input
                                                         type="number"
                                                         min="1"
@@ -1140,6 +1200,7 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                                 <div>
                                                     {/* Expected Buyback Amount */}
                                                     <label className="block text-sm font-medium text-gray-700 mb-2">Expected Buyback Quantity *</label>
+                                                    <p className="text-xs text-gray-500 mb-2">Valid range: 1–999,999</p>
                                                     <input
                                                         type="text"
                                                         inputMode="numeric"
@@ -1151,7 +1212,6 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                                         disabled={isLocked('expected_buyback_amount')}
                                                         placeholder="Enter Buyback quantity"
                                                     />
-                                                    <span className="text-xs text-gray-500 block mt-1">Valid range: 1–999,999</span>
                                                     {expectedBuybackErrors[seed.id] && (
                                                         <p className="text-red-500 text-xs mt-1">{expectedBuybackErrors[seed.id]}</p>
                                                     )}
@@ -1162,23 +1222,24 @@ export default function ContractForm({ partners, seeds, contract = null }) {
                                                 </div>
 
                                                 <div>
-    <label className="block text-sm font-medium text-gray-700 mb-2">Buyback Unit *</label>
-    <select
-        value={seed.buyback_unit}
-        onChange={(e) => updateSeedData(seed.id, 'buyback_unit', e.target.value)}
-        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
-        required
-        disabled={isLocked('buyback_unit')}
-    >
-        <option value="kg">kg</option>
-        <option value="sack">sack</option>
-        <option value="ton">ton</option>
-    </select>
-    {/* Add this hidden input when disabled */}
-    {isLocked('buyback_unit') && (
-        <input type="hidden" name={`seeds.${index}.buyback_unit`} value={seed.buyback_unit} />
-    )}
-    {errors[`seeds.${index}.buyback_unit`] && <p className="text-red-500 text-xs mt-1">{errors[`seeds.${index}.buyback_unit`]}</p>}
+                                                    <label className="block text-sm font-medium text-gray-700 mb-2">Buyback Unit *</label>
+                                                    <p className="text-xs text-gray-500 mb-2">Unit of measurement for buyback</p>
+                                                    <select
+                                                        value={seed.buyback_unit}
+                                                        onChange={(e) => updateSeedData(seed.id, 'buyback_unit', e.target.value)}
+                                                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#37692F] focus:border-[#37692F]"
+                                                        required
+                                                        disabled={isLocked('buyback_unit')}
+                                                    >
+                                                        <option value="kg">kg</option>
+                                                        <option value="sack">sack</option>
+                                                        <option value="ton">ton</option>
+                                                    </select>
+                                                    {/* Add this hidden input when disabled */}
+                                                    {isLocked('buyback_unit') && (
+                                                        <input type="hidden" name={`seeds.${index}.buyback_unit`} value={seed.buyback_unit} />
+                                                    )}
+                                                    {errors[`seeds.${index}.buyback_unit`] && <p className="text-red-500 text-xs mt-1">{errors[`seeds.${index}.buyback_unit`]}</p>}
 </div>
                                             </div>
                                         </div>

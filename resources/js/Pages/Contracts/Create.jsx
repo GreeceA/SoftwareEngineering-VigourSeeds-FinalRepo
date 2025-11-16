@@ -22,7 +22,7 @@ export default function Create({ auth, partners, seeds }) {
                             </svg>
                             Home
                         </a>
-                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-4 h-4 text-gray-400" fill=    "none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                         </svg>
                         <Link href={route('contracts.index')} className="text-gray-500 hover:text-[#37692F] transition-colors duration-200">

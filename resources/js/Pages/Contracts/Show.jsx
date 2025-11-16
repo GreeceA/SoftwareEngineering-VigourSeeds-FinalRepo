@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Head, Link, useForm, router, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import Breadcrumb from '@/Components/Breadcrumb';
 import { ArrowTopRightOnSquareIcon, DocumentTextIcon, CalendarIcon, UserIcon, MapPinIcon, CubeIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 import { CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/solid';
 import DraftActiveModal from './Draft-ActiveModal';
@@ -8,6 +9,7 @@ import ContractFilePreviewModal from './ContractFilePreviewModal';
 import ActivateContractModal from './ActivateContractModal';
 import CancelContractModal from './CancelContractModal';
 import SendEmailModal from './SendEmailModal';
+import EmailSuccessModal from './EmailSuccessModal';
 import CompleteContractModal from './CompleteContractModal';
 import TerminateContractModal from './TerminateContractModal';
 import SuspendContractModal from './SuspendContractModal';
@@ -22,6 +24,7 @@ export default function Show({ auth, contract }) {
     const [statusToTransition, setStatusToTransition] = useState('');
     const [showFilePreview, setShowFilePreview] = useState(false);
     const [showSendEmailModal, setShowSendEmailModal] = useState(false);
+    const [showEmailSuccessModal, setShowEmailSuccessModal] = useState(false);
     const [showCompleteModal, setShowCompleteModal] = useState(false);
     const [showTerminateModal, setShowTerminateModal] = useState(false);
 
@@ -105,9 +108,17 @@ export default function Show({ auth, contract }) {
     };
 
     const handleSendEmailConfirm = () => {
-        post(route('contracts.sendEmail', contract.id), {}, {
-            onSuccess: () => setShowSendEmailModal(false),
-            onError: () => setShowSendEmailModal(false),
+        router.post(route('contracts.sendEmail', contract.id), {}, {
+            onSuccess: () => {
+                setShowSendEmailModal(false);
+                setTimeout(() => {
+                    setShowEmailSuccessModal(true);
+                }, 300);
+            },
+            onError: (errors) => {
+                console.error('Email send error:', errors);
+                setShowSendEmailModal(false);
+            },
             preserveState: true,
             preserveScroll: true
         });
@@ -151,32 +162,47 @@ export default function Show({ auth, contract }) {
         <AuthenticatedLayout
             user={auth.user}
             header={
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-900">Contract Details</h1>
-                        <p className="mt-1 text-sm text-gray-600">View and manage contract information</p>
-                    </div>
-                    <div className="flex items-center space-x-3">
-                        {permissions.includes('edit contracts') && (contract.can_be_edited || contract.can_be_partially_edited) && (
+                <div className="space-y-4">
+                    {/* Breadcrumb */}
+                    <Breadcrumb 
+                        items={[
+                            { 
+                                label: 'Home', 
+                                href: route('dashboard'),
+                                icon: <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>
+                            },
+                            { label: 'Contracts', href: route('contracts.index') },
+                            { label: contract.contract_name }
+                        ]}
+                    />
+                    
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-2xl font-bold text-gray-900">Contract Details</h1>
+                            <p className="mt-1 text-sm text-gray-600">View and manage contract information</p>
+                        </div>
+                        <div className="flex items-center space-x-3">
+                            {permissions.includes('edit contracts') && (contract.can_be_edited || contract.can_be_partially_edited) && (
+                                <Link
+                                    href={route('contracts.edit', contract.id)}
+                                    className={`inline-flex items-center rounded-lg bg-[#37692F] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#2a5624] ${['cancelled', 'active'].includes(contract.status)
+                                            ? 'pointer-events-none opacity-50 cursor-not-allowed'
+                                            : ''
+                                        }`}
+                                    tabIndex={['cancelled', 'active'].includes(contract.status) ? -1 : 0}
+                                    aria-disabled={['cancelled', 'active'].includes(contract.status)}
+                                >
+                                    <DocumentTextIcon className="mr-2 h-4 w-4" />
+                                    Edit Contract
+                                </Link>
+                            )}
                             <Link
-                                href={route('contracts.edit', contract.id)}
-                                className={`inline-flex items-center rounded-lg bg-[#37692F] px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#2a5624] ${['cancelled', 'active'].includes(contract.status)
-                                        ? 'pointer-events-none opacity-50 cursor-not-allowed'
-                                        : ''
-                                    }`}
-                                tabIndex={['cancelled', 'active'].includes(contract.status) ? -1 : 0}
-                                aria-disabled={['cancelled', 'active'].includes(contract.status)}
+                                href={route('contracts.index')}
+                                className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
                             >
-                                <DocumentTextIcon className="mr-2 h-4 w-4" />
-                                Edit Contract
+                                ← Back to List
                             </Link>
-                        )}
-                        <Link
-                            href={route('contracts.index')}
-                            className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
-                        >
-                            ← Back to List
-                        </Link>
+                        </div>
                     </div>
                 </div>
             }
@@ -184,6 +210,7 @@ export default function Show({ auth, contract }) {
             <Head title={`Contract: ${contract.contract_name}`} />
 
             <div className="space-y-6 p-6">
+
                 {/* Header Card - Improved */}
                 <div className="rounded-xl bg-gradient-to-r from-[#37692F] to-[#2a5624] p-6 text-white shadow-lg">
                     <div className="flex items-start justify-between">
@@ -791,7 +818,7 @@ export default function Show({ auth, contract }) {
             {showFilePreview && (
                 <ContractFilePreviewModal
                     fileUrl={contract.contract_file
-                        ? `http://localhost/dashboard/SoftwareEngineering-VigourSeeds-FinalRepo/storage/app/public/contracts/${contract.contract_file.split('/').pop()}`
+                        ? `/storage/${contract.contract_file}`
                         : null}
                     onClose={handleClosePreview}
                     contract={contract}
@@ -813,6 +840,13 @@ export default function Show({ auth, contract }) {
                 onConfirm={handleSendEmailConfirm}
                 contract={contract}
                 processing={processing}
+            />
+
+            <EmailSuccessModal
+                open={showEmailSuccessModal}
+                onClose={() => setShowEmailSuccessModal(false)}
+                partnerName={contract.partner.name}
+                partnerEmail={contract.partner.email}
             />
 
             <CompleteContractModal

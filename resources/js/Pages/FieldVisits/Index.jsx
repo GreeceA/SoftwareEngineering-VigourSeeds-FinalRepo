@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { debounce } from 'lodash';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import Breadcrumb from '@/Components/Breadcrumb';
 import { FunnelIcon, ChevronDownIcon, ArrowsUpDownIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
 import CompleteVisitModal from './handleComplete';
 import CancelVisitModal from './handleCancel';
@@ -145,18 +146,16 @@ export default function Index({ auth, fieldVisits, filters, contracts }) {
                 
                 <div className="relative px-6 py-6">
                     {/* Breadcrumb */}
-                    <nav className="flex items-center space-x-2 text-sm mb-4">
-                        <a href={route('dashboard')} className="text-gray-500 hover:text-[#37692F] transition-colors duration-200 flex items-center">
-                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                            </svg>
-                            Home
-                        </a>
-                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                        <span className="text-[#37692F] font-medium">Field Visit Management</span>
-                    </nav>
+                    <Breadcrumb 
+                        items={[
+                            { 
+                                label: 'Home', 
+                                href: route('dashboard'),
+                                icon: <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>
+                            },
+                            { label: 'Field Visit Management' }
+                        ]}
+                    />
 
                     {/* Header Content */}
                     <div className="flex items-center justify-between">

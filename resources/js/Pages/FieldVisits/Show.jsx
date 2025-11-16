@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import Breadcrumb from '@/Components/Breadcrumb';
 import ShowGrowthModal from '@/Pages/FieldVisits/showGrowthModal';
 import ShowDamageModal from '@/Pages/FieldVisits/showDamageModal';
 import EditGrowthModal from '@/Pages/Reports/EditGrowthModal';
@@ -215,28 +216,20 @@ export default function Show({ auth, fieldVisit }) {
         <AuthenticatedLayout user={auth.user}>
             <Head title={`Field Visit #${fieldVisit.field_visit_ID}`} />
             
-            {/* Breadcrumb */}
-            <div className="px-6 pt-6">
-                <nav className="flex items-center space-x-2 text-sm text-gray-600">
-                    <Link
-                        href={route('dashboard')}
-                        className="text-[#37692F] hover:underline transition-colors duration-200"
-                    >
-                        Home
-                    </Link>
-                    <span className="text-gray-400">/</span>
-                    <Link
-                        href={route('field-visits.index')}
-                        className="text-[#37692F] hover:underline transition-colors duration-200"
-                    >
-                        Field Visits
-                    </Link>
-                    <span className="text-gray-400">/</span>
-                    <span className="text-gray-800 font-medium truncate max-w-xs">Visit #{fieldVisit.field_visit_ID}</span>
-                </nav>
-            </div>
-
             <div className="p-6">
+                {/* Breadcrumb */}
+                <Breadcrumb 
+                    items={[
+                        { 
+                            label: 'Home', 
+                            href: route('dashboard'),
+                            icon: <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>
+                        },
+                        { label: 'Field Visits', href: route('field-visits.index') },
+                        { label: `Visit #${fieldVisit.field_visit_ID}` }
+                    ]}
+                />
+
                 {/* Header Section */}
                 <div className="mb-8">
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
