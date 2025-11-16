@@ -220,7 +220,7 @@ export default function Index({ auth, users, filters }) {
                                 <ChevronDownIcon className="w-4 h-4 ml-2 text-gray-500" />
                             </button>
                             {showExportDropdown && (
-                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-10">
+                                <div className="absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-10">
                                     <div className="py-1">
                                         <button
                                             onClick={() => handleExport('pdf')}
@@ -247,7 +247,7 @@ export default function Index({ auth, users, filters }) {
                                 <ChevronDownIcon className="w-4 h-4 ml-2 text-gray-500" />
                             </button>
                             {showFilterDropdown && (
-                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-10">
+                                <div className="absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-10">
                                     <div className="py-1">
                                         {['all', 'active', 'inactive'].map((status) => (
                                             <button
@@ -277,7 +277,7 @@ export default function Index({ auth, users, filters }) {
                                 <ChevronDownIcon className="w-4 h-4 ml-2 text-gray-500" />
                             </button>
                             {showSortDropdown && (
-                                <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg border border-gray-200 z-10">
+                                <div className="absolute left-0 mt-2 w-56 bg-white rounded-md shadow-lg border border-gray-200 z-10">
                                     <div className="py-1">
                                         <button onClick={() => { setSortBy('id'); setSortDir('desc'); setShowSortDropdown(false); fetchUsers({ sort_by: 'id', sort_dir: 'desc', page: 1 }); }}
                                             className={`w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${sortBy === 'id' ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}>Default</button>

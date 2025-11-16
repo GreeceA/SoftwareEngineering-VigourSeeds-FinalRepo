@@ -217,7 +217,7 @@ export default function Index({ auth, fieldVisits, filters, contracts }) {
                                 <ChevronDownIcon className="ml-2 h-4 w-4 text-gray-500" />
                             </button>
                             {showFilterDropdown && (
-                                <div className="absolute right-0 z-10 mt-2 w-80 rounded-md border border-gray-200 bg-white p-4 shadow-lg">
+                                <div className="absolute left-0 z-10 mt-2 w-80 rounded-md border border-gray-200 bg-white p-4 shadow-lg">
                                     <div className="space-y-4">
                                         {/* Status Filter */}
                                         <div>

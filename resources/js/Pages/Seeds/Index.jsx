@@ -185,7 +185,7 @@ export default function Index({ auth, seeds, filters }) {
                                 <ChevronDownIcon className="w-4 h-4 ml-2 text-gray-500" />
                             </button>
                             {showExportDropdown && (
-                                <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-10">
+                                <div className="absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-10">
                                     <div className="py-1">
                                         <button
                                             onClick={() => handleExport('pdf')}
@@ -215,7 +215,7 @@ export default function Index({ auth, seeds, filters }) {
                                 <ChevronDownIcon className="ml-2 h-4 w-4 text-gray-500" />
                             </button>
                             {showFilterDropdown && (
-                                <div className="absolute right-0 z-10 mt-2 w-48 rounded-md border border-gray-200 bg-white shadow-lg">
+                                <div className="absolute left-0 z-10 mt-2 w-48 rounded-md border border-gray-200 bg-white shadow-lg">
                                     <div className="py-1">
                                         {['all', 'active', 'archived'].map((status) => (
                                             <button
@@ -249,7 +249,7 @@ export default function Index({ auth, seeds, filters }) {
                                 <ChevronDownIcon className="ml-2 h-4 w-4 text-gray-500" />
                             </button>
                             {showSortDropdown && (
-                                <div className="absolute right-0 z-10 mt-2 w-56 rounded-md border border-gray-200 bg-white shadow-lg">
+                                <div className="absolute left-0 z-10 mt-2 w-56 rounded-md border border-gray-200 bg-white shadow-lg">
                                     <div className="py-1">
                                         <button
                                             onClick={() => {

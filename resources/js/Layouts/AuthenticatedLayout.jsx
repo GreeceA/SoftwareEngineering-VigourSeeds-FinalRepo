@@ -22,7 +22,17 @@ export default function AuthenticatedLayout({ header, children }) {
     const [openUsersDropdown, setOpenUsersDropdown] = useState(false);
     const [openInventoryDropdown, setOpenInventoryDropdown] = useState(false);
     const [showingNavigationDropdown, setShowingNavigationDropdown] = useState(false);
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    
+    // Initialize sidebar state from localStorage, default to collapsed (true)
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+        const saved = localStorage.getItem('sidebarCollapsed');
+        return saved !== null ? JSON.parse(saved) : true;
+    });
+
+    // Save sidebar state to localStorage whenever it changes
+    useEffect(() => {
+        localStorage.setItem('sidebarCollapsed', JSON.stringify(sidebarCollapsed));
+    }, [sidebarCollapsed]);
 
     // Auto-open dropdowns when on related pages
     useEffect(() => {
@@ -336,17 +346,6 @@ export default function AuthenticatedLayout({ header, children }) {
                                         </div>                                        {/* Submenu - show items based on specific permissions */}
                                         {openUsersDropdown && !sidebarCollapsed && (
                                             <div className="bg-gray-50 border-l-4 border-gray-200 transition-all duration-300 ease-in-out">
-                                                {/* All Users */}
-                                                {permissions.includes('view users') && (
-                                                    <Link
-                                                        href={route("users.index")}
-                                                        className="flex items-center gap-2 pl-8 pr-4 py-2 text-sm text-gray-700 hover:bg-gray-200 hover:text-[#37692F]"
-                                                    >
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
-                                                        All Users
-                                                    </Link>
-                                                )}
-
                                                 {/* Add User */}
                                                 {permissions.includes('create users') && permissions.includes('view users') && (
                                                     <Link

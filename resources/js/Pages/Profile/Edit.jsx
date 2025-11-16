@@ -49,28 +49,50 @@ export default function Edit({ mustVerifyEmail, status }) {
     };
 
     return (
-        <AuthenticatedLayout
-            user={auth.user}
-            header={
-                <h2 className="text-[25px] font-[800]" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                    <span className="text-[#37692F] font-[800]">VIGOUR SEEDS</span>
-                    <span className="text-[#333333] font-[400]"> | Profile</span>
-                </h2>
-            }
-        >
+        <AuthenticatedLayout user={auth.user}>
             <Head title="Profile" />
 
-            {/* Breadcrumb */}
-            <div className="px-6 pt-6">
-                <nav className="text-sm text-gray-600">
-                    <Link
-                        href={route('dashboard')}
-                        className="text-[#37692F] hover:underline"
-                    >
-                        Home
-                    </Link>{" "}
-                    / <span>Profile</span>
-                </nav>
+            {/* Modern Page Header with Integrated Breadcrumb */}
+            <div className="relative bg-gradient-to-br from-white via-green-50/30 to-white border-b border-gray-200 overflow-hidden">
+                {/* Subtle decorative elements */}
+                <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-[#8fbc8f]/10 to-transparent rounded-full blur-3xl"></div>
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-[#a8d5a8]/10 to-transparent rounded-full blur-2xl"></div>
+                
+                <div className="relative px-6 py-6">
+                    {/* Breadcrumb */}
+                    <nav className="flex items-center space-x-2 text-sm mb-4">
+                        <Link href={route('dashboard')} className="text-gray-500 hover:text-[#37692F] transition-colors duration-200 flex items-center">
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                            </svg>
+                            Home
+                        </Link>
+                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                        <span className="text-[#37692F] font-medium">Profile</span>
+                    </nav>
+
+                    {/* Header Content */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                            {/* Icon */}
+                            <div className="flex-shrink-0">
+                                <div className="w-16 h-16 bg-gradient-to-br from-[#37692F] to-[#4a8a3f] rounded-2xl flex items-center justify-center shadow-lg shadow-green-900/20">
+                                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                    </svg>
+                                </div>
+                            </div>
+                            
+                            {/* Title & Description */}
+                            <div>
+                                <h1 className="text-3xl font-bold text-gray-900 mb-1">Profile</h1>
+                                <p className="text-gray-600">Manage your account settings and preferences</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div className="p-6">
@@ -81,7 +103,7 @@ export default function Edit({ mustVerifyEmail, status }) {
                             {/* Avatar Section */}
                             <div className="flex-shrink-0">
                                 <label className="block cursor-pointer group">
-                                    <div className="w-36 h-36 rounded-full bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center text-gray-500 border-2 border-dashed border-gray-200 group-hover:border-[#37692F] group-hover:shadow-lg transition-all duration-300 overflow-hidden relative">
+                                    <div className="w-32 h-32 rounded-full bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center text-gray-500 border-2 border-dashed border-gray-200 group-hover:border-[#37692F] group-hover:shadow-lg transition-all duration-300 overflow-hidden relative">
                                         {avatarPreview ? (
                                             <img
                                                 src={avatarPreview}
@@ -95,13 +117,10 @@ export default function Edit({ mustVerifyEmail, status }) {
                                                 className="w-full h-full object-cover"
                                             />
                                         ) : (
-                                            <div className="text-center transform group-hover:scale-105 transition-transform duration-300">
-                                                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#37692F] to-[#4a8a3f] flex items-center justify-center mx-auto mb-2 shadow-md">
-                                                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                                                    </svg>
-                                                </div>
-                                                <span className="text-sm font-medium text-gray-600 group-hover:text-[#37692F]">Upload Photo</span>
+                                            <div className="w-full h-full rounded-full bg-gray-100 flex items-center justify-center">
+                                                <svg className="w-16 h-16 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                                                    <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" />
+                                                </svg>
                                             </div>
                                         )}
                                         {/* Hover Overlay */}
@@ -124,7 +143,7 @@ export default function Edit({ mustVerifyEmail, status }) {
                                 </label>
 
                                 {/* Avatar Action Buttons */}
-                                <div className="mt-4 space-y-2">
+                                <div className="mt-3 space-y-1.5">
                                     {avatarPreview && (
                                         <button
                                             type="button"
@@ -133,22 +152,22 @@ export default function Edit({ mustVerifyEmail, status }) {
                                                 setData('avatar', null);
                                                 if (fileInputRef.current) fileInputRef.current.value = '';
                                             }}
-                                            className="w-full px-4 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors duration-200 flex items-center justify-center space-x-2"
+                                            className="w-full px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors duration-200 flex items-center justify-center space-x-1.5"
                                         >
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                             </svg>
                                             <span>Remove</span>
                                         </button>
                                     )}
 
-                                    <div className="flex space-x-2">
+                                    <div className="flex space-x-1.5">
                                         <button
                                             type="button"
                                             onClick={() => fileInputRef.current && fileInputRef.current.click()}
-                                            className="flex-1 px-4 py-2 text-sm font-medium bg-gradient-to-r from-[#37692F] to-[#4a8a3f] text-white rounded-lg hover:from-[#2a5624] hover:to-[#37692F] transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 flex items-center justify-center space-x-2"
+                                            className="flex-1 px-3 py-1.5 text-xs font-medium bg-gradient-to-r from-[#37692F] to-[#4a8a3f] text-white rounded-lg hover:from-[#2a5624] hover:to-[#37692F] transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 flex items-center justify-center space-x-1.5"
                                         >
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
                                             </svg>
                                             <span>{avatarPreview ? 'Change' : 'Upload'}</span>
@@ -158,10 +177,10 @@ export default function Edit({ mustVerifyEmail, status }) {
                                             <button
                                                 type="submit"
                                                 onClick={handleAvatarSubmit}
-                                                className="flex-1 px-4 py-2 text-sm font-medium bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 flex items-center justify-center space-x-2"
+                                                className="flex-1 px-3 py-1.5 text-xs font-medium bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 flex items-center justify-center space-x-1.5"
                                                 disabled={processing || !data.avatar}
                                             >
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                                 </svg>
                                                 <span>Save</span>
@@ -170,7 +189,7 @@ export default function Edit({ mustVerifyEmail, status }) {
                                     </div>
 
                                     {errors.avatar && (
-                                        <div className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg border border-red-200">
+                                        <div className="text-xs text-red-600 bg-red-50 px-2.5 py-1.5 rounded-lg border border-red-200">
                                             {errors.avatar}
                                         </div>
                                     )}

@@ -665,18 +665,6 @@ export default function ContractForm({ partners, seeds, contract = null }) {
 
     return (
         <div className="p-6">
-            <div className="px-6 pt-6">
-                <nav className="text-sm text-gray-600">
-                    <Link
-                        href={route('dashboard')}
-                        className="text-[#37692F] hover:underline"
-                    >
-                        Home
-                    </Link>{" "}
-                    / <Link href={route('contracts.index')} className="text-[#37692F] hover:underline">Contracts</Link> / <span>{isEditing ? 'Edit' : 'Create'} Contract</span>
-                </nav>
-            </div>
-
             <div className="bg-white shadow-lg rounded-lg p-6 mt-4">
                 <h1 className="text-2xl font-semibold text-gray-800 mb-6">
                     {isEditing ? 'Edit Contract' : 'Create New Contract'}

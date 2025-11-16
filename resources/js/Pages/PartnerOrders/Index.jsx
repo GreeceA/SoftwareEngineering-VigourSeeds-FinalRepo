@@ -222,16 +222,19 @@ const PartnerOrdersList = () => {
                                 <option value="fulfilled">Fulfilled</option>
                                 <option value="cancelled">Cancelled</option>
                             </select>
-                            <select
-                                value={filters.partner_id}
-                                onChange={(e) => setFilters({ ...filters, partner_id: e.target.value })}
-                                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            >
-                                <option value="">All Partners</option>
-                                {partners.map(p => (
-                                    <option key={p.id} value={p.id}>{p.name}</option>
-                                ))}
-                            </select>
+                            <div className="relative">
+                                <select
+                                    value={filters.partner_id}
+                                    onChange={(e) => setFilters({ ...filters, partner_id: e.target.value })}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
+                                    style={{ backgroundPosition: 'right 0.5rem center' }}
+                                >
+                                    <option value="">All Partners</option>
+                                    {partners.map(p => (
+                                        <option key={p.id} value={p.id}>{p.name}</option>
+                                    ))}
+                                </select>
+                            </div>
                             <select
                                 value={filters.contract_status}
                                 onChange={(e) => setFilters({ ...filters, contract_status: e.target.value })}
