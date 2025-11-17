@@ -47,7 +47,11 @@ export default function UserInfoModal({ user, onClose }) {
                     {/* Name and Title */}
                     <div className="text-center">
                         <h2 className="text-2xl font-bold text-gray-800">{user.name}</h2>
-                        <p className="text-[#37692F] font-medium mt-1">{user.role}</p>
+                        <p className="text-[#37692F] font-medium mt-1">
+                            {user.roles && user.roles.length > 0 
+                                ? user.roles[0].name.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+                                : user.role}
+                        </p>
                     </div>
 
                     {/* Stats */}
