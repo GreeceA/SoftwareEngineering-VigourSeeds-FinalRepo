@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Leaf, TrendingUp, AlertCircle, CheckCircle, Plus, Eye, Search } from 'lucide-react';
+import { Filter, Leaf, TrendingUp, AlertCircle, CheckCircle, Plus, Eye, Search } from 'lucide-react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { usePage, Link, router } from '@inertiajs/react';
 import { ChevronDownIcon, FunnelIcon, ArrowsUpDownIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
@@ -211,97 +211,108 @@ const BuybackOverview = () => {
                         </div>
                     </div>
 
-                    {/* Filters Section */}
+                    {/* Filters & Actions Section */}
                     <div className="mb-6 bg-white rounded-lg shadow-sm p-6">
-                        <div className="flex items-center gap-6">
-                            {/* Filters Label with Icon */}
-                            <div className="flex items-center gap-2">
-                                <FunnelIcon className="h-5 w-5 text-gray-700" />
-                                <span className="text-lg font-semibold text-gray-900">Filters</span>
-                            </div>
-
-                            {/* Status Filter */}
-                            <div className="relative flex-1" ref={filterRef}>
-                                <button
-                                    onClick={() => {
-                                        setShowFilterDropdown(!showFilterDropdown);
-                                        setShowSortDropdown(false);
-                                    }}
-                                    className="w-full flex items-center justify-between px-4 py-3 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#37692F] bg-white"
-                                >
-                                    <span className="text-gray-700">{statusOptions.find(opt => opt.value === statusFilter)?.label || 'All Status'}</span>
-                                    <ChevronDownIcon className="h-5 w-5 text-gray-400" />
-                                </button>
-                                {showFilterDropdown && (
-                                    <div className="absolute left-0 right-0 z-10 mt-2 rounded-lg border border-gray-200 bg-white shadow-lg">
-                                        <div className="py-1">
-                                            {statusOptions.map((opt) => (
-                                                <button
-                                                    key={opt.value}
-                                                    onClick={() => {
-                                                        setStatusFilter(opt.value);
-                                                        setShowFilterDropdown(false);
-                                                    }}
-                                                    className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 ${statusFilter === opt.value ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
-                                                >
-                                                    {opt.label}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* Partner Filter (Placeholder) */}
-                            <div className="flex-1">
-                                <div className="flex items-center justify-between px-4 py-3 text-sm border border-gray-300 rounded-lg bg-white cursor-not-allowed opacity-60">
-                                    <span className="text-gray-700">All Partners</span>
-                                    <ChevronDownIcon className="h-5 w-5 text-gray-400" />
-                                </div>
-                            </div>
-
-                            {/* Sort Dropdown */}
-                            <div className="relative flex-1" ref={sortRef}>
-                                <button
-                                    onClick={() => {
-                                        setShowSortDropdown(!showSortDropdown);
-                                        setShowFilterDropdown(false);
-                                    }}
-                                    className="w-full flex items-center justify-between px-4 py-3 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#37692F] bg-white"
-                                >
-                                    <span className="text-gray-700">{sortOptions.find(opt => opt.value === sortBy)?.label || 'All Contract Status'}</span>
-                                    <ChevronDownIcon className="h-5 w-5 text-gray-400" />
-                                </button>
-                                {showSortDropdown && (
-                                    <div className="absolute left-0 right-0 z-10 mt-2 rounded-lg border border-gray-200 bg-white shadow-lg">
-                                        <div className="py-1">
-                                            {sortOptions.map((opt) => (
-                                                <button
-                                                    key={opt.value}
-                                                    onClick={() => {
-                                                        setSortBy(opt.value);
-                                                        setShowSortDropdown(false);
-                                                    }}
-                                                    className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 ${sortBy === opt.value ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
-                                                >
-                                                    {opt.label}
-                                                </button>
-                                            ))}
-                                            <div className="border-t border-gray-200 my-1"></div>
-                                            <button
-                                                onClick={() => {
-                                                    setSortAsc(!sortAsc);
-                                                    setShowSortDropdown(false);
-                                                }}
-                                                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 text-gray-700"
-                                            >
-                                                {sortAsc ? '↑ Ascending' : '↓ Descending'}
-                                            </button>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
+                    <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                        <Filter size={20} className="text-gray-600" />
+                        <h3 className="font-semibold text-gray-900">Filters</h3>
                         </div>
+                    </div>
+
+                    <div className="flex items-center space-x-4">
+                        {/* Search Input */}
+                        <div className="flex-1 max-w-md">
+                        <div className="relative">
+                            <input
+                            type="text"
+                            placeholder="Search by contract, partner, or farm..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full rounded-md border border-gray-300 pl-10 pr-4 py-2 text-sm focus:ring-[#37692F] focus:outline-none focus:ring-2"
+                            />
+                            <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+                        </div>
+                        </div>
+
+                        {/* Status Filter Dropdown */}
+                        <div className="relative" ref={filterRef}>
+                        <button
+                            onClick={() => {
+                            setShowFilterDropdown(!showFilterDropdown);
+                            setShowSortDropdown(false);
+                            setShowExportDropdown(false);
+                            }}
+                            className="flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm hover:bg-gray-50 focus:ring-[#37692F] focus:outline-none focus:ring-2"
+                        >
+                            <FunnelIcon className="mr-2 h-4 w-4 text-gray-500" />
+                            {statusOptions.find(opt => opt.value === statusFilter)?.label || 'All Status'}
+                            <ChevronDownIcon className="ml-2 h-4 w-4 text-gray-500" />
+                        </button>
+                        {showFilterDropdown && (
+                            <div className="absolute left-0 z-10 mt-2 w-48 rounded-md border border-gray-200 bg-white shadow-lg">
+                            <div className="py-1">
+                                {statusOptions.map((opt) => (
+                                <button
+                                    key={opt.value}
+                                    onClick={() => {
+                                    setStatusFilter(opt.value);
+                                    setShowFilterDropdown(false);
+                                    }}
+                                    className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 ${statusFilter === opt.value ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                >
+                                    {opt.label}
+                                </button>
+                                ))}
+                            </div>
+                            </div>
+                        )}
+                        </div>
+
+                        {/* Sort Dropdown */}
+                        <div className="relative" ref={sortRef}>
+                        <button
+                            onClick={() => {
+                            setShowSortDropdown(!showSortDropdown);
+                            setShowFilterDropdown(false);
+                            setShowExportDropdown(false);
+                            }}
+                            className="flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm hover:bg-gray-50 focus:ring-[#37692F] focus:outline-none focus:ring-2"
+                        >
+                            <ArrowsUpDownIcon className="mr-2 h-4 w-4 text-gray-500" />
+                            {sortOptions.find(opt => opt.value === sortBy)?.label || 'Sort By'}
+                            <ChevronDownIcon className="ml-2 h-4 w-4 text-gray-500" />
+                        </button>
+                        {showSortDropdown && (
+                            <div className="absolute left-0 z-10 mt-2 w-56 rounded-md border border-gray-200 bg-white shadow-lg">
+                            <div className="py-1">
+                                {sortOptions.map((opt) => (
+                                <button
+                                    key={opt.value}
+                                    onClick={() => {
+                                    setSortBy(opt.value);
+                                    setShowSortDropdown(false);
+                                    }}
+                                    className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 ${sortBy === opt.value ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                >
+                                    {opt.label}
+                                </button>
+                                ))}
+                                <div className="border-t border-gray-200 my-1"></div>
+                                <button
+                                onClick={() => {
+                                    setSortAsc(!sortAsc);
+                                    setShowSortDropdown(false);
+                                }}
+                                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 text-gray-700"
+                                >
+                                {sortAsc ? '↑ Ascending' : '↓ Descending'}
+                                </button>
+                            </div>
+                            </div>
+                        )}
+                        </div>
+                    </div>
                     </div>
 
                     <div className="overflow-x-auto rounded-lg bg-white shadow-lg">

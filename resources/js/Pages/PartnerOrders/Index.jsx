@@ -206,16 +206,18 @@ const PartnerOrdersList = () => {
                     </div>
 
                     {/* Filters */}
-                    <div className="bg-white rounded-lg shadow p-6 mb-6">
+                        <div className="bg-white rounded-lg shadow p-6 mb-6">
                         <div className="flex items-center gap-2 mb-4">
                             <Filter size={20} className="text-gray-600" />
                             <h3 className="font-semibold text-gray-900">Filters</h3>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="flex items-center space-x-4">
+                            {/* Status Filter */}
+                            <div className="flex-1 min-w-[180px]">
                             <select
                                 value={filters.status}
                                 onChange={(e) => setFilters({ ...filters, status: e.target.value })}
-                                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm focus:ring-[#37692F] focus:outline-none focus:ring-2"
                             >
                                 <option value="">All Status</option>
                                 <option value="pending">Pending</option>
@@ -223,30 +225,36 @@ const PartnerOrdersList = () => {
                                 <option value="fulfilled">Fulfilled</option>
                                 <option value="cancelled">Cancelled</option>
                             </select>
-                            <div className="relative">
-                                <select
-                                    value={filters.partner_id}
-                                    onChange={(e) => setFilters({ ...filters, partner_id: e.target.value })}
-                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none"
-                                    style={{ backgroundPosition: 'right 0.5rem center' }}
-                                >
-                                    <option value="">All Partners</option>
-                                    {partners.map(p => (
-                                        <option key={p.id} value={p.id}>{p.name}</option>
-                                    ))}
-                                </select>
                             </div>
+
+                            {/* Partner Filter */}
+                            <div className="flex-1 min-w-[200px]">
+                            <select
+                                value={filters.partner_id}
+                                onChange={(e) => setFilters({ ...filters, partner_id: e.target.value })}
+                                className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm focus:ring-[#37692F] focus:outline-none focus:ring-2"
+                            >
+                                <option value="">All Partners</option>
+                                {partners.map(p => (
+                                <option key={p.id} value={p.id}>{p.name}</option>
+                                ))}
+                            </select>
+                            </div>
+
+                            {/* Contract Status Filter */}
+                            <div className="flex-1 min-w-[200px]">
                             <select
                                 value={filters.contract_status}
                                 onChange={(e) => setFilters({ ...filters, contract_status: e.target.value })}
-                                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm focus:ring-[#37692F] focus:outline-none focus:ring-2"
                             >
                                 {contractStatusOptions.map(opt => (
-                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
                                 ))}
                             </select>
+                            </div>
                         </div>
-                    </div>
+                        </div>
 
                     {/* Orders Table */}
                     <div className="overflow-x-auto rounded-lg bg-white shadow-lg">

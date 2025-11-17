@@ -177,93 +177,90 @@ const InventoryLedger = () => {
         <div className="max-w-7xl mx-auto">
 
           {/* Filters */}
-          <div className="bg-white rounded-lg shadow p-6 mb-6">
-            <div className="flex items-center gap-2 mb-4">
-              <Filter size={20} className="text-gray-600" />
-              <h3 className="font-semibold text-gray-900">Filters</h3>
+            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                <Filter size={20} className="text-gray-600" />
+                <h3 className="font-semibold text-gray-900">Filters</h3>
+                </div>
+                
+                {/* Clear Filters Button */}
+                {hasActiveFilters && (
+                <button
+                    onClick={clearFilters}
+                    className="text-sm text-gray-600 hover:text-gray-800 font-medium"
+                >
+                    Clear all filters
+                </button>
+                )}
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-              {/* Search */}
-              <div className="col-span-2">
-                <label className="block text-xs font-medium text-gray-700 mb-1">Search Product</label>
+            <div className="flex items-center space-x-4">
+                {/* Search Input */}
+                <div className="flex-1 max-w-md">
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                  <input
+                    <input
                     type="text"
                     placeholder="Search products..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
+                    className="w-full rounded-md border border-gray-300 pl-10 pr-4 py-2 text-sm focus:ring-[#37692F] focus:outline-none focus:ring-2"
+                    />
+                    <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
                 </div>
-              </div>
+                </div>
 
-              {/* Product Type */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Product Type</label>
+                {/* Product Type */}
+                <div className="min-w-[140px]">
                 <select
-                  value={filters.product_type}
-                  onChange={(e) => handleFilterChange('product_type', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    value={filters.product_type}
+                    onChange={(e) => handleFilterChange('product_type', e.target.value)}
+                    className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm focus:ring-[#37692F] focus:outline-none focus:ring-2"
                 >
-                  <option value="">All Types</option>
-                  <option value="Seed">Seeds</option>
-                  <option value="item">Items</option>
-                  <option value="CornProduct">Corn Products</option>
+                    <option value="">All Types</option>
+                    <option value="Seed">Seeds</option>
+                    <option value="item">Items</option>
+                    <option value="CornProduct">Corn Products</option>
                 </select>
-              </div>
+                </div>
 
-              {/* Transaction Type */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">Transaction Type</label>
+                {/* Transaction Type */}
+                <div className="min-w-[160px]">
                 <select
-                  value={filters.transaction_type}
-                  onChange={(e) => handleFilterChange('transaction_type', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    value={filters.transaction_type}
+                    onChange={(e) => handleFilterChange('transaction_type', e.target.value)}
+                    className="w-full rounded-md border border-gray-300 bg-white px-4 py-2 text-sm focus:ring-[#37692F] focus:outline-none focus:ring-2"
                 >
-                  <option value="">All</option>
-                  <option value="inbound">Inbound</option>
-                  <option value="outbound">Outbound</option>
-                  <option value="adjustment">Adjustment</option>
+                    <option value="">All</option>
+                    <option value="inbound">Inbound</option>
+                    <option value="outbound">Outbound</option>
+                    <option value="adjustment">Adjustment</option>
                 </select>
-              </div>
+                </div>
 
-              {/* Date From */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">From Date</label>
+                {/* Date From */}
+                <div>
                 <input
-                  type="date"
-                  value={filters.date_from}
-                  onChange={(e) => handleFilterChange('date_from', e.target.value)}
-                  max={filters.date_to || undefined}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    type="date"
+                    value={filters.date_from}
+                    onChange={(e) => handleFilterChange('date_from', e.target.value)}
+                    max={filters.date_to || undefined}
+                    className="rounded-md border border-gray-300 px-4 py-2 text-sm focus:ring-[#37692F] focus:outline-none focus:ring-2"
                 />
-              </div>
+                </div>
 
-              {/* Date To */}
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">To Date</label>
+                {/* Date To */}
+                <div>
                 <input
-                  type="date"
-                  value={filters.date_to}
-                  onChange={(e) => handleFilterChange('date_to', e.target.value)}
-                  min={filters.date_from || undefined}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    type="date"
+                    value={filters.date_to}
+                    onChange={(e) => handleFilterChange('date_to', e.target.value)}
+                    min={filters.date_from || undefined}
+                    className="rounded-md border border-gray-300 px-4 py-2 text-sm focus:ring-[#37692F] focus:outline-none focus:ring-2"
                 />
-              </div>
+                </div>
             </div>
-
-            {/* Clear Filters Button */}
-            {hasActiveFilters && (
-              <button
-                onClick={clearFilters}
-                className="mt-4 text-blue-600 hover:text-blue-700 text-sm font-medium"
-              >
-                Clear all filters
-              </button>
-            )}
-          </div>
+            </div>
 
           {/* Transactions Table */}
           <div className="overflow-x-auto rounded-lg bg-white shadow-lg">
