@@ -703,7 +703,7 @@ export default function Show({ auth, fieldVisit }) {
                                 </svg>
                                 Complete Visit
                             </button>
-                        )}z
+                        )}
                         {permissions.includes('cancel field visit') && (
                             <button
                                 onClick={handleCancel}
