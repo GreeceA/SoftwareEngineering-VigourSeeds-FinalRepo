@@ -131,10 +131,10 @@ class RolePermissionSeeder extends Seeder
             'terminate contract', 'complete contract', 'cancel contract',
             // Read-only access to related entities
             'view partners', 'view seeds', 'view items',
-            // Field visit creation for contracts
-            'view field visit', 'create field visit',
-            // Inventory visibility
-            'view inventory',
+            // Field visit control (can complete/cancel)
+            'view field visit', 'create field visit', 'complete field visit', 'cancel field visit',
+            // Inventory visibility and buyback control
+            'view inventory', 'record buyback transaction',
         ]);
 
         // 3. CONTRACT COORDINATOR - Limited Contract Control (No Activation)
@@ -153,9 +153,10 @@ class RolePermissionSeeder extends Seeder
         $partnerManager->syncPermissions([
             // Full partner control
             'view partners', 'create partners', 'edit partners', 'archive partners',
-            // Read-only to see partner agreements
+            // Read-only to see partner agreements and inventory
             'view contracts',
             'view field visit',
+            'view inventory',
         ]);
 
         // 5. INVENTORY MANAGER - Full Inventory & Stock Control
@@ -211,18 +212,26 @@ class RolePermissionSeeder extends Seeder
         $employee = Role::firstOrCreate(['name' => 'employee']);
         $employee->syncPermissions([]);
 
+        // 11. PARTNER VIEWER - Read-Only Partner Access
+        $partnerViewer = Role::firstOrCreate(['name' => 'partner_viewer']);
+        $partnerViewer->syncPermissions([
+            // Read-only partner access
+            'view partners',
+        ]);
+
         $this->command->info('✅ All roles and permissions created successfully!');
         $this->command->info('');
         $this->command->info('📋 ROLES CREATED:');
         $this->command->info('   1. admin - Full system access');
-        $this->command->info('   2. contract_manager - Full contract lifecycle + read access');
+        $this->command->info('   2. contract_manager - Full contract lifecycle + field visit control + buyback');
         $this->command->info('   3. contract_coordinator - Draft/submit only (no activation)');
-        $this->command->info('   4. partner_manager - Full partner management');
+        $this->command->info('   4. partner_manager - Full partner management + view inventory');
         $this->command->info('   5. inventory_manager - Full inventory + items control');
         $this->command->info('   6. warehouse_staff - Transaction recording only');
         $this->command->info('   7. seed_manager - Seed catalog specialist');
         $this->command->info('   8. field_officer - Farm inspections (no completion)');
         $this->command->info('   9. field_supervisor - Full field visit control');
         $this->command->info('  10. employee - Base role (no permissions)');
+        $this->command->info('  11. partner_viewer - Read-only partner access');
     }
 }

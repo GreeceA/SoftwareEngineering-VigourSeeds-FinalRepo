@@ -14,8 +14,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             PermissionSeeder::class,
             RolePermissionSeeder::class, // Comprehensive role setup
-            AdminUserSeeder::class,
-            \Database\Seeders\BasicUsersSeeder::class,
+            TestAccountsSeeder::class, // Test accounts for all roles
         ]);
 
         // Call functional data seeders

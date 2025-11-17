@@ -67,12 +67,16 @@ php artisan vendor:publish --provider="Spatie\Permission\PermissionServiceProvid
 php artisan migrate
 ```
 
-### 5. Seed Data (Conflict-Safe)
-Note: TestUsersSeeder was renamed to BasicUsersSeeder. The seeder suite now creates only admin and employee roles (employee has no permissions).
+### 5. Seed Data (Comprehensive Role Setup)
+The system includes 11 roles with specific permissions and test accounts for each role.
 ```bash
-php artisan db:seed --class=PermissionSeeder
-php artisan db:seed --class=AdminUserSeeder
-php artisan db:seed --class=BasicUsersSeeder
+php artisan db:seed --class=RolePermissionSeeder
+php artisan db:seed --class=TestAccountsSeeder
+```
+
+**Or seed everything at once:**
+```bash
+php artisan migrate:fresh --seed
 ```
 
 ### 6. Start Development Servers
@@ -84,36 +88,73 @@ php artisan serve
 npm run dev
 ```
 
-## 🔧 Conflict Resolution
+## 🎭 Role Structure
 
-### Existing Users
-- No automatic backup-email renaming is performed by the seeder.
-- The seeder will normalize roles so that only one admin account remains (admin@vigourseeds.com is kept as admin) and other users are assigned the employee role (no permissions). Emails are not modified.
+The system includes **11 roles** with separation of duties:
 
-### Existing Permissions
-- `delete users` → Renamed to `deactivate users`
-- `view user` → Renamed to `view users` (standardizes plural)
-- Other variations automatically standardized
+1. **admin** - Full system access
+2. **contract_manager** - Full contract lifecycle + field visit + buyback
+3. **contract_coordinator** - Draft & submit only
+4. **partner_manager** - Full partner CRUD + view inventory
+5. **partner_viewer** - Read-only partner access
+6. **inventory_manager** - Full inventory/seeds/items control
+7. **warehouse_staff** - Transaction recording only
+8. **seed_manager** - Seed catalog specialist
+9. **field_officer** - Farm inspections (no completion)
+10. **field_supervisor** - Full field visit control
+11. **employee** - Base role (no permissions)
 
-### Existing Roles  
-- `administrator` → Renamed to `admin`
-- `user` → Renamed to `employee`
-- `member` → Renamed to `employee`
-- `manager` / `testuser` roles are removed/converted to `employee`.
+**Permissions:** 41 total across user management, partners, seeds, items, contracts, inventory, and field visits.
 
 ## 🔑 Test Accounts
 
-After setup, you'll have these accounts:
+After setup, you'll have **11 test accounts** (one for each role). All use password: **`password123`**
 
-### 👑 Super Admin (Full Access)
+### 👑 Admin - Full System Access
 - **Email:** admin@vigourseeds.com
-- **Password:** admin123
-- **Can:** Do everything
+- **Can:** Everything (41 permissions)
 
-### 👤 Employee (No Permissions)
+### 📝 Contract Manager - Full Contract Control
+- **Email:** contract.manager@vigourseeds.com
+- **Can:** Full contract CRUD, field visit control, buyback transactions
+
+### 📋 Contract Coordinator - Limited Contract Control
+- **Email:** contract.coordinator@vigourseeds.com
+- **Can:** Draft & submit contracts (no activation)
+
+### 🤝 Partner Manager - Full Partner Management
+- **Email:** partner.manager@vigourseeds.com
+- **Can:** Full partner CRUD, view contracts & inventory
+
+### 👁️ Partner Viewer - Read-Only Partner Access
+- **Email:** partner.viewer@vigourseeds.com
+- **Can:** View partners only
+
+### 📦 Inventory Manager - Full Inventory Control
+- **Email:** inventory.manager@vigourseeds.com
+- **Can:** Full inventory, seeds, items CRUD
+
+### 🏭 Warehouse Staff - Transaction Recording
+- **Email:** warehouse.staff@vigourseeds.com
+- **Can:** Record inventory transactions only
+
+### 🌱 Seed Manager - Seed Catalog Specialist
+- **Email:** seed.manager@vigourseeds.com
+- **Can:** Full seed catalog management
+
+### 🚜 Field Officer - Farm Inspections
+- **Email:** field.officer@vigourseeds.com
+- **Can:** Create & edit field visits (no completion)
+
+### 👨‍🌾 Field Supervisor - Senior Field Control
+- **Email:** field.supervisor@vigourseeds.com
+- **Can:** Full field visit control including completion
+
+### 👤 Employee - Base Role
 - **Email:** employee@vigourseeds.com
-- **Password:** employee123
-- **Can:** No special permissions (employee role is intentionally empty)
+- **Can:** No special permissions
+
+**📄 See `TEST-ACCOUNTS.md` for complete permission details**
 
 ## 🛠️ Troubleshooting
 
@@ -139,9 +180,10 @@ npm run build
 
 ## ⚠️ Important Notes
 
-- **Existing Data:** The setup normalizes roles but does not change user emails.
+- **Test Accounts:** All accounts use password `password123` - change in production!
 - **Backups:** Always backup your database before running migrations and seeders.
-- **Test Accounts:** Delete test accounts before production deployment if needed.
-- **Admin Password:** Change admin password after first login
+- **Production:** Remove test accounts before deploying to production.
+- **Permission Cache:** Run `php artisan permission:cache-reset` if permissions don't update.
+- **Detailed Guide:** See `TEST-ACCOUNTS.md` for complete role & permission matrix
 
 Happy coding! 🎉
