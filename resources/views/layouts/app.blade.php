@@ -23,7 +23,7 @@
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center h-16">
                 <div class="flex items-center space-x-3">
-                    <img src="/vigour-logo.png" alt="Vigour Seeds Logo" class="h-10 w-10" />
+                    <img src="{{ asset('vigour-logo.png') }}" alt="Vigour Seeds Logo" class="h-10 w-10" />
                     <span class="text-white text-xl font-bold tracking-tight">
                         <span class="font-extrabold">VIGOUR SEEDS</span>
                         <span class="font-light"> | Partner Portal</span>

@@ -4,6 +4,7 @@
 
 @section('content')
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    
     @if(session('success'))
         <div class="mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
             <div class="flex items-center">
@@ -85,7 +86,7 @@
                         </svg>
                         <div>
                             <p class="text-sm font-medium text-gray-700">Committed Buyback Price</p>
-                            <p class="text-gray-900 font-semibold">PHP {{ number_format($contract->buyback_price_per_unit, 4) }} / kg</p>
+                            <p class="text-gray-900 font-semibold">PHP {{ number_format($contract->buyback_price_per_unit, 2) }} / kg</p>
                         </div>
                     </div>
                 </div>
