@@ -80,7 +80,7 @@ class BuybackController extends Controller implements HasMiddleware
     /**
      * Show form for recording buyback delivery
      */
-    public function createInbound()
+        public function createInbound(Request $request)
     {
         $contracts = Contract::active()
             ->with(['partner', 'contractSeedCommitments.seed.cornProduct', 'buybackTransactions'])
@@ -126,9 +126,13 @@ class BuybackController extends Controller implements HasMiddleware
         // Get all corn products (auto-generated from seeds)
         $cornProducts = CornProduct::active()->get();
 
+        // Get the prefilled contract_id from query parameter
+        $prefilledContractId = $request->query('contract_id');
+
         return Inertia::render('Buybacks/Inbound', [
             'contracts' => $contracts,
             'cornProducts' => $cornProducts,
+            'prefilledContractId' => $prefilledContractId,
         ]);
     }
 

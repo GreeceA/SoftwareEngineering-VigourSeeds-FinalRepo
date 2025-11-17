@@ -695,6 +695,30 @@ class ContractController extends Controller implements HasMiddleware
             $oldStatus = $contract->status;
             $contract->update(['status' => $status]);
 
+            // Auto-cancel ongoing field visits when contract is terminated
+            if ($status === 'terminated') {
+                $ongoingVisits = \App\Models\FieldVisit::where('contract_ID', $contract->id)
+                    ->where('status', 'ongoing')
+                    ->get();
+
+                foreach ($ongoingVisits as $visit) {
+                    $visit->update([
+                        'status' => 'cancelled',
+                        'remarks' => $visit->remarks 
+                            ? $visit->remarks . ' | Auto-cancelled due to contract termination.'
+                            : 'Auto-cancelled due to contract termination.'
+                    ]);
+                }
+
+                if ($ongoingVisits->count() > 0) {
+                    Log::info("Auto-cancelled ongoing field visits due to contract termination", [
+                        'contract_id' => $contract->id,
+                        'cancelled_visits_count' => $ongoingVisits->count(),
+                        'user_id' => auth()->id(),
+                    ]);
+                }
+            }
+
             if ($status === 'active') {
                 // Check if an order already exists for this contract
                 $existingOrder = \App\Models\PartnerOrder::where('contract_id', $contract->id)->first();
@@ -731,8 +755,13 @@ class ContractController extends Controller implements HasMiddleware
                 'user_id' => auth()->id(),
             ]);
 
+            // Custom success message for terminated status
+            $successMessage = $status === 'terminated' 
+                ? "Contract status successfully changed to terminated. All ongoing field visits have been automatically cancelled."
+                : "Contract status successfully changed to {$status}.";
+
             return redirect()->back()
-                ->with('success', "Contract status successfully changed to {$status}.");
+                ->with('success', $successMessage);
         } catch (\Exception $e) {
             Log::error("Failed to change contract status", [
                 'contract_id' => $contract->id,

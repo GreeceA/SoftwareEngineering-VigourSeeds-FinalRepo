@@ -181,7 +181,7 @@ const BuybackContractDetails = () => {
                                     </span>
                                 </div>
                             </div>
-                            {permissions.includes('create inventory') && (
+                            {permissions.includes('create inventory') && contract.status === 'active' && (
                                 <Link
                                     href={route('buybacks.inbound.create', { contract_id: contract.id })}
                                     className="w-full mt-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center justify-center gap-2 transition"
