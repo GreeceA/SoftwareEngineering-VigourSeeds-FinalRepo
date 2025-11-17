@@ -257,7 +257,7 @@ export default function Show({ auth, contract }) {
                                 )}
 
                                 {/* Activate Contract - Under Review status */}
-                                {permissions.includes('edit contracts') && contract.status === 'under_review' && contract.available_transitions?.includes('active') && (
+                                {permissions.includes('edit contracts') && permissions.includes('activate contracts') && contract.status === 'under_review' && contract.available_transitions?.includes('active') && (
                                     <button
                                         onClick={() => handleOpenStatusModal('active')}
                                         className="flex flex-col items-center justify-center rounded-lg bg-green-50 p-4 text-center transition-all hover:bg-green-100 hover:shadow-md border border-green-200"
@@ -269,7 +269,7 @@ export default function Show({ auth, contract }) {
                                 )}
 
                                 {/* Complete Contract - Active status */}
-                                {permissions.includes('edit contracts') && contract.status === 'active' && contract.available_transitions?.includes('completed') && (
+                                {permissions.includes('edit contracts') && permissions.includes('activate contracts') && contract.status === 'active' && contract.available_transitions?.includes('completed') && (
                                     <button
                                         onClick={() => setShowCompleteModal(true)}
                                         className="flex flex-col items-center justify-center rounded-lg bg-green-50 p-4 text-center transition-all hover:bg-green-100 hover:shadow-md border border-green-200"
@@ -281,7 +281,7 @@ export default function Show({ auth, contract }) {
                                 )}
 
                                 {/* Suspend Contract - Active status */}
-                                {permissions.includes('edit contracts') && contract.status === 'active' && contract.available_transitions?.includes('suspended') && (
+                                {permissions.includes('edit contracts') && permissions.includes('activate contracts') && contract.status === 'active' && contract.available_transitions?.includes('suspended') && (
                                     <button
                                         onClick={() => handleOpenStatusModal('suspended')}
                                         className="flex flex-col items-center justify-center rounded-lg bg-yellow-50 p-4 text-center transition-all hover:bg-yellow-100 hover:shadow-md border border-yellow-200"
@@ -293,7 +293,7 @@ export default function Show({ auth, contract }) {
                                 )}
 
                                 {/* Reactivate Contract - Only when suspended */}
-                                {permissions.includes('edit contracts') && contract.status === 'suspended' && contract.available_transitions?.includes('active') && (
+                                {permissions.includes('edit contracts') && permissions.includes('activate contracts') && contract.status === 'suspended' && contract.available_transitions?.includes('active') && (
                                     <button
                                         onClick={() => handleOpenStatusModal('active')}
                                         className="flex flex-col items-center justify-center rounded-lg bg-green-50 p-4 text-center transition-all hover:bg-green-100 hover:shadow-md border border-green-200"
@@ -305,7 +305,7 @@ export default function Show({ auth, contract }) {
                                 )}
 
                                 {/* Terminate Contract - when active or suspended */}
-                                {permissions.includes('edit contracts') && ['active', 'suspended'].includes(contract.status) && contract.available_transitions?.includes('terminated') && (
+                                {permissions.includes('edit contracts') && permissions.includes('activate contracts') && ['active', 'suspended'].includes(contract.status) && contract.available_transitions?.includes('terminated') && (
                                     <button
                                         onClick={() => handleOpenStatusModal('terminated')}
                                         className="flex flex-col items-center justify-center rounded-lg bg-red-50 p-4 text-center transition-all hover:bg-red-100 hover:shadow-md border border-red-200"
