@@ -29,10 +29,10 @@ class InventoryTransactionController extends Controller implements HasMiddleware
 
     /**
      * Display the inventory ledger
-     */
+        */
     public function index(Request $request)
     {
-        $query = InventoryTransaction::with(['contract', 'partnerOrder', 'creator'])
+        $query = InventoryTransaction::with(['contract', 'partnerOrder', 'creator', 'seed', 'item', 'cornProduct'])
             ->orderBy('created_at', 'desc');
 
         // Filter by product type
@@ -57,21 +57,22 @@ class InventoryTransactionController extends Controller implements HasMiddleware
         if ($request->filled('search')) {
             $searchTerm = $request->search;
 
-            // Get seed IDs that match the search
             $seedIds = Seed::where('seed_variety', 'LIKE', "%{$searchTerm}%")->pluck('id');
-
-            // Get item IDs that match the search
             $itemIds = Item::where('name', 'LIKE', "%{$searchTerm}%")->pluck('id');
+            $cornProductIds = CornProduct::where('name', 'LIKE', "%{$searchTerm}%")->pluck('id');
 
-            // Filter transactions by matching product IDs
-            $query->where(function ($q) use ($seedIds, $itemIds) {
+            $query->where(function ($q) use ($seedIds, $itemIds, $cornProductIds) {
                 $q->where(function ($subQ) use ($seedIds) {
                     $subQ->where('product_type', 'Seed')
-                         ->whereIn('product_id', $seedIds);
+                        ->whereIn('product_id', $seedIds);
                 })
                 ->orWhere(function ($subQ) use ($itemIds) {
                     $subQ->where('product_type', 'item')
-                         ->whereIn('product_id', $itemIds);
+                        ->whereIn('product_id', $itemIds);
+                })
+                ->orWhere(function ($subQ) use ($cornProductIds) {
+                    $subQ->where('product_type', 'CornProduct')
+                        ->whereIn('product_id', $cornProductIds);
                 });
             });
         }
@@ -80,7 +81,6 @@ class InventoryTransactionController extends Controller implements HasMiddleware
 
         // Transform transactions to include product names and user names
         $transactions->getCollection()->transform(function ($txn) {
-            // Handle product name for each type
             if ($txn->product_type === 'Seed' || $txn->product_type === 'seed') {
                 $seed = $txn->seed;
                 $txn->product_name = $seed ? $seed->seed_variety : '-';
@@ -94,7 +94,6 @@ class InventoryTransactionController extends Controller implements HasMiddleware
                 $txn->product_name = '-';
             }
 
-            // Attach user name
             $txn->user_name = $txn->creator
                 ? trim(($txn->creator->first_name ?? '') . ' ' . ($txn->creator->last_name ?? ''))
                 : '-';

@@ -211,7 +211,7 @@
 
     @if($hasFilters)
     <div class="filters-applied">
-        <div class="filter-title">📋 Filters Applied:</div>
+        <div class="filter-title">Filters Applied:</div>
         @if($filters['product_type'])
             <span class="filter-item"><strong>Product Type:</strong> {{ ucfirst($filters['product_type']) }}</span>
         @endif
