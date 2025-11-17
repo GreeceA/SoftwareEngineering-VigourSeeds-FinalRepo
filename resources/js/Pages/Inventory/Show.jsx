@@ -172,10 +172,15 @@ const Show = () => {
                                 <h3 className="font-semibold text-gray-900">Filter Transactions</h3>
                             </div>
                             {permissions.includes('view inventory') && (
-                                <button className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1">
+                                <a
+                                    href={route('inventory.exportProductLedger', [product.type.toLowerCase(), product.id])}
+                                    className="text-blue-600 hover:text-blue-700 text-sm font-medium flex items-center gap-1"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                >
                                     <Download size={16} />
                                     Export
-                                </button>
+                                </a>
                             )}
                         </div>
                         <div className="flex gap-2 p-4">

@@ -799,4 +799,81 @@ class InventoryTransactionController extends Controller implements HasMiddleware
 
         return $pdf->download('VigourSeed_InventoryLedger_' . now()->format('Y-m-d') . '.pdf');
     }
+
+    public function exportProductLedger($productType, $productId)
+    {
+        $product = null;
+        $unit = 'kg';
+
+        if ($productType === 'seed') {
+            $product = \App\Models\Seed::findOrFail($productId);
+            $productData = [
+                'id' => $product->id,
+                'name' => $product->seed_variety,
+                'type' => 'Seed',
+                'current_stock' => $product->getCurrentStock(),
+                'unit' => $unit,
+                'status' => $this->determineStockStatus($product->getCurrentStock()),
+            ];
+        } elseif ($productType === 'item') {
+            $product = \App\Models\Item::findOrFail($productId);
+            $productData = [
+                'id' => $product->id,
+                'name' => $product->name,
+                'type' => $product->type,
+                'current_stock' => $product->getCurrentStock(),
+                'unit' => $product->base_unit ?? $unit,
+                'status' => $this->determineStockStatus($product->getCurrentStock()),
+            ];
+        } else {
+            abort(404, 'Invalid product type');
+        }
+
+        $transactions = \App\Models\InventoryTransaction::with(['creator', 'contract', 'partnerOrder'])
+            ->where('product_type', $productType)
+            ->where('product_id', $productId)
+            ->orderBy('created_at', 'asc') 
+            ->get();
+
+        $convertToKg = function ($qty, $unit) {
+            if ($unit === 'ton') return $qty * 1000;
+            if ($unit === 'sack') return $qty * 50;
+            return $qty;
+        };
+
+        $runningBalance = 0;
+        $transactionsWithBalance = $transactions->map(function ($transaction) use (&$runningBalance, $convertToKg, $productData) {
+            $qtyKg = abs($convertToKg(floatval($transaction->qty), $transaction->unit));
+            $transaction->qty_converted = $qtyKg;
+            $transaction->unit_converted = $productData['unit'];
+
+            if ($transaction->transaction_type === 'inbound') {
+                $runningBalance += $qtyKg;
+            } elseif ($transaction->transaction_type === 'outbound') {
+                $runningBalance -= $qtyKg;
+            } elseif ($transaction->transaction_type === 'adjustment') {
+                $runningBalance += $transaction->qty >= 0 ? $qtyKg : -$qtyKg;
+            }
+
+            $transaction->running_balance = $runningBalance;
+
+            $transaction->user_name = $transaction->creator
+                ? trim(($transaction->creator->first_name ?? '') . ' ' . ($transaction->creator->last_name ?? ''))
+                : '-';
+
+            return $transaction;
+        });
+
+        // Get current user
+        $currentUser = Auth::user();
+        $userName = trim(($currentUser->first_name ?? '') . ' ' . ($currentUser->last_name ?? '')) ?: $currentUser->email;
+
+        return \Barryvdh\DomPDF\Facade\Pdf::loadView('exports.inventory_product_ledger_pdf', [
+            'product' => $productData,
+            'transactions' => $transactionsWithBalance,
+            'user' => (object)['name' => $userName], // Pass user as object with name
+            'generationDate' => now()->format('F d, Y - h:i A')
+        ])->setPaper('A4', 'landscape')
+        ->download('Inventory_Ledger_' . $productData['name'] . '_' . now()->format('Ymd') . '.pdf');
+    }
 }

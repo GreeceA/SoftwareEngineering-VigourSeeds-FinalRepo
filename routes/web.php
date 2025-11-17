@@ -238,7 +238,10 @@ Route::middleware(['auth'])->group(function () {
     // Inventory Dashboard
     Route::get('/inventory/export/dashboard', [InventoryTransactionController::class, 'exportDashboard'])->name('inventory.export.dashboard');
     Route::get('/inventory/ledger/export', [InventoryTransactionController::class, 'exportLedger'])->name('inventory.ledger.export');
-
+    Route::get('/inventory/{productType}/{productId}/export-ledger', [InventoryTransactionController::class, 'exportProductLedger'])
+        ->name('inventory.exportProductLedger')
+        ->middleware('permission:view inventory');
+        
     Route::get('/inventory/dashboard', [InventoryTransactionController::class, 'dashboard'])
         ->name('inventory.dashboard');
     
