@@ -206,12 +206,14 @@ export default function Edit({ mustVerifyEmail, status }) {
 
                                         <div className="flex items-center space-x-4 mb-4">
                                             {/* Role Badge */}
-                                            <span className="inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold bg-gradient-to-r from-[#37692F] to-[#4a8a3f] text-white shadow-md">
-                                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                                </svg>
-                                                {user.role === 'admin' ? 'Administrator' : 'Employee'}
-                                            </span>
+                                            {user.roles && user.roles.length > 0 && (
+                                                <span className="inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold bg-gradient-to-r from-[#37692F] to-[#4a8a3f] text-white shadow-md">
+                                                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                                    </svg>
+                                                    {user.roles[0].name.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                                                </span>
+                                            )}
 
                                             {/* Status Indicator */}
                                             <div className="flex items-center text-sm font-medium">
