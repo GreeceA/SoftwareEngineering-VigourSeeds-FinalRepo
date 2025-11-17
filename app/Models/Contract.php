@@ -195,16 +195,16 @@ class Contract extends Model
         return $query->where('partner_id', $partnerId);
     }
 
-    public function scopeSearch(Builder $query, string $search): Builder
+    public function scopeSearch($query, $search)
     {
         return $query->where(function ($q) use ($search) {
             $q->where('contract_name', 'like', "%{$search}%")
-                ->orWhereHas('partner', function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%");
-                })
-                ->orWhereHas('seedCommitments.seed', function ($q) use ($search) {
-                    $q->where('seed_variety', 'like', "%{$search}%");
-                });
+            ->orWhereHas('partner', function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%");
+            })
+            ->orWhereHas('contractSeedCommitments.seed', function ($q) use ($search) {
+                $q->where('seed_variety', 'like', "%{$search}%");
+            });
         });
     }
 

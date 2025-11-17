@@ -36,61 +36,94 @@ class ContractController extends Controller implements HasMiddleware
      */
     public function index(Request $request)
     {
-        // Optimized: Only load partner name, limit seed commitments to 3
-        $query = Contract::with(['partner:id,name', 'contractSeedCommitments' => function($q) {
-            $q->limit(3)->with('seed:id,seed_variety');
-        }]);
+        try {
+            // Optimized: Only load partner name, limit seed commitments to 3
+            $query = Contract::with(['partner:id,name', 'contractSeedCommitments' => function($q) {
+                $q->limit(3)->with('seed:id,seed_variety');
+            }]);
 
-        // Apply search
-        if ($request->filled('search')) {
-            $query->search($request->search);
-        }
+            // Apply search
+            if ($request->filled('search')) {
+                $query->where(function ($q) use ($request) {
+                    $q->where('contract_name', 'like', "%{$request->search}%")
+                    ->orWhereHas('partner', function ($q) use ($request) {
+                        $q->where('name', 'like', "%{$request->search}%");
+                    })
+                    ->orWhereHas('contractSeedCommitments.seed', function ($q) use ($request) {
+                        $q->where('seed_variety', 'like', "%{$request->search}%");
+                    });
+                });
+            }
 
-        // Apply status filter
-        if ($request->filled('status') && $request->status !== 'all') {
-            $query->where('status', $request->status);
-        }
+            // Apply status filter
+            if ($request->filled('status') && $request->status !== 'all') {
+                $query->where('status', $request->status);
+            }
 
-        // Apply sorting
-        $sortBy = $request->get('sort_by', 'id');
-        $sortDir = $request->get('sort_dir', 'desc');
+            // Apply sorting
+            $sortBy = $request->get('sort_by', 'id');
+            $sortDir = $request->get('sort_dir', 'desc');
 
-        $validSortColumns = ['id', 'contract_name', 'signing_date', 'effective_date', 'expiration_date', 'status'];
-        if (in_array($sortBy, $validSortColumns)) {
-            $query->orderBy($sortBy, $sortDir);
-        } else {
-            $query->latest();
-        }
+            $validSortColumns = ['id', 'contract_name', 'signing_date', 'effective_date', 'expiration_date', 'status'];
+            if (in_array($sortBy, $validSortColumns)) {
+                $query->orderBy($sortBy, $sortDir);
+            } else {
+                $query->latest();
+            }
 
-        $perPage = min($request->get('per_page', 15), 100); // Cap at 100
+            $perPage = min($request->get('per_page', 15), 100); // Cap at 100
 
-        $contracts = $query->paginate($perPage)
-            ->through(fn ($contract) => [
-                'id' => $contract->id,
-                'contract_name' => $contract->contract_name,
-                'partner_name' => $contract->partner->name,
-                'signing_date' => $contract->signing_date->format('Y-m-d'),
-                'effective_date' => $contract->effective_date?->format('Y-m-d'),
-                'expiration_date' => $contract->expiration_date?->format('Y-m-d'),
-                'seed_varieties' => $contract->contractSeedCommitments
-                    ->take(3)
-                    ->map(fn ($item) => $item->seed->seed_variety)
-                    ->implode(', '),
-                'status' => $contract->status,
-                'is_expired' => $contract->isExpired(),
-                'days_until_expiration' => $contract->getDaysUntilExpiration(),
+            $contracts = $query->paginate($perPage)
+                ->through(fn ($contract) => [
+                    'id' => $contract->id,
+                    'contract_name' => $contract->contract_name,
+                    'partner_name' => $contract->partner?->name ?? 'N/A',
+                    'signing_date' => $contract->signing_date?->format('Y-m-d') ?? null,
+                    'effective_date' => $contract->effective_date?->format('Y-m-d') ?? null,
+                    'expiration_date' => $contract->expiration_date?->format('Y-m-d') ?? null,
+                    'seed_varieties' => $contract->contractSeedCommitments
+                        ? $contract->contractSeedCommitments
+                            ->take(3)
+                            ->map(fn ($item) => $item->seed?->seed_variety ?? 'N/A')
+                            ->filter()
+                            ->implode(', ')
+                        : '',
+                    'status' => $contract->status,
+                    'is_expired' => $contract->isExpired(),
+                    'days_until_expiration' => $contract->getDaysUntilExpiration(),
+                ]);
+
+            return Inertia::render('Contracts/Index', [
+                'contracts' => $contracts,
+                'filters' => [
+                    'search' => $request->search,
+                    'status' => $request->status ?? 'all',
+                    'sort_by' => $sortBy,
+                    'sort_dir' => $sortDir,
+                    'per_page' => $perPage,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Failed to load contracts index", [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'user_id' => auth()->id(),
             ]);
 
-        return Inertia::render('Contracts/Index', [
-            'contracts' => $contracts,
-            'filters' => [
-                'search' => $request->search,
-                'status' => $request->status ?? 'all',
-                'sort_by' => $sortBy,
-                'sort_dir' => $sortDir,
-                'per_page' => $perPage,
-            ],
-        ]);
+            return Inertia::render('Contracts/Index', [
+                'contracts' => ['data' => [], 'links' => [], 'total' => 0],
+                'filters' => [
+                    'search' => $request->search,
+                    'status' => $request->status ?? 'all',
+                    'sort_by' => 'id',
+                    'sort_dir' => 'desc',
+                    'per_page' => 15,
+                ],
+                'flash' => [
+                    'error' => 'Failed to load contracts. Please contact support if the issue persists.'
+                ]
+            ]);
+        }
     }
 
     /**
