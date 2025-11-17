@@ -395,13 +395,13 @@ const BuybackContractDetails = () => {
                             <table className="w-full">
                                 <thead className="bg-gray-50 border-b">
                                     <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product Name</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Qty Ordered</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Unit</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Delivered</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Price/Unit</th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Product</th>
+                                        <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Product Name</th>
+                                        <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Qty Ordered</th>
+                                        <th className="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Unit</th>
+                                        <th className="px-6 py-4 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Delivered</th>
+                                        <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Price/Unit</th>
+                                        <th className="px-6 py-4 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">Total</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
@@ -433,40 +433,14 @@ const BuybackContractDetails = () => {
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     {line.product_name}
-                                                    {isBackordered && (
-                                                        <span className="ml-2 text-orange-500" title="Ordered quantity exceeds available stock">
-                                                            ⚠️
-                                                        </span>
-                                                    )}
                                                 </td>
-                                                <td className="px-6 py-4">
+                                                <td className="px-6 py-4 text-right">
                                                     {line.qty}
-                                                    {isBackordered && (
-                                                        <span
-                                                            className="ml-2 text-orange-500"
-                                                            title={`Available: ${availableStockKg} kg (${(() => {
-                                                                let qty = Number(line.qty) || 0;
-                                                                switch (line.unit) {
-                                                                    case 'sack':
-                                                                        qty = qty * 50;
-                                                                        break;
-                                                                    case 'ton':
-                                                                        qty = qty * 1000;
-                                                                        break;
-                                                                    default:
-                                                                        break;
-                                                                }
-                                                                return qty;
-                                                            })()} kg ordered)`}
-                                                        >
-                                                            ⚠️
-                                                        </span>
-                                                    )}
                                                 </td>
-                                                <td className="px-6 py-4">{line.unit}</td>
-                                                <td className="px-6 py-4">{line.delivered_qty}</td>
-                                                <td className="px-6 py-4">₱{Number(line.price_per_unit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                                                <td className="px-6 py-4 font-semibold text-green-600">
+                                                <td className="px-6 py-4 text-center">{line.unit}</td>
+                                                <td className="px-6 py-4 text-center">{line.delivered_qty}</td>
+                                                <td className="px-6 py-4 text-right">₱{Number(line.price_per_unit).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                                <td className="px-6 py-4 text-right font-semibold text-green-600">
                                                     ₱{(() => {
                                                         let qty = Number(line.qty) || 0;
                                                         let price = Number(line.price_per_unit) || 0;
@@ -491,7 +465,7 @@ const BuybackContractDetails = () => {
                                             <td colSpan={6} className="px-6 py-4 text-right font-bold text-gray-900">
                                                 Total
                                             </td>
-                                            <td className="px-6 py-4 font-bold text-green-700">
+                                            <td className="px-6 py-4 text-right font-bold text-green-700">
                                                 ₱{lines.reduce((sum, line) => {
                                                     let qty = Number(line.qty) || 0;
                                                     let price = Number(line.price_per_unit) || 0;

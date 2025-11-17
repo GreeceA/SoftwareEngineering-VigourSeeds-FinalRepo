@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ShoppingCart, Plus, Filter, Eye, CheckCircle, Clock, XCircle } from 'lucide-react';
+import { XCircleIcon } from '@heroicons/react/24/outline';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { usePage, Link } from '@inertiajs/react';
 import CancelOrderModal from './CancelOrderModal';
@@ -248,34 +249,21 @@ const PartnerOrdersList = () => {
                     </div>
 
                     {/* Orders Table */}
-                    <div className="bg-white rounded-lg shadow overflow-hidden">
-                        <table className="w-full">
-                            <thead className="bg-gray-50 border-b">
+                    <div className="overflow-x-auto rounded-lg bg-white shadow-lg">
+                        <table className="w-full text-left text-sm">
+                            <thead className="bg-[#37692F] text-xs uppercase text-gray-600">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Order Details
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Partner
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Contract Status
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Status
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Fulfillment
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Total Value
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Actions
-                                    </th>
+                                    {['ORDER DETAILS', 'PARTNER', 'CONTRACT STATUS', 'STATUS', 'FULFILLMENT', 'TOTAL VALUE', 'ACTIONS'].map((header) => (
+                                        <th
+                                            key={header}
+                                            className="px-6 py-4 font-poppins text-[14px] font-medium text-white"
+                                        >
+                                            {header}
+                                        </th>
+                                    ))}
                                 </tr>
                             </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
+                            <tbody className="divide-y divide-gray-200">
                                 {filteredOrders.map((order) => {
                                     const statusConfig = getStatusConfig(order.status);
                                     const StatusIcon = statusConfig.icon;
@@ -310,15 +298,15 @@ const PartnerOrdersList = () => {
                                     }
 
                                     return (
-                                        <tr key={order.id} className="hover:bg-gray-50 transition">
+                                        <tr key={order.id} className="hover:bg-gray-50">
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center gap-3">
                                                     <div className="bg-blue-100 p-2 rounded">
                                                         <ShoppingCart className="text-blue-600" size={20} />
                                                     </div>
                                                     <div>
-                                                        <p className="font-medium text-gray-900">{order.order_number || `PO-${order.contract?.contract_name}-${order.id}`}</p>
-                                                        <p className="text-sm text-gray-500">
+                                                        <p className="font-poppins text-[13px] font-medium text-gray-900">{order.order_number || `PO-${order.contract?.contract_name}-${order.id}`}</p>
+                                                        <p className="font-poppins text-[12px] font-normal text-gray-500">
                                                             {order.order_date
                                                                 ? new Date(order.order_date).toLocaleString('en-GB', {
                                                                     year: 'numeric',
@@ -328,7 +316,7 @@ const PartnerOrdersList = () => {
                                                                 : ''}
                                                         </p>
                                                         {contractNumber && (
-                                                            <span className="text-xs bg-purple-100 text-purple-800 px-2 py-0.5 rounded mt-1 inline-block">
+                                                            <span className="font-poppins text-[11px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded mt-1 inline-block">
                                                                 {contractNumber}
                                                             </span>
                                                         )}
@@ -336,25 +324,20 @@ const PartnerOrdersList = () => {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <p className="text-sm font-medium text-gray-900">{order.partner?.name}</p>
-                                                <p className="text-xs text-gray-500">{linesCount} line items</p>
+                                                <p className="font-poppins text-[13px] font-medium text-gray-900">{order.partner?.name}</p>
+                                                <p className="font-poppins text-[12px] font-normal text-gray-500">{linesCount} line items</p>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className={`px-3 py-1 text-xs font-medium rounded-full border ${contractStatusConfig.color}`}>
+                                                <span className={`rounded-full px-3 py-1 text-xs font-poppins font-normal shadow-sm border ${contractStatusConfig.color}`}>
                                                     {contractStatusConfig.label}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
                                                 <div className="flex items-center gap-2">
                                                     <StatusIcon size={16} />
-                                                    <span className={`px-3 py-1 text-xs font-medium rounded-full border ${statusConfig.color}`}>
+                                                    <span className={`rounded-full px-3 py-1 text-xs font-poppins font-normal shadow-sm border ${statusConfig.color}`}>
                                                         {statusConfig.label}
                                                     </span>
-                                                    {order.status === 'pending' && needsStock && (
-                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full border bg-amber-100 text-amber-800 border-amber-200 ml-2">
-                                                            <span role="img" aria-label="warning">⚠️</span> Awaiting Stock
-                                                        </span>
-                                                    )}
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
@@ -367,32 +350,35 @@ const PartnerOrdersList = () => {
                                                             style={{ width: `${fulfillment}%` }}
                                                         />
                                                     </div>
-                                                    <span className="text-sm font-medium text-gray-700 w-12 text-right">
+                                                    <span className="font-poppins text-[12px] font-medium text-gray-700 w-12 text-right">
                                                         {Number(fulfillment).toFixed(2)}%
                                                     </span>
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className="font-bold text-gray-900">
+                                                <span className="font-poppins text-[13px] font-bold text-gray-900">
                                                     ₱{totalValue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                <Link
-                                                    href={route('partner-orders.show', { partnerOrder: order.id })}
-                                                    className="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium text-sm transition"
-                                                >
-                                                    <Eye size={16} />
-                                                    View Details
-                                                </Link>
-                                                {canCancel(order) && (
-                                                    <button
-                                                        onClick={() => openCancelModal(order)}
-                                                        className="ml-3 text-red-600 hover:text-red-800 font-medium text-sm transition"
+                                                <div className="flex items-center gap-2">
+                                                    <Link
+                                                        href={route('partner-orders.show', { partnerOrder: order.id })}
+                                                        className="font-poppins text-[13px] font-normal text-blue-600 hover:text-blue-800 transition-colors duration-200 flex items-center gap-2"
                                                     >
-                                                        Cancel
-                                                    </button>
-                                                )}
+                                                        <Eye size={16} />
+                                                        View Details
+                                                    </Link>
+                                                    {canCancel(order) && (
+                                                        <button
+                                                            onClick={() => openCancelModal(order)}
+                                                            className="text-red-600 hover:text-red-800 transition-colors duration-200"
+                                                            title="Cancel Order"
+                                                        >
+                                                            <XCircleIcon className="h-5 w-5" />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </td>
                                         </tr>
                                     );
@@ -408,9 +394,9 @@ const PartnerOrdersList = () => {
                                 key={idx}
                                 disabled={link.active || !link.url}
                                 onClick={() => link.url && window.location.assign(link.url)}
-                                className={`px-3 py-1 rounded border text-sm font-medium ${link.active
-                                        ? 'bg-blue-600 text-white border-blue-600'
-                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50'
+                                className={`px-3 py-1 rounded transition font-poppins text-[13px] ${link.active
+                                        ? 'bg-[#37692F] text-white font-medium'
+                                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'
                                     }`}
                                 dangerouslySetInnerHTML={{ __html: link.label }}
                             />
