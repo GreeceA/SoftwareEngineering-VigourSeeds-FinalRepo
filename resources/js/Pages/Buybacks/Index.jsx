@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { Leaf, TrendingUp, AlertCircle, CheckCircle, Plus, Eye } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Leaf, TrendingUp, AlertCircle, CheckCircle, Plus, Eye, Search } from 'lucide-react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { usePage, Link, router } from '@inertiajs/react';
+import { ChevronDownIcon, FunnelIcon, ArrowsUpDownIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 
 const statusOptions = [
     { value: 'all', label: 'All' },
@@ -32,11 +33,45 @@ const BuybackOverview = () => {
     const [statusFilter, setStatusFilter] = useState('all');
     const [sortBy, setSortBy] = useState('contract_number');
     const [sortAsc, setSortAsc] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    // Dropdown states
+    const [showExportDropdown, setShowExportDropdown] = useState(false);
+    const [showFilterDropdown, setShowFilterDropdown] = useState(false);
+    const [showSortDropdown, setShowSortDropdown] = useState(false);
+
+    // Refs for dropdown detection
+    const exportRef = useRef(null);
+    const filterRef = useRef(null);
+    const sortRef = useRef(null);
+
+    // Close dropdowns when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (exportRef.current && !exportRef.current.contains(event.target)) {
+                setShowExportDropdown(false);
+            }
+            if (filterRef.current && !filterRef.current.contains(event.target)) {
+                setShowFilterDropdown(false);
+            }
+            if (sortRef.current && !sortRef.current.contains(event.target)) {
+                setShowSortDropdown(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     // contracts is now a paginated object
-    const filteredContracts = statusFilter === 'all'
-        ? contracts.data
-        : contracts.data.filter(c => c.status === statusFilter);
+    const filteredContracts = contracts.data.filter(c => {
+        const matchesStatus = statusFilter === 'all' || c.status === statusFilter;
+        const matchesSearch = searchTerm === '' || 
+            c.contract_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            c.partner_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            c.farm_name?.toLowerCase().includes(searchTerm.toLowerCase());
+        return matchesStatus && matchesSearch;
+    });
 
     const sortedContracts = [...filteredContracts].sort((a, b) => {
         if (a[sortBy] < b[sortBy]) return sortAsc ? -1 : 1;
@@ -131,41 +166,6 @@ const BuybackOverview = () => {
             <div className="p-6">
                 <div className="max-w-7xl mx-auto">
 
-                    {/* Filter and Sort Controls */}
-                    <div className="mb-4 flex gap-2 flex-wrap">
-                        {statusOptions.map(opt => (
-                            <button
-                                key={opt.value}
-                                onClick={() => setStatusFilter(opt.value)}
-                                className={`px-4 py-2 rounded-lg font-medium border transition ${statusFilter === opt.value
-                                        ? 'bg-blue-600 text-white border-blue-600'
-                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50'
-                                    }`}
-                            >
-                                {opt.label}
-                            </button>
-                        ))}
-                        <div className="ml-auto flex items-center gap-2">
-                            <label className="text-sm font-medium text-gray-700">Sort by:</label>
-                            <select
-                                value={sortBy}
-                                onChange={e => setSortBy(e.target.value)}
-                                className="px-2 py-1 rounded border border-gray-300"
-                            >
-                                {sortOptions.map(opt => (
-                                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                ))}
-                            </select>
-                            <button
-                                onClick={() => setSortAsc(!sortAsc)}
-                                className="px-2 py-1 rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
-                                title={sortAsc ? 'Ascending' : 'Descending'}
-                            >
-                                {sortAsc ? '↑' : '↓'}
-                            </button>
-                        </div>
-                    </div>
-
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
                         <div className="bg-white rounded-lg shadow p-6 border-l-4 border-blue-500">
                             <div className="flex items-center justify-between mb-2">
@@ -211,54 +211,127 @@ const BuybackOverview = () => {
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-lg shadow overflow-hidden">
-                        <div className="p-6 border-b">
-                            <h2 className="text-lg font-semibold text-gray-900">Contract Buyback Status</h2>
+                    {/* Filters Section */}
+                    <div className="mb-6 bg-white rounded-lg shadow-sm p-6">
+                        <div className="flex items-center gap-6">
+                            {/* Filters Label with Icon */}
+                            <div className="flex items-center gap-2">
+                                <FunnelIcon className="h-5 w-5 text-gray-700" />
+                                <span className="text-lg font-semibold text-gray-900">Filters</span>
+                            </div>
+
+                            {/* Status Filter */}
+                            <div className="relative flex-1" ref={filterRef}>
+                                <button
+                                    onClick={() => {
+                                        setShowFilterDropdown(!showFilterDropdown);
+                                        setShowSortDropdown(false);
+                                    }}
+                                    className="w-full flex items-center justify-between px-4 py-3 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#37692F] bg-white"
+                                >
+                                    <span className="text-gray-700">{statusOptions.find(opt => opt.value === statusFilter)?.label || 'All Status'}</span>
+                                    <ChevronDownIcon className="h-5 w-5 text-gray-400" />
+                                </button>
+                                {showFilterDropdown && (
+                                    <div className="absolute left-0 right-0 z-10 mt-2 rounded-lg border border-gray-200 bg-white shadow-lg">
+                                        <div className="py-1">
+                                            {statusOptions.map((opt) => (
+                                                <button
+                                                    key={opt.value}
+                                                    onClick={() => {
+                                                        setStatusFilter(opt.value);
+                                                        setShowFilterDropdown(false);
+                                                    }}
+                                                    className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 ${statusFilter === opt.value ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                                >
+                                                    {opt.label}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Partner Filter (Placeholder) */}
+                            <div className="flex-1">
+                                <div className="flex items-center justify-between px-4 py-3 text-sm border border-gray-300 rounded-lg bg-white cursor-not-allowed opacity-60">
+                                    <span className="text-gray-700">All Partners</span>
+                                    <ChevronDownIcon className="h-5 w-5 text-gray-400" />
+                                </div>
+                            </div>
+
+                            {/* Sort Dropdown */}
+                            <div className="relative flex-1" ref={sortRef}>
+                                <button
+                                    onClick={() => {
+                                        setShowSortDropdown(!showSortDropdown);
+                                        setShowFilterDropdown(false);
+                                    }}
+                                    className="w-full flex items-center justify-between px-4 py-3 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#37692F] bg-white"
+                                >
+                                    <span className="text-gray-700">{sortOptions.find(opt => opt.value === sortBy)?.label || 'All Contract Status'}</span>
+                                    <ChevronDownIcon className="h-5 w-5 text-gray-400" />
+                                </button>
+                                {showSortDropdown && (
+                                    <div className="absolute left-0 right-0 z-10 mt-2 rounded-lg border border-gray-200 bg-white shadow-lg">
+                                        <div className="py-1">
+                                            {sortOptions.map((opt) => (
+                                                <button
+                                                    key={opt.value}
+                                                    onClick={() => {
+                                                        setSortBy(opt.value);
+                                                        setShowSortDropdown(false);
+                                                    }}
+                                                    className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 ${sortBy === opt.value ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                                >
+                                                    {opt.label}
+                                                </button>
+                                            ))}
+                                            <div className="border-t border-gray-200 my-1"></div>
+                                            <button
+                                                onClick={() => {
+                                                    setSortAsc(!sortAsc);
+                                                    setShowSortDropdown(false);
+                                                }}
+                                                className="w-full px-4 py-2 text-left text-sm hover:bg-gray-100 text-gray-700"
+                                            >
+                                                {sortAsc ? '↑ Ascending' : '↓ Descending'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                        <div className="overflow-x-auto">
-                            <table className="w-full">
-                                <thead className="bg-gray-50 border-b">
-                                    <tr>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Contract
+                    </div>
+
+                    <div className="overflow-x-auto rounded-lg bg-white shadow-lg">
+                        <table className="w-full text-left text-sm">
+                            <thead className="bg-[#37692F] text-xs uppercase text-gray-600">
+                                <tr>
+                                    {['CONTRACT', 'PARTNER & FARM', 'EXPECTED', 'RECEIVED', 'REMAINING', 'PROGRESS', 'STATUS', 'ACTIONS'].map((header) => (
+                                        <th
+                                            key={header}
+                                            className="px-6 py-4 font-poppins text-[14px] font-medium text-white"
+                                        >
+                                            {header}
                                         </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Partner & Farm
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Expected
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Received
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Remaining
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Progress
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Status
-                                        </th>
-                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            Actions
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200">
                                     {sortedContracts.map((contract) => {
                                         const expectedValue = contract.expected_kg * contract.buyback_price;
                                         const fulfillment = contract.expected_kg > 0 ? (contract.actual_kg / contract.expected_kg) * 100 : 0;
                                         const status = getFulfillmentStatus(fulfillment);
 
                                         return (
-                                            <tr key={contract.id} className="hover:bg-gray-50 transition">
+                                            <tr key={contract.id} className="hover:bg-gray-50">
                                                 <td className="px-6 py-4">
                                                     <div>
-                                                        <p className="font-medium text-gray-900">{contract.contract_number}-{contract.id}</p>
-                                                        <p className="text-xs text-gray-500">₱{Number(contract.buyback_price).toFixed(2)}/kg</p>
+                                                        <p className="font-poppins text-[13px] font-medium text-gray-900">{contract.contract_number}-{contract.id}</p>
+                                                        <p className="font-poppins text-[12px] font-normal text-gray-500">₱{Number(contract.buyback_price).toFixed(2)}/kg</p>
                                                         <span
-                                                            className={`px-3 py-1 text-xs font-semibold rounded-full ${contract.status === 'active'
+                                                            className={`rounded-full px-3 py-1 text-xs font-poppins font-semibold ${contract.status === 'active'
                                                                     ? 'bg-green-100 text-green-700'
                                                                     : contract.status === 'terminated'
                                                                         ? 'bg-red-100 text-red-700'
@@ -275,26 +348,26 @@ const BuybackOverview = () => {
                                                 </td>
                                                 <td className="px-6 py-4">
                                                     <div>
-                                                        <p className="font-medium text-gray-900">{contract.partner_name}</p>
-                                                        <p className="text-xs text-gray-500">{contract.farm_name}</p>
+                                                        <p className="font-poppins text-[13px] font-medium text-gray-900">{contract.partner_name}</p>
+                                                        <p className="font-poppins text-[12px] font-normal text-gray-500">{contract.farm_name}</p>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <p className="font-semibold text-gray-900">
+                                                    <p className="font-poppins text-[13px] font-semibold text-gray-900">
                                                         {contract.expected_buyback_amount.toLocaleString()} {contract.buyback_unit}
                                                     </p>
-                                                    <p className="text-xs text-gray-500">
+                                                    <p className="font-poppins text-[12px] font-normal text-gray-500">
                                                         ≈ {contract.expected_kg.toLocaleString()} kg
                                                     </p>
-                                                    <p className="text-xs text-gray-500">≈ ₱{expectedValue.toLocaleString()}</p>
+                                                    <p className="font-poppins text-[12px] font-normal text-gray-500">≈ ₱{expectedValue.toLocaleString()}</p>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <p className="font-semibold text-green-600">
+                                                    <p className="font-poppins text-[13px] font-semibold text-green-600">
                                                         {contract.actual_kg.toLocaleString()} kg
                                                     </p>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <p className={`font-semibold ${contract.remaining_kg === 0 ? 'text-green-600' : 'text-yellow-600'}`}>
+                                                    <p className={`font-poppins text-[13px] font-semibold ${contract.remaining_kg === 0 ? 'text-green-600' : 'text-yellow-600'}`}>
                                                         {contract.remaining_kg.toLocaleString()} kg
                                                     </p>
                                                 </td>
@@ -309,20 +382,20 @@ const BuybackOverview = () => {
                                                                 style={{ width: `${Math.min(fulfillment, 100)}%` }}
                                                             />
                                                         </div>
-                                                        <span className="text-xs font-medium w-12 text-right">
+                                                        <span className="font-poppins text-[12px] font-medium w-12 text-right">
                                                             {fulfillment.toFixed(0)}%
                                                         </span>
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    <span className={`px-3 py-1 text-xs font-medium rounded-full ${status.bg} ${status.color}`}>
+                                                    <span className={`rounded-full px-3 py-1 text-xs font-poppins font-medium ${status.bg} ${status.color}`}>
                                                         {status.label}
                                                     </span>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <Link
                                                         href={route('buybacks.show', { contract: contract.id })}
-                                                        className="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-medium text-sm transition"
+                                                        className="font-poppins text-[13px] font-medium text-blue-600 hover:text-blue-800 transition flex items-center gap-2"
                                                     >
                                                         <Eye size={16} />
                                                         Details
@@ -334,12 +407,15 @@ const BuybackOverview = () => {
                                 </tbody>
                             </table>
                             {sortedContracts.length === 0 && (
-                                <div className="p-8 text-center text-gray-500 text-lg">
-                                    No Contracts Found
-                                </div>
+                                <tr>
+                                    <td colSpan="8" className="px-6 py-12 text-center">
+                                        <div className="font-poppins text-[14px] font-normal text-gray-500">
+                                            No Contracts Found
+                                        </div>
+                                    </td>
+                                </tr>
                             )}
                         </div>
-                    </div>
 
                     {/* Pagination Controls */}
                     <div className="flex justify-center items-center mt-6 gap-2">
@@ -348,9 +424,9 @@ const BuybackOverview = () => {
                                 key={idx}
                                 disabled={link.active || !link.url}
                                 onClick={() => link.url && handlePageChange(link.url)}
-                                className={`px-3 py-1 rounded border text-sm font-medium ${link.active
-                                        ? 'bg-blue-600 text-white border-blue-600'
-                                        : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50'
+                                className={`px-3 py-1 rounded transition font-poppins text-[13px] ${link.active
+                                        ? 'bg-[#37692F] text-white font-medium'
+                                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'
                                     }`}
                                 dangerouslySetInnerHTML={{ __html: link.label }}
                             />

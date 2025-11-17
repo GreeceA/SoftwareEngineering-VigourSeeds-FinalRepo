@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { FileText, Leaf, TrendingUp, Calendar, MapPin, User, Download, ArrowLeft, Plus } from 'lucide-react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { usePage, Link } from '@inertiajs/react';
+import { usePage, Link, Head } from '@inertiajs/react';
+import Breadcrumb from '@/Components/Breadcrumb';
 
 const BuybackContractDetails = () => {
     const { contract, buybackData, auth } = usePage().props;
@@ -24,24 +25,66 @@ const BuybackContractDetails = () => {
     };
 
     return (
-        <AuthenticatedLayout
-            user={auth.user}
-            header={
-                <h2 className="text-[25px] font-[800]" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                    <span className="text-[#37692F] font-[800]">VIGOUR SEEDS</span>
-                    <span className="text-[#333333] font-[400]"> | Inventory Management</span>
-                </h2>
-            }
-        >
+        <AuthenticatedLayout user={auth.user}>
+            <Head title={`Buyback Details - ${contract.contract_number}`} />
+
+            {/* Modern Page Header with Integrated Breadcrumb */}
+            <div className="relative bg-gradient-to-br from-white via-green-50/30 to-white border-b border-gray-200 overflow-hidden">
+                {/* Subtle decorative elements */}
+                <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-[#8fbc8f]/10 to-transparent rounded-full blur-3xl"></div>
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-[#a8d5a8]/10 to-transparent rounded-full blur-2xl"></div>
+                
+                <div className="relative px-6 py-6">
+                    {/* Breadcrumb */}
+                    <Breadcrumb 
+                        items={[
+                            { 
+                                label: 'Home', 
+                                href: route('dashboard'),
+                                icon: (
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                                    </svg>
+                                )
+                            },
+                            { label: 'Buyback Tracking', href: route('buybacks.index') },
+                            { label: `Contract ${contract.contract_number}` }
+                        ]}
+                    />
+
+                    {/* Header Content */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                            {/* Icon */}
+                            <div className="flex-shrink-0">
+                                <div className="w-16 h-16 bg-gradient-to-br from-[#37692F] to-[#4a8a3f] rounded-2xl flex items-center justify-center shadow-lg shadow-green-900/20">
+                                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                </div>
+                            </div>
+                            
+                            {/* Title & Description */}
+                            <div>
+                                <h1 className="text-3xl font-bold text-gray-900 mb-1">Buyback Contract Details</h1>
+                                <p className="text-gray-600">{contract.contract_number} - {contract.partner_name}</p>
+                            </div>
+                        </div>
+
+                        {/* Back Button */}
+                        <Link
+                            href={route('buybacks.index')}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-gray-600 text-white font-medium rounded-lg hover:bg-gray-700 transition-all shadow-md hover:shadow-lg"
+                        >
+                            <ArrowLeft size={20} />
+                            Back to Overview
+                        </Link>
+                    </div>
+                </div>
+            </div>
+
             <div className="min-h-screen bg-gray-50 p-6">
                 <div className="max-w-7xl mx-auto">
-                    <Link
-                        href={route('buybacks.index')}
-                        className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6 transition"
-                    >
-                        <ArrowLeft size={20} />
-                        Back to Buyback Overview
-                    </Link>
 
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                         <div className="lg:col-span-2 bg-white rounded-lg shadow p-6">
@@ -150,44 +193,43 @@ const BuybackContractDetails = () => {
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-lg shadow overflow-hidden mb-6">
-                        <div className="p-6 border-b">
-                            <h2 className="text-lg font-semibold text-gray-900">Seed Commitments</h2>
-                        </div>
-                        <table className="w-full">
-                            <thead className="bg-gray-50 border-b">
+                    <div className="overflow-x-auto rounded-lg bg-white shadow-lg mb-6">
+                        <table className="w-full text-left text-sm">
+                            <thead className="bg-[#37692F] text-xs uppercase text-gray-600">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Seed Variety</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Distributed</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Planting Date</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Expected Harvest</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cycles</th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Expected Buyback</th>
+                                    {['SEED VARIETY', 'DISTRIBUTED', 'PLANTING DATE', 'EXPECTED HARVEST', 'CYCLES', 'EXPECTED BUYBACK'].map((header) => (
+                                        <th
+                                            key={header}
+                                            className="px-6 py-4 font-poppins text-[14px] font-medium text-white"
+                                        >
+                                            {header}
+                                        </th>
+                                    ))}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200">
                                 {(contract.seed_commitments ?? []).map((sc) => (
                                     <tr key={sc.id} className="hover:bg-gray-50">
                                         <td className="px-6 py-4">
-                                            <p className="font-medium text-gray-900">{sc.seed_variety}</p>
+                                            <p className="font-poppins text-[13px] font-medium text-gray-900">{sc.seed_variety}</p>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <p className="font-semibold">{sc.seed_quantity} {sc.seed_unit}</p>
-                                            <p className="text-xs text-gray-500">₱{Number(sc.seed_price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/kg</p>
+                                            <p className="font-poppins text-[13px] font-semibold text-gray-900">{sc.seed_quantity} {sc.seed_unit}</p>
+                                            <p className="font-poppins text-[12px] font-normal text-gray-500">₱{Number(sc.seed_price).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/kg</p>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <p className="text-sm text-gray-900">{sc.planting_date}</p>
+                                            <p className="font-poppins text-[13px] font-normal text-gray-900">{sc.planting_date}</p>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <p className="text-sm text-gray-900">{sc.expected_first_harvest}</p>
+                                            <p className="font-poppins text-[13px] font-normal text-gray-900">{sc.expected_first_harvest}</p>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium">
+                                            <span className="rounded-full px-3 py-1 text-xs font-poppins font-medium shadow-sm bg-blue-100 text-blue-700 border border-blue-200">
                                                 {sc.agreed_cycles} cycle{sc.agreed_cycles > 1 ? 's' : ''}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
-                                            <p className="font-semibold text-green-600">
+                                            <p className="font-poppins text-[13px] font-semibold text-green-600">
                                                 {sc.expected_buyback_amount.toLocaleString()} {sc.buyback_unit}
                                             </p>
                                         </td>

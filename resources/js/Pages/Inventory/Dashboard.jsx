@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from 'react';
-import { Package, TrendingUp, TrendingDown, AlertTriangle, Plus, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { Package, TrendingUp, TrendingDown, AlertTriangle, Plus, ArrowRight, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { usePage, Link } from '@inertiajs/react';
-import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import { ArrowDownTrayIcon, FunnelIcon, ChevronDownIcon, ArrowsUpDownIcon } from '@heroicons/react/24/outline';
 import Vlogo from '@/assets/vigour-logo.png';
 
 const InventoryDashboard = () => {
@@ -15,6 +15,34 @@ const InventoryDashboard = () => {
     const [sortOrder, setSortOrder] = useState('desc');
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
+
+    // Dropdown states
+    const [showTypeDropdown, setShowTypeDropdown] = useState(false);
+    const [showStatusDropdown, setShowStatusDropdown] = useState(false);
+    const [showSortDropdown, setShowSortDropdown] = useState(false);
+
+    // Refs for dropdown click outside detection
+    const typeFilterRef = useRef(null);
+    const statusFilterRef = useRef(null);
+    const sortRef = useRef(null);
+
+    // Close dropdowns when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event) => {
+            if (typeFilterRef.current && !typeFilterRef.current.contains(event.target)) {
+                setShowTypeDropdown(false);
+            }
+            if (statusFilterRef.current && !statusFilterRef.current.contains(event.target)) {
+                setShowStatusDropdown(false);
+            }
+            if (sortRef.current && !sortRef.current.contains(event.target)) {
+                setShowSortDropdown(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
 
     // Deduplicate inventory by type-id (memoized)
     const dedupedInventory = useMemo(() => {
@@ -290,127 +318,154 @@ const InventoryDashboard = () => {
                         </div>
                     </div>
 
-                    {/* Filter Controls */}
-                    <div className="flex flex-wrap gap-4 mb-4 items-center">
-                        {/* Type Filter */}
-                        <div>
-                            <label className="text-sm font-medium text-gray-700 mr-2">Type:</label>
-                            {filterOptions.map((f) => (
+                    {/* Filters Section */}
+                    <div className="mb-6 bg-white rounded-lg shadow-sm p-6">
+                        <div className="flex items-center gap-6">
+                            {/* Filters Label with Icon */}
+                            <div className="flex items-center gap-2">
+                                <FunnelIcon className="h-5 w-5 text-gray-700" />
+                                <span className="text-lg font-semibold text-gray-900">Filters</span>
+                            </div>
+
+                            {/* Type Filter */}
+                            <div className="relative flex-1" ref={typeFilterRef}>
                                 <button
-                                    key={f}
-                                    onClick={() => handleFilterChange(f)}
-                                    className={`px-3 py-1 rounded-lg font-medium capitalize transition mr-1 ${filter === f
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-gray-100 text-gray-700 hover:bg-blue-50'
-                                        }`}
+                                    onClick={() => {
+                                        setShowTypeDropdown(!showTypeDropdown);
+                                        setShowStatusDropdown(false);
+                                        setShowSortDropdown(false);
+                                    }}
+                                    className="w-full flex items-center justify-between px-4 py-3 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#37692F] bg-white"
                                 >
-                                    {f}
+                                    <span className="text-gray-700">{filter === 'all' ? 'All Status' : filter.charAt(0).toUpperCase() + filter.slice(1)}</span>
+                                    <ChevronDownIcon className="h-5 w-5 text-gray-400" />
                                 </button>
-                            ))}
-                        </div>
-                        {/* Status Filter */}
-                        <div>
-                            <label className="text-sm font-medium text-gray-700 mr-2">Status:</label>
-                            {statusOptions.map((s) => (
+                                {showTypeDropdown && (
+                                    <div className="absolute left-0 right-0 z-10 mt-2 rounded-lg border border-gray-200 bg-white shadow-lg">
+                                        <div className="py-1">
+                                            {filterOptions.map((f) => (
+                                                <button
+                                                    key={f}
+                                                    onClick={() => {
+                                                        handleFilterChange(f);
+                                                        setShowTypeDropdown(false);
+                                                    }}
+                                                    className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 capitalize ${filter === f ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                                >
+                                                    {f === 'all' ? 'All Types' : f}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Partners Filter (Placeholder) */}
+                            <div className="flex-1">
+                                <div className="flex items-center justify-between px-4 py-3 text-sm border border-gray-300 rounded-lg bg-white cursor-not-allowed opacity-60">
+                                    <span className="text-gray-700">All Partners</span>
+                                    <ChevronDownIcon className="h-5 w-5 text-gray-400" />
+                                </div>
+                            </div>
+
+                            {/* Status Filter */}
+                            <div className="relative flex-1" ref={statusFilterRef}>
                                 <button
-                                    key={s}
-                                    onClick={() => { setStatusFilter(s); setCurrentPage(1); }}
-                                    className={`px-3 py-1 rounded-lg font-medium capitalize transition mr-1 ${statusFilter === s
-                                            ? 'bg-green-600 text-white'
-                                            : 'bg-gray-100 text-gray-700 hover:bg-green-50'
-                                        }`}
+                                    onClick={() => {
+                                        setShowStatusDropdown(!showStatusDropdown);
+                                        setShowTypeDropdown(false);
+                                        setShowSortDropdown(false);
+                                    }}
+                                    className="w-full flex items-center justify-between px-4 py-3 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#37692F] bg-white"
                                 >
-                                    {s}
+                                    <span className="text-gray-700">{statusFilter === 'all' ? 'All Contract Status' : statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}</span>
+                                    <ChevronDownIcon className="h-5 w-5 text-gray-400" />
                                 </button>
-                            ))}
-                        </div>
-                        {/* Name Search */}
-                        <div>
-                            <input
-                                type="text"
-                                value={search}
-                                onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-                                placeholder="Search product name..."
-                                className="px-3 py-1 rounded-lg border border-gray-300"
-                            />
-                        </div>
-                        {/* Sort Order */}
-                        <div>
-                            <label className="text-sm font-medium text-gray-700 mr-2">Sort by Stock:</label>
-                            <button
-                                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                                className="px-3 py-1 rounded-lg font-medium transition bg-gray-100 text-gray-700 hover:bg-gray-200"
-                            >
-                                {sortOrder === 'asc' ? 'Lowest First' : 'Highest First'}
-                            </button>
+                                {showStatusDropdown && (
+                                    <div className="absolute left-0 right-0 z-10 mt-2 rounded-lg border border-gray-200 bg-white shadow-lg">
+                                        <div className="py-1">
+                                            {statusOptions.map((s) => (
+                                                <button
+                                                    key={s}
+                                                    onClick={() => {
+                                                        setStatusFilter(s);
+                                                        setCurrentPage(1);
+                                                        setShowStatusDropdown(false);
+                                                    }}
+                                                    className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-100 capitalize ${statusFilter === s ? 'bg-[#37692F] text-white' : 'text-gray-700'}`}
+                                                >
+                                                    {s === 'all' ? 'All Status' : s}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 
                     {/* Inventory Table */}
-                    <div className="bg-white rounded-lg shadow overflow-hidden">
-                        <table className="w-full">
-                            <thead className="bg-gray-50 border-b">
+                    <div className="overflow-x-auto rounded-lg bg-white shadow-lg">
+                        <table className="w-full text-left text-sm">
+                            <thead className="bg-[#37692F] text-xs uppercase text-gray-600">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Product
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Type
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Current Stock
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Status
-                                    </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                        Actions
-                                    </th>
+                                    {['PRODUCT', 'TYPE', 'CURRENT STOCK', 'STATUS', 'ACTIONS'].map((header) => (
+                                        <th
+                                            key={header}
+                                            className="px-6 py-4 font-poppins text-[14px] font-medium text-white"
+                                        >
+                                            {header}
+                                        </th>
+                                    ))}
                                 </tr>
                             </thead>
-                            <tbody className="bg-white divide-y divide-gray-200">
+                            <tbody className="divide-y divide-gray-200">
                                 {paginatedInventory.length > 0 ? (
                                     paginatedInventory.map((item) => (
-                                        <tr key={`${item.type}-${item.id}`} className="hover:bg-gray-50 transition">
-                                            <td className="px-6 py-4 whitespace-nowrap">
+                                        <tr key={`${item.type}-${item.id}`} className="hover:bg-gray-50">
+                                            <td className="px-6 py-4">
                                                 <div className="flex items-center">
                                                     <span className="text-2xl mr-3">{getTypeIcon(item.type)}</span>
                                                     <div>
-                                                        <div className="text-sm font-medium text-gray-900">{item.name}</div>
-                                                        <div className="text-sm text-gray-500">ID: {item.id}</div>
+                                                        <div className="font-poppins text-[13px] font-medium text-gray-900">
+                                                            {item.name}
+                                                        </div>
+                                                        <div className="font-poppins text-[12px] font-normal text-gray-500">
+                                                            ID: {item.id}
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <span className="px-3 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
+                                            <td className="px-6 py-4">
+                                                <span className="rounded-full px-3 py-1 text-xs font-poppins font-medium shadow-sm bg-blue-100 text-blue-700 border border-blue-200">
                                                     {item.type}
                                                 </span>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
-                                                <div className="text-sm font-semibold text-gray-900">
+                                            <td className="px-6 py-4">
+                                                <div className="font-poppins text-[13px] font-semibold text-gray-900">
                                                     {item.current_stock === null || item.current_stock === undefined
                                                         ? '-'
                                                         : `${item.current_stock.toLocaleString()} ${item.unit}`}
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap">
+                                            <td className="px-6 py-4">
                                                 {item.status ? (
-                                                    <span className={`px-3 py-1 text-xs font-medium rounded-full border capitalize ${getStatusColor(item.status)}`}>
+                                                    <span className={`rounded-full px-3 py-1 text-xs font-poppins font-normal border capitalize ${getStatusColor(item.status)}`}>
                                                         {item.status}
                                                     </span>
                                                 ) : (
-                                                    <span className="px-3 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-400 border-gray-200">
+                                                    <span className="rounded-full px-3 py-1 text-xs font-poppins font-normal bg-gray-100 text-gray-400 border border-gray-200">
                                                         -
                                                     </span>
                                                 )}
                                             </td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                            <td className="px-6 py-4">
                                                 <Link
                                                     href={route('inventory.show', [
                                                         item.type === 'Seed' ? 'seed' : 'item',
                                                         item.id
                                                     ])}
-                                                    className="text-blue-600 hover:text-blue-900 font-medium"
+                                                    className="font-poppins text-[13px] font-normal text-blue-600 hover:text-blue-800 transition-colors duration-200"
                                                 >
                                                     View Details
                                                 </Link>
@@ -419,8 +474,10 @@ const InventoryDashboard = () => {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
-                                            No inventory items found for this filter.
+                                        <td colSpan="5" className="px-6 py-12 text-center">
+                                            <div className="font-poppins text-[14px] font-normal text-gray-500">
+                                                No inventory items found for this filter.
+                                            </div>
                                         </td>
                                     </tr>
                                 )}
@@ -429,71 +486,73 @@ const InventoryDashboard = () => {
 
                         {/* Pagination Controls */}
                         {filteredInventory.length > 0 && (
-                            <div className="bg-gray-50 px-6 py-4 border-t flex items-center justify-between">
-                                <div className="text-sm text-gray-700">
-                                    Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
-                                    <span className="font-medium">{Math.min(endIndex, filteredInventory.length)}</span> of{' '}
-                                    <span className="font-medium">{filteredInventory.length}</span> items
-                                </div>
-
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => handlePageChange(currentPage - 1)}
-                                        disabled={currentPage === 1}
-                                        className={`px-3 py-1 rounded-md flex items-center gap-1 ${currentPage === 1
-                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                                : 'bg-white text-gray-700 hover:bg-gray-100 border'
-                                            }`}
-                                    >
-                                        <ChevronLeft size={16} />
-                                        Previous
-                                    </button>
-
-                                    <div className="flex gap-1">
-                                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                                            // Show first page, last page, current page, and pages around current
-                                            if (
-                                                page === 1 ||
-                                                page === totalPages ||
-                                                (page >= currentPage - 1 && page <= currentPage + 1)
-                                            ) {
-                                                return (
-                                                    <button
-                                                        key={page}
-                                                        onClick={() => handlePageChange(page)}
-                                                        className={`px-3 py-1 rounded-md ${currentPage === page
-                                                                ? 'bg-blue-600 text-white'
-                                                                : 'bg-white text-gray-700 hover:bg-gray-100 border'
-                                                            }`}
-                                                    >
-                                                        {page}
-                                                    </button>
-                                                );
-                                            } else if (
-                                                page === currentPage - 2 ||
-                                                page === currentPage + 2
-                                            ) {
-                                                return (
-                                                    <span key={page} className="px-2 py-1 text-gray-500">
-                                                        ...
-                                                    </span>
-                                                );
-                                            }
-                                            return null;
-                                        })}
+                            <div className="border-t border-gray-200 bg-gray-50 px-6 py-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="font-poppins text-[13px] font-normal text-gray-600">
+                                        Showing <span className="font-medium">{startIndex + 1}</span> to{' '}
+                                        <span className="font-medium">{Math.min(endIndex, filteredInventory.length)}</span> of{' '}
+                                        <span className="font-medium">{filteredInventory.length}</span> items
                                     </div>
 
-                                    <button
-                                        onClick={() => handlePageChange(currentPage + 1)}
-                                        disabled={currentPage === totalPages}
-                                        className={`px-3 py-1 rounded-md flex items-center gap-1 ${currentPage === totalPages
-                                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                                                : 'bg-white text-gray-700 hover:bg-gray-100 border'
-                                            }`}
-                                    >
-                                        Next
-                                        <ChevronRight size={16} />
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => handlePageChange(currentPage - 1)}
+                                            disabled={currentPage === 1}
+                                            className={`px-3 py-1 rounded transition font-poppins text-[13px] flex items-center gap-1 ${currentPage === 1
+                                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                    : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                                                }`}
+                                        >
+                                            <ChevronLeft size={16} />
+                                            Previous
+                                        </button>
+
+                                        <div className="flex gap-1">
+                                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                                                // Show first page, last page, current page, and pages around current
+                                                if (
+                                                    page === 1 ||
+                                                    page === totalPages ||
+                                                    (page >= currentPage - 1 && page <= currentPage + 1)
+                                                ) {
+                                                    return (
+                                                        <button
+                                                            key={page}
+                                                            onClick={() => handlePageChange(page)}
+                                                            className={`px-3 py-1 rounded transition font-poppins text-[13px] ${currentPage === page
+                                                                    ? 'bg-[#37692F] text-white font-medium'
+                                                                    : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                                                                }`}
+                                                        >
+                                                            {page}
+                                                        </button>
+                                                    );
+                                                } else if (
+                                                    page === currentPage - 2 ||
+                                                    page === currentPage + 2
+                                                ) {
+                                                    return (
+                                                        <span key={page} className="px-2 py-1 text-gray-500 font-poppins text-[13px]">
+                                                            ...
+                                                        </span>
+                                                    );
+                                                }
+                                                return null;
+                                            })}
+                                        </div>
+
+                                        <button
+                                            onClick={() => handlePageChange(currentPage + 1)}
+                                            disabled={currentPage === totalPages}
+                                            className={`px-3 py-1 rounded transition font-poppins text-[13px] flex items-center gap-1 ${currentPage === totalPages
+                                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                    : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                                                }`}
+                                        >
+                                            Next
+                                            <ChevronRight size={16} />
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         )}
