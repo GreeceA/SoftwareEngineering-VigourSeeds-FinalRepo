@@ -442,15 +442,14 @@ export default function Index({ auth, fieldVisits, filters, contracts }) {
                                                 </Link>
 
                                                 {/* Complete & Cancel Buttons - Only for ongoing visits */}
-                                                {visit.status === 'ongoing' && (
+                                                {visit.status === 'ongoing' && permissions.includes('edit field visit') && (
                                                     <>
-                                                        {permissions.includes('complete field visit') && (
-                                                            <button
-                                                                onClick={() => handleComplete(visit.field_visit_ID)}
-                                                                disabled={processing[`complete-${visit.field_visit_ID}`]}
-                                                                className="text-green-600 transition-colors duration-200 hover:text-green-800 disabled:opacity-50"
-                                                                title="Complete Visit"
-                                                            >
+                                                        <button
+                                                            onClick={() => handleComplete(visit.field_visit_ID)}
+                                                            disabled={processing[`complete-${visit.field_visit_ID}`]}
+                                                            className="text-green-600 transition-colors duration-200 hover:text-green-800 disabled:opacity-50"
+                                                            title="Complete Visit"
+                                                        >
                                                             {processing[`complete-${visit.field_visit_ID}`] ? (
                                                                 <svg className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
                                                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -459,15 +458,13 @@ export default function Index({ auth, fieldVisits, filters, contracts }) {
                                                             ) : (
                                                                 <CheckCircleIcon className="h-5 w-5" />
                                                             )}
-                                                            </button>
-                                                        )}
-                                                        {permissions.includes('cancel field visit') && (
-                                                            <button
-                                                                onClick={() => handleCancel(visit.field_visit_ID)}
-                                                                disabled={processing[`cancel-${visit.field_visit_ID}`]}
-                                                                className="text-red-600 transition-colors duration-200 hover:text-red-800 disabled:opacity-50"
-                                                                title="Cancel Visit"
-                                                            >
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleCancel(visit.field_visit_ID)}
+                                                            disabled={processing[`cancel-${visit.field_visit_ID}`]}
+                                                            className="text-red-600 transition-colors duration-200 hover:text-red-800 disabled:opacity-50"
+                                                            title="Cancel Visit"
+                                                        >
                                                             {processing[`cancel-${visit.field_visit_ID}`] ? (
                                                                 <svg className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
                                                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -476,8 +473,7 @@ export default function Index({ auth, fieldVisits, filters, contracts }) {
                                                             ) : (
                                                                 <XCircleIcon className="h-5 w-5" />
                                                             )}
-                                                            </button>
-                                                        )}
+                                                        </button>
                                                     </>
                                                 )}
                                             </div>
