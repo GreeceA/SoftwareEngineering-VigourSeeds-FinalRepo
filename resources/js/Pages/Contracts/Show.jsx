@@ -222,9 +222,9 @@ export default function Show({ auth, contract }) {
                                 <h1 className="text-2xl font-bold">{contract.contract_name}</h1>
                                 <div className="mt-2 flex items-center space-x-4">
                                     <span className="text-white/80">ID: #{contract.id}</span>
-                                    <span className="rounded-full border border-white/30 bg-white/20 px-3 py-1 text-sm font-medium backdrop-blur-sm">
-                                        {contract.status.replace(/_/g, ' ').charAt(0).toUpperCase() + contract.status.replace(/_/g, ' ').slice(1)}
-                                    </span>
+                                    <span className="inline-flex items-center justify-center whitespace-nowrap rounded-full border border-white/30 bg-white/20 px-3 py-1 text-sm font-medium backdrop-blur-sm">
+                                            {contract.status.replace(/_/g, ' ').charAt(0).toUpperCase() + contract.status.replace(/_/g, ' ').slice(1)}
+                                        </span>
                                 </div>
                             </div>
                         </div>
