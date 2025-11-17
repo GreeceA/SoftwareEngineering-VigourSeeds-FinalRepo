@@ -82,7 +82,7 @@ export default function UserInfoModal({ user, onClose }) {
                         </div>
                     </div>
 
-                    {/* Department Section */}
+                    {/* Department Section
                     <div className="w-full mt-4">
                         <h3 className="text-sm font-semibold text-gray-700 mb-2">Department</h3>
                         <div className="bg-gray-50 rounded-lg p-3">
@@ -90,7 +90,7 @@ export default function UserInfoModal({ user, onClose }) {
                                 <span className="text-sm font-medium">{user.department || 'N/A'}</span>
                             </div>
                         </div>
-                    </div>
+                    </div> */}
                 </div>
             </div>
         </div>
