@@ -4,11 +4,14 @@ import React from 'react';
 export default function handleComplete({ fieldVisit, onCancel, onConfirm }) {
     if (!fieldVisit) return null;
 
-    // Check if there's at least one report
-    const hasGrowthReports = fieldVisit.growth_reports && fieldVisit.growth_reports.length > 0;
-    const hasDamageReports = fieldVisit.damage_reports && fieldVisit.damage_reports.length > 0;
+    // Use counts from the backend (supports multiple property name formats)
+    const growthCount = fieldVisit.growthReports_count ?? fieldVisit.growth_reports_count ?? fieldVisit.growth_reports?.length ?? 0;
+    const damageCount = fieldVisit.damageReports_count ?? fieldVisit.damage_reports_count ?? fieldVisit.damage_reports?.length ?? 0;
+    
+    const hasGrowthReports = growthCount > 0;
+    const hasDamageReports = damageCount > 0;
     const hasReports = hasGrowthReports || hasDamageReports;
-    const totalReports = (fieldVisit.growth_reports?.length || 0) + (fieldVisit.damage_reports?.length || 0);
+    const totalReports = growthCount + damageCount;
 
     // Determine if completion is blocked (no reports)
     const isBlocked = !hasReports;
@@ -98,8 +101,8 @@ export default function handleComplete({ fieldVisit, onCancel, onConfirm }) {
                         Visit Date: {new Date(fieldVisit.date_visit).toLocaleDateString()}
                     </p>
                     <div className="mt-2 pt-2 border-t border-gray-200 flex justify-center gap-4 text-xs text-gray-600">
-                        <span>📊 Growth Reports: <strong className={hasGrowthReports ? 'text-green-600' : 'text-red-600'}>{fieldVisit.growth_reports?.length || 0}</strong></span>
-                        <span>⚠️ Damage Reports: <strong className={hasDamageReports ? 'text-orange-600' : 'text-red-600'}>{fieldVisit.damage_reports?.length || 0}</strong></span>
+                        <span>📊 Growth Reports: <strong className={hasGrowthReports ? 'text-green-600' : 'text-red-600'}>{growthCount}</strong></span>
+                        <span>⚠️ Damage Reports: <strong className={hasDamageReports ? 'text-orange-600' : 'text-red-600'}>{damageCount}</strong></span>
                     </div>
                     <p className="text-center text-xs font-semibold text-gray-700 mt-2">
                         Total Reports: <span className={hasReports ? 'text-green-600' : 'text-red-600'}>{totalReports}</span>
