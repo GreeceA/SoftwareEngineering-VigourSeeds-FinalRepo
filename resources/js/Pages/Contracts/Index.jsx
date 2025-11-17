@@ -306,7 +306,7 @@ export default function Index({ auth, contracts, filters }) {
                                         {/* Status */}
                                         <td className="px-6 py-4">
                                             <span
-                                                className={`rounded-full px-3 py-1 font-poppins text-xs font-normal ${getStatusColor(contract.status)}`}
+                                                className={`inline-flex items-center justify-center whitespace-nowrap rounded-full px-3 py-1 font-poppins text-xs font-normal ${getStatusColor(contract.status)}`}
                                             >
                                                 {contract.status.replace(/_/g, ' ').toUpperCase()}
                                             </span>
