@@ -818,7 +818,7 @@ export default function Show({ auth, contract }) {
             {showFilePreview && (
                 <ContractFilePreviewModal
                     fileUrl={contract.contract_file
-                        ? `/storage/${contract.contract_file}`
+                        ? `http://localhost/dashboard/SoftwareEngineering-VigourSeeds-FinalRepo/storage/app/public/contracts/${contract.contract_file.split('/').pop()}`
                         : null}
                     onClose={handleClosePreview}
                     contract={contract}
