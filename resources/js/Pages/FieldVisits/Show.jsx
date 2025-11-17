@@ -691,30 +691,26 @@ export default function Show({ auth, fieldVisit }) {
                 </div>
 
                 {/* Action Buttons */}
-                {fieldVisit.status === 'ongoing' && (permissions.includes('complete field visit') || permissions.includes('cancel field visit')) && (
+                {fieldVisit.status === 'ongoing' && permissions.includes('edit field visit') && (
                     <div className="mt-8 flex justify-end space-x-4">
-                        {permissions.includes('complete field visit') && (
-                            <button
-                                onClick={handleComplete}
-                                className="flex items-center rounded-xl bg-gradient-to-r from-green-600 to-green-700 px-6 py-3 text-white font-medium hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                            >
-                                <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
-                                Complete Visit
-                            </button>
-                        )}
-                        {permissions.includes('cancel field visit') && (
-                            <button
-                                onClick={handleCancel}
-                                className="flex items-center rounded-xl bg-gradient-to-r from-red-600 to-red-700 px-6 py-3 text-white font-medium hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                            >
-                                <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                                Cancel Visit
-                            </button>
-                        )}
+                        <button
+                            onClick={handleComplete}
+                            className="flex items-center rounded-xl bg-gradient-to-r from-green-600 to-green-700 px-6 py-3 text-white font-medium hover:from-green-700 hover:to-green-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                        >
+                            <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            Complete Visit
+                        </button>
+                        <button
+                            onClick={handleCancel}
+                            className="flex items-center rounded-xl bg-gradient-to-r from-red-600 to-red-700 px-6 py-3 text-white font-medium hover:from-red-700 hover:to-red-800 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                        >
+                            <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                            Cancel Visit
+                        </button>
                     </div>
                 )}
 
