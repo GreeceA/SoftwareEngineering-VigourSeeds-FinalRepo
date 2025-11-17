@@ -219,33 +219,43 @@ export default function Welcome({ auth }) {
                             </div>
                         </div>
 
-                        {/* Stats Section - Modern card style */}
+                        {/* About Section - Modern elegant card */}
                         <div className={`transition-all duration-1000 delay-900 ${animateStats ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'}`}>
                             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 md:p-12">
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
-                                    <div className="text-center">
-                                        <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-[#37692F] to-[#4a8a3f] bg-clip-text text-transparent mb-2 animate-counter" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                                            Contract
-                                        </div>
-                                        <div className="text-sm md:text-base text-gray-600 font-medium">Management</div>
+                                <div className="md:flex md:items-start md:justify-between gap-8">
+                                    <div className="md:flex-1">
+                                        <h3 className="text-2xl md:text-3xl font-extrabold text-gray-900 mb-3" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                                            Vigour Seeds Development Inc.
+                                        </h3>
+                                        <p className="text-gray-600 text-base md:text-lg leading-relaxed" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                                            Vigour Seeds Development Inc. operates in the agriculture industry, with a strong focus on food production and crop farming. The company’s primary specialization lies in agricultural research and development, crop production and processing, and contributing to the corn industry supply chain.
+                                        </p>
                                     </div>
-                                    <div className="text-center">
-                                        <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-[#37692F] to-[#4a8a3f] bg-clip-text text-transparent mb-2 animate-counter" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                                            Partner
+
+                                    <div className="mt-6 md:mt-0 w-full md:w-1/3 grid grid-cols-1 sm:grid-cols-3 gap-4 items-stretch">
+                                        <div className="bg-green-50 border border-green-100 rounded-lg p-4 flex flex-col items-start gap-2">
+                                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#37692F] to-[#4a8a3f] flex items-center justify-center text-white font-bold">R</div>
+                                            <div>
+                                                <div className="text-sm font-semibold text-gray-900">R&amp;D</div>
+                                                <div className="text-xs text-gray-500">Research & development</div>
+                                            </div>
                                         </div>
-                                        <div className="text-sm md:text-base text-gray-600 font-medium">Relations</div>
-                                    </div>
-                                    <div className="text-center">
-                                        <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-[#37692F] to-[#4a8a3f] bg-clip-text text-transparent mb-2 animate-counter" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                                            Inventory
+
+                                        <div className="bg-green-50 border border-green-100 rounded-lg p-4 flex flex-col items-start gap-2">
+                                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#37692F] to-[#4a8a3f] flex items-center justify-center text-white font-bold">P</div>
+                                            <div>
+                                                <div className="text-sm font-semibold text-gray-900">Production</div>
+                                                <div className="text-xs text-gray-500">Crop production & processing</div>
+                                            </div>
                                         </div>
-                                        <div className="text-sm md:text-base text-gray-600 font-medium">Control</div>
-                                    </div>
-                                    <div className="text-center">
-                                        <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-[#37692F] to-[#4a8a3f] bg-clip-text text-transparent mb-2 animate-counter" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                                            Field
+
+                                        <div className="bg-green-50 border border-green-100 rounded-lg p-4 flex flex-col items-start gap-2">
+                                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[#37692F] to-[#4a8a3f] flex items-center justify-center text-white font-bold">S</div>
+                                            <div>
+                                                <div className="text-sm font-semibold text-gray-900">Supply</div>
+                                                <div className="text-xs text-gray-500">Corn industry supply chain</div>
+                                            </div>
                                         </div>
-                                        <div className="text-sm md:text-base text-gray-600 font-medium">Monitoring</div>
                                     </div>
                                 </div>
                             </div>
