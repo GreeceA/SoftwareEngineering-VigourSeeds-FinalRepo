@@ -51,6 +51,11 @@ class GoogleController extends Controller
                     // Don't update first_name and last_name if user already exists
                     // This preserves the names entered during registration
                 ]);
+                
+                // Check if user is deactivated
+                if ($user->status === 'inactive') {
+                    return redirect()->route('login')->with('error', 'Your account has been deactivated. Please contact an administrator.');
+                }
             } else {
                 // New user - use Google name as fallback
                 $user = User::create([

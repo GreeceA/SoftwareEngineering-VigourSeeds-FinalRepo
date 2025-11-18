@@ -169,7 +169,7 @@ class InventoryTransactionController extends Controller implements HasMiddleware
     /**
      * Show form for creating outbound transaction
      */
-    public function createOutbound()
+    public function createOutbound(Request $request)
     {
         $partnerOrders = \App\Models\PartnerOrder::with(['partner', 'lines.seed', 'lines.item', 'contract.farm'])
             ->whereIn('status', ['pending', 'partially_fulfilled'])
@@ -221,8 +221,12 @@ class InventoryTransactionController extends Controller implements HasMiddleware
                 ];
             });
 
+        // Get the prefilled partner_order_id from query parameter
+        $prefilledOrderId = $request->query('partner_order_id');
+
         return Inertia::render('Inventory/Outbound', [
             'partnerOrders' => $partnerOrders,
+            'prefilledOrderId' => $prefilledOrderId, // Pass to frontend
         ]);
     }
 

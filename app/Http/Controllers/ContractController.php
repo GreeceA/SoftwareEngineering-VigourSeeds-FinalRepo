@@ -36,61 +36,94 @@ class ContractController extends Controller implements HasMiddleware
      */
     public function index(Request $request)
     {
-        // Optimized: Only load partner name, limit seed commitments to 3
-        $query = Contract::with(['partner:id,name', 'contractSeedCommitments' => function($q) {
-            $q->limit(3)->with('seed:id,seed_variety');
-        }]);
+        try {
+            // Optimized: Only load partner name, limit seed commitments to 3
+            $query = Contract::with(['partner:id,name', 'contractSeedCommitments' => function($q) {
+                $q->limit(3)->with('seed:id,seed_variety');
+            }]);
 
-        // Apply search
-        if ($request->filled('search')) {
-            $query->search($request->search);
-        }
+            // Apply search
+            if ($request->filled('search')) {
+                $query->where(function ($q) use ($request) {
+                    $q->where('contract_name', 'like', "%{$request->search}%")
+                    ->orWhereHas('partner', function ($q) use ($request) {
+                        $q->where('name', 'like', "%{$request->search}%");
+                    })
+                    ->orWhereHas('contractSeedCommitments.seed', function ($q) use ($request) {
+                        $q->where('seed_variety', 'like', "%{$request->search}%");
+                    });
+                });
+            }
 
-        // Apply status filter
-        if ($request->filled('status') && $request->status !== 'all') {
-            $query->where('status', $request->status);
-        }
+            // Apply status filter
+            if ($request->filled('status') && $request->status !== 'all') {
+                $query->where('status', $request->status);
+            }
 
-        // Apply sorting
-        $sortBy = $request->get('sort_by', 'id');
-        $sortDir = $request->get('sort_dir', 'desc');
+            // Apply sorting
+            $sortBy = $request->get('sort_by', 'id');
+            $sortDir = $request->get('sort_dir', 'desc');
 
-        $validSortColumns = ['id', 'contract_name', 'signing_date', 'effective_date', 'expiration_date', 'status'];
-        if (in_array($sortBy, $validSortColumns)) {
-            $query->orderBy($sortBy, $sortDir);
-        } else {
-            $query->latest();
-        }
+            $validSortColumns = ['id', 'contract_name', 'signing_date', 'effective_date', 'expiration_date', 'status'];
+            if (in_array($sortBy, $validSortColumns)) {
+                $query->orderBy($sortBy, $sortDir);
+            } else {
+                $query->latest();
+            }
 
-        $perPage = min($request->get('per_page', 15), 100); // Cap at 100
+            $perPage = min($request->get('per_page', 15), 100); // Cap at 100
 
-        $contracts = $query->paginate($perPage)
-            ->through(fn ($contract) => [
-                'id' => $contract->id,
-                'contract_name' => $contract->contract_name,
-                'partner_name' => $contract->partner->name,
-                'signing_date' => $contract->signing_date->format('Y-m-d'),
-                'effective_date' => $contract->effective_date?->format('Y-m-d'),
-                'expiration_date' => $contract->expiration_date?->format('Y-m-d'),
-                'seed_varieties' => $contract->contractSeedCommitments
-                    ->take(3)
-                    ->map(fn ($item) => $item->seed->seed_variety)
-                    ->implode(', '),
-                'status' => $contract->status,
-                'is_expired' => $contract->isExpired(),
-                'days_until_expiration' => $contract->getDaysUntilExpiration(),
+            $contracts = $query->paginate($perPage)
+                ->through(fn ($contract) => [
+                    'id' => $contract->id,
+                    'contract_name' => $contract->contract_name,
+                    'partner_name' => $contract->partner?->name ?? 'N/A',
+                    'signing_date' => $contract->signing_date?->format('Y-m-d') ?? null,
+                    'effective_date' => $contract->effective_date?->format('Y-m-d') ?? null,
+                    'expiration_date' => $contract->expiration_date?->format('Y-m-d') ?? null,
+                    'seed_varieties' => $contract->contractSeedCommitments
+                        ? $contract->contractSeedCommitments
+                            ->take(3)
+                            ->map(fn ($item) => $item->seed?->seed_variety ?? 'N/A')
+                            ->filter()
+                            ->implode(', ')
+                        : '',
+                    'status' => $contract->status,
+                    'is_expired' => $contract->isExpired(),
+                    'days_until_expiration' => $contract->getDaysUntilExpiration(),
+                ]);
+
+            return Inertia::render('Contracts/Index', [
+                'contracts' => $contracts,
+                'filters' => [
+                    'search' => $request->search,
+                    'status' => $request->status ?? 'all',
+                    'sort_by' => $sortBy,
+                    'sort_dir' => $sortDir,
+                    'per_page' => $perPage,
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error("Failed to load contracts index", [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'user_id' => auth()->id(),
             ]);
 
-        return Inertia::render('Contracts/Index', [
-            'contracts' => $contracts,
-            'filters' => [
-                'search' => $request->search,
-                'status' => $request->status ?? 'all',
-                'sort_by' => $sortBy,
-                'sort_dir' => $sortDir,
-                'per_page' => $perPage,
-            ],
-        ]);
+            return Inertia::render('Contracts/Index', [
+                'contracts' => ['data' => [], 'links' => [], 'total' => 0],
+                'filters' => [
+                    'search' => $request->search,
+                    'status' => $request->status ?? 'all',
+                    'sort_by' => 'id',
+                    'sort_dir' => 'desc',
+                    'per_page' => 15,
+                ],
+                'flash' => [
+                    'error' => 'Failed to load contracts. Please contact support if the issue persists.'
+                ]
+            ]);
+        }
     }
 
     /**
@@ -662,6 +695,30 @@ class ContractController extends Controller implements HasMiddleware
             $oldStatus = $contract->status;
             $contract->update(['status' => $status]);
 
+            // Auto-cancel ongoing field visits when contract is terminated
+            if ($status === 'terminated') {
+                $ongoingVisits = \App\Models\FieldVisit::where('contract_ID', $contract->id)
+                    ->where('status', 'ongoing')
+                    ->get();
+
+                foreach ($ongoingVisits as $visit) {
+                    $visit->update([
+                        'status' => 'cancelled',
+                        'remarks' => $visit->remarks 
+                            ? $visit->remarks . ' | Auto-cancelled due to contract termination.'
+                            : 'Auto-cancelled due to contract termination.'
+                    ]);
+                }
+
+                if ($ongoingVisits->count() > 0) {
+                    Log::info("Auto-cancelled ongoing field visits due to contract termination", [
+                        'contract_id' => $contract->id,
+                        'cancelled_visits_count' => $ongoingVisits->count(),
+                        'user_id' => auth()->id(),
+                    ]);
+                }
+            }
+
             if ($status === 'active') {
                 // Check if an order already exists for this contract
                 $existingOrder = \App\Models\PartnerOrder::where('contract_id', $contract->id)->first();
@@ -698,8 +755,13 @@ class ContractController extends Controller implements HasMiddleware
                 'user_id' => auth()->id(),
             ]);
 
+            // Custom success message for terminated status
+            $successMessage = $status === 'terminated' 
+                ? "Contract status successfully changed to terminated. All ongoing field visits have been automatically cancelled."
+                : "Contract status successfully changed to {$status}.";
+
             return redirect()->back()
-                ->with('success', "Contract status successfully changed to {$status}.");
+                ->with('success', $successMessage);
         } catch (\Exception $e) {
             Log::error("Failed to change contract status", [
                 'contract_id' => $contract->id,

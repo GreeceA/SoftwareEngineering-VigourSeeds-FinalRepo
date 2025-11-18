@@ -4,7 +4,7 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { usePage, router } from '@inertiajs/react';
 
 const BuybackInboundForm = () => {
-    const { auth, contracts = [], cornProducts = [], flash = {} } = usePage().props;
+    const { auth, contracts = [], cornProducts = [], flash = {}, prefilledContractId } = usePage().props;
     
     const [formData, setFormData] = useState({
         contract_id: '',
@@ -20,6 +20,22 @@ const BuybackInboundForm = () => {
     const [submitting, setSubmitting] = useState(false);
     const [deliveryDateError, setDeliveryDateError] = useState('');
     const [showExpirationWarning, setShowExpirationWarning] = useState(false);
+
+    // Handle prefilled contract on component mount
+    useEffect(() => {
+        if (prefilledContractId) {
+            const contract = contracts.find(c => c.id === parseInt(prefilledContractId));
+            if (contract) {
+                setSelectedContract(contract);
+                setFormData(prev => ({
+                    ...prev,
+                    contract_id: prefilledContractId.toString(),
+                    corn_product_id: contract?.corn_product_id || '',
+                    unit: contract?.unit || 'kg'
+                }));
+            }
+        }
+    }, [prefilledContractId, contracts]);
 
     const toKg = (qty, unit) => {
         if (unit === 'kg') return parseFloat(qty || 0);
@@ -160,6 +176,19 @@ const BuybackInboundForm = () => {
                             <AlertTriangle className="text-red-600" size={20} />
                             <div>
                                 <p className="font-medium text-red-900">{flash.error}</p>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Show info banner if prefilled */}
+                    {prefilledContractId && selectedContract && (
+                        <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center gap-3">
+                            <CheckCircle className="text-blue-600" size={20} />
+                            <div>
+                                <p className="font-medium text-blue-900">Contract Pre-selected</p>
+                                <p className="text-sm text-blue-700">
+                                    Buyback contract {selectedContract.contract_name} has been automatically selected
+                                </p>
                             </div>
                         </div>
                     )}
@@ -317,9 +346,11 @@ const BuybackInboundForm = () => {
                                     </div>
                                 </div>
 
-                                <p className="text-xs text-red-500 mt-1">
-                                    {deliveryDateError}
-                                </p>
+                                {deliveryDateError && (
+                                    <p className="text-xs text-red-500 mb-3">
+                                        {deliveryDateError}
+                                    </p>
+                                )}
 
                                 <div className="mb-6">
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -381,12 +412,12 @@ const BuybackInboundForm = () => {
                                                     </span>
                                                 </span>
                                             </div>
-											<div className="flex justify-between">
-												<span className="text-gray-600">Buyback Price</span>
-												<span className="font-semibold">
-													₱{Number(selectedContract.buyback_price).toFixed(2)}/{selectedContract.unit}
-												</span>
-											</div>
+                                            <div className="flex justify-between">
+                                                <span className="text-gray-600">Buyback Price</span>
+                                                <span className="font-semibold">
+                                                    ₱{Number(selectedContract.buyback_price).toFixed(2)}/{selectedContract.unit}
+                                                </span>
+                                            </div>
                                             <div className="flex justify-between pt-2 border-t">
                                                 <span className="text-gray-900 font-medium">Estimated Value</span>
                                                 <span className="font-bold text-lg text-green-600">

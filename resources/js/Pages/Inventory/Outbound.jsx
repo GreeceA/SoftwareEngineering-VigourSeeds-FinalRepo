@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowUpCircle, AlertTriangle, CheckCircle, Package } from 'lucide-react';
 import { HomeIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
@@ -6,7 +6,7 @@ import { usePage, Link, router } from '@inertiajs/react';
 import Select from 'react-select'; 
 
 const StockOutboundForm = () => {
-    const { auth, partnerOrders, errors: backendErrors } = usePage().props;
+    const { auth, partnerOrders, errors: backendErrors, prefilledOrderId } = usePage().props;
 
     const [formData, setFormData] = useState({
         partner_order_id: '',
@@ -19,6 +19,20 @@ const StockOutboundForm = () => {
     const [selectedOrder, setSelectedOrder] = useState(null);
     const [selectedLine, setSelectedLine] = useState(null);
     const [errorMessage, setErrorMessage] = useState('');
+
+    // Handle prefilled order on component mount
+    useEffect(() => {
+        if (prefilledOrderId) {
+            const order = partnerOrders.find(o => o.id === parseInt(prefilledOrderId));
+            if (order) {
+                setSelectedOrder(order);
+                setFormData(prev => ({
+                    ...prev,
+                    partner_order_id: prefilledOrderId.toString()
+                }));
+            }
+        }
+    }, [prefilledOrderId, partnerOrders]);
 
     const convertToBaseUnit = (qty, unit) => {
         if (unit === 'ton') return qty * 1000;
@@ -90,7 +104,6 @@ const StockOutboundForm = () => {
             return;
         }
         
-        // FIXED: Use Inertia router to POST to backend
         router.post(route('inventory.outbound.store'), formData, {
             preserveScroll: true,
             onSuccess: () => {
@@ -171,6 +184,19 @@ const StockOutboundForm = () => {
                                     <li key={key}>{value}</li>
                                 ))}
                             </ul>
+                        </div>
+                    )}
+
+                    {/* Show info banner if prefilled */}
+                    {prefilledOrderId && selectedOrder && (
+                        <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-center gap-3">
+                            <CheckCircle className="text-blue-600" size={20} />
+                            <div>
+                                <p className="font-medium text-blue-900">Order Pre-selected</p>
+                                <p className="text-sm text-blue-700">
+                                    Partner Order PO-{selectedOrder.contract_name}-{selectedOrder.id} has been automatically selected
+                                </p>
+                            </div>
                         </div>
                     )}
 

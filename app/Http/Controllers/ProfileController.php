@@ -15,7 +15,7 @@ class ProfileController extends Controller
 {
     public function edit(Request $request): Response
     {
-        $user = auth()->user();
+        $user = auth()->user()->load('roles');
         
         // Convert avatar to full URL - works with any APP_URL
         $avatarUrl = null;
@@ -33,6 +33,7 @@ class ProfileController extends Controller
                 'last_name' => $user->last_name,
                 'email' => $user->email,
                 'role' => $user->role,
+                'roles' => $user->roles,
                 'avatar' => $avatarUrl,
                 'created_at' => $user->created_at,
                 'email_verified_at' => $user->email_verified_at,
@@ -45,6 +46,7 @@ class ProfileController extends Controller
                     'last_name' => $user->last_name,
                     'email' => $user->email,
                     'role' => $user->role,
+                    'roles' => $user->roles,
                     'avatar' => $avatarUrl,
                     'created_at' => $user->created_at,
                     'email_verified_at' => $user->email_verified_at,

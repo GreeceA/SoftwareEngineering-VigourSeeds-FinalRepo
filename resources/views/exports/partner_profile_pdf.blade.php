@@ -138,7 +138,7 @@
         }
         
         th {
-            color: #fff;
+            color: #37692F;
             padding: 12px 10px;
             text-align: left;
             font-weight: 600;

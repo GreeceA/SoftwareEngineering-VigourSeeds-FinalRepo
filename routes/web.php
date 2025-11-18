@@ -94,7 +94,7 @@ Route::middleware(['auth'])->group(function () {
         // Roles & Permissions
         Route::get('/roles', [UserController::class, 'roles'])->name('roles');
         Route::get('/permissions', [UserController::class, 'permissions'])->name('permissions');
-
+        Route::delete('/users/permissions/{permission}', [PermissionController::class, 'destroy'])->name('users.permissions.destroy');
         // Activation
         Route::post('/{user}/deactivate', [UserController::class, 'deactivate'])->name('deactivate');
         Route::post('/{user}/reactivate', [UserController::class, 'reactivate'])->name('reactivate');
