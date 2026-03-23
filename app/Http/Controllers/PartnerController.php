@@ -191,30 +191,10 @@ class PartnerController extends Controller implements HasMiddleware
             }
         }
 
-        // Farms
-        foreach ($partner->farms as $farm) {
-            // Check if farm is used in any contract
-            $isUsed = $farm->contracts()->exists();
-            if (!$isUsed) {
-                $farm->delete();
-            }
-            // If used, skip deletion
-        }
 
-        if ($request->farms && is_array($request->farms)) {
-            foreach ($request->farms as $farmData) {
-                // Only create new farm if not already existing
-                if (empty($farmData['id'])) {
-                    $partner->farms()->create([
-                        'location_name' => $farmData['location_name'],
-                        'address' => $farmData['address'],
-                        'area_size' => $farmData['area_size'] ?? null,
-                        'soil_type' => $farmData['soil_type'] ?? null,
-                    ]);
         // Farms - UPDATE existing farms instead of deleting them to preserve contracts
         if ($request->farms && is_array($request->farms)) {
             $submittedFarmIds = [];
-            
             foreach ($request->farms as $farm) {
                 if (isset($farm['id']) && $farm['id']) {
                     // Update existing farm
@@ -239,7 +219,6 @@ class PartnerController extends Controller implements HasMiddleware
                     $submittedFarmIds[] = $newFarm->id;
                 }
             }
-            
             // Only delete farms that are NOT in the submitted list AND have NO contracts
             $partner->farms()
                 ->whereNotIn('id', $submittedFarmIds)
@@ -249,7 +228,7 @@ class PartnerController extends Controller implements HasMiddleware
 
         return redirect()->route('partners.index')->with('success', 'Partner updated successfully.');
     }
-
+    
     public function destroy(Partner $partner)
     {
         // $partner->delete();
