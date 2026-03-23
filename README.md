@@ -1,61 +1,114 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+<br />
+<div align="center">
+  <a href="https://github.com/GreeceA/vigour-seeds-cms">
+    <img src="C:\xampp\htdocs\dashboard\SoftwareEngineering-VigourSeeds-FinalRepo\public\images\vigour-logo.png" alt="Logo" width="100%">
+  </a>
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+  <h3 align="center">Vigour Seeds: Enterprise Contract Management System</h3>
 
-## About Laravel
+  <p align="center">
+    A comprehensive, end-to-end platform modernizing agricultural supply chains, contract lifecycles, and field operations.
+    <br />
+    <a href="ROLES-PERMISSIONS-GUIDE.md"><strong>Explore the Role Guide »</strong></a>
+    <br />
+    <br />
+  </p>
+</div>
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+<div align="center">
+  <img src="https://img.shields.io/badge/Laravel-FF2D20?style=for-the-badge&logo=laravel&logoColor=white" alt="Laravel" />
+  <img src="https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB" alt="React" />
+  <img src="https://img.shields.io/badge/Inertia.js-9553E9?style=for-the-badge&logo=inertia&logoColor=white" alt="Inertia.js" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white" alt="Tailwind" />
+  <img src="https://img.shields.io/badge/PHP-777BB4?style=for-the-badge&logo=php&logoColor=white" alt="PHP" />
+</div>
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+---
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## 📖 About the Project
 
-## Learning Laravel
+**Vigour Seeds Development Inc.** is a leading company in the agriculture industry, specializing in food production, crop farming, and agricultural research and development. To support their expanding operations, they required a centralized digital solution to replace fragmented workflows. 
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+The **Vigour Seeds Contract Management System** is a modern, web-based platform engineered to act as the company's central nervous system. It centralizes contract management, partner relationships, seed cataloging, inventory, and field activities, empowering staff with intelligent tools for efficient and transparent workflows.
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+> **💡 Note for Recruiters:** This project demonstrates complex state management, highly secure Role-Based Access Control (RBAC), and full-stack integration using modern SPA architecture.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+---
 
-## Laravel Sponsors
+## 📸 System Previews
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### 📊 Real-Time Dashboard
+*A centralized hub providing visual analytics and immediate overviews of active contracts, inventory thresholds, and recent system activities.*
+![Dashboard Preview](https://via.placeholder.com/800x400/F2EBEB/2A1115?text=Insert+Screenshot+of+Dashboard+Here)
 
-### Premium Partners
+### 📝 Contract Lifecycle Management
+*End-to-end tracking of agricultural contracts including drafting, multi-stage reviews, activation, suspension, completion, and buyback transactions.*
+![Contract Workflow GIF](https://via.placeholder.com/800x400/F2EBEB/2A1115?text=Insert+GIF+of+Contract+Workflow+Here)
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+### 📱 Responsive UI & Field Operations
+*Scheduling and monitoring tools built with Tailwind CSS for field officers to log farm inspections on any device.*
+![Mobile/Field View](https://via.placeholder.com/800x400/F2EBEB/2A1115?text=Insert+Screenshot+of+Mobile+View+Here)
 
-## Contributing
+---
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## ✨ Key Modules & Features
 
-## Code of Conduct
+* **Contracts:** Full lifecycle management (Draft → Review → Active → Suspended → Completed), including integrated buyback transactions.
+* **Partners:** Manage partner organizations, farm locations, and contact persons with role-based access for managers and viewers.
+* **Seeds:** Comprehensive seed catalog management encompassing creation, editing, pricing, optimal growth cycles, and soil compatibility requirements.
+* **Inventory:** Real-time logistics tracking for seed and item stocks, inbound/outbound warehouse transactions, and fulfillment of partner orders.
+* **Field Visits:** Automated scheduling and monitoring tools for farm inspections and activity reports.
+* **Automated Reporting:** One-click PDF report generation for contracts, seed inventory audits, user logs, and field visit records.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+---
 
-## Security Vulnerabilities
+## 🔐 Security & Role-Based Access Control (RBAC)
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+The system employs strict, fine-grained permissions to ensure data integrity and separation of duties across **11 distinct organizational roles**.
 
-## License
+| Role Category | System Access & Responsibilities |
+| :--- | :--- |
+| **System Admin** | Full root access to all modules, system configuration, and user management. |
+| **Contract Manager** | Oversees the complete contract lifecycle and coordinates required field visits. |
+| **Partner Manager** | Manages partner organization profiles, farm locations, and contact personnel. |
+| **Inventory Manager** | Oversees warehouse operations, stock levels, and transaction approvals. |
+| **Seed Manager** | Maintains the integrity and updates of the centralized seed catalog. |
+| **Field Officer** | Accesses assigned schedules to conduct, document, and submit farm inspections. |
+| **Employee (Base)** | Limited, read-only view of essential company data based on departmental assignment. |
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+*For a detailed breakdown of all 11 roles and their specific module permissions, please see our comprehensive [ROLES-PERMISSIONS-GUIDE.md](ROLES-PERMISSIONS-GUIDE.md).*
+
+---
+
+## 🚀 Getting Started
+
+*(Add instructions here if you want to show recruiters how to run the project locally)*
+
+### Prerequisites
+* PHP >= 8.1
+* Composer
+* Node.js & npm
+* MySQL
+
+### Installation
+
+1. Clone the repo
+   ```sh
+   git clone [https://github.com/GreeceA/vigour-seeds-cms.git](https://github.com/GreeceA/vigour-seeds-cms.git)
+
+2. Install PHP dependencies
+   ```sh
+   composer install
+
+3. Install NPM packages
+   ```sh
+   npm install && npm run build
+
+4. Configure environment variables
+   ```sh
+   cp .env.example .env
+    php artisan key:generate
+
+5. Run migrations and seed the database
+   ```sh
+   php artisan migrate --seed
