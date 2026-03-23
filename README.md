@@ -1,7 +1,7 @@
 <br />
 <div align="center">
   <a href="https://github.com/GreeceA/vigour-seeds-cms">
-    <img src="public/images/vigour-logo.png" alt="Vigour Seeds Logo" width="320">
+    <img src="public/images/vigour-logo.png" alt="Vigour Seeds Logo" width="160">
   </a>
 
   <h3 align="center">Vigour Seeds: Enterprise Contract Management System</h3>
@@ -42,7 +42,7 @@ The **Vigour Seeds Contract Management System** is a modern, web-based platform 
 ### 📊 Real-Time Dashboard
 *A centralized hub providing visual analytics and immediate overviews of active contracts, inventory thresholds, and recent system activities.*
 ![Dashboard Preview](public/images/vigour-dashboard.png)
-![Dashboard Tablet View](public/images/vigour-dashboard-tablet.png)
+<img src="public/images/vigour-dashboard-tablet.png" alt="Dashboard Tablet View" width="400" style="margin: 12px 0;" />
 
 ### 📝 Contract Lifecycle Management
 *End-to-end tracking of agricultural contracts including drafting, multi-stage reviews, activation, suspension, completion, and buyback transactions.*
@@ -50,8 +50,10 @@ The **Vigour Seeds Contract Management System** is a modern, web-based platform 
 
 ### 📱 Responsive UI & Field Operations
 *Scheduling and monitoring tools built with Tailwind CSS for field officers to log farm inspections on any device.*
-![Mobile/Field View](public/images/vigour-inventory-phone.png)
-![Inventory Ledger Tablet](public/images/vigour-invetoryledger-tablet.png)
+<div style="display: flex; gap: 16px; align-items: flex-start;">
+  <img src="public/images/vigour-inventory-phone.png" alt="Mobile/Field View" width="220" />
+  <img src="public/images/vigour-invetoryledger-tablet.png" alt="Inventory Ledger Tablet" width="220" />
+</div>
 ---
 
 ## ✨ Key Modules & Features
