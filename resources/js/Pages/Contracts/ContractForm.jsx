@@ -571,58 +571,9 @@ export default function ContractForm({ partners, seeds, contract = null }) {
             setBuybackPriceError('Price must be greater than 0.');
         } else {
             setBuybackPriceError('');
-    const submit = (e) => {
-        e.preventDefault();
-
-        console.log('Submit triggered');
-        console.log('Form data:', data);
-        console.log('Selected seeds:', selectedSeeds);
-        console.log('Processing:', processing);
-        console.log('Errors:', errors);
-
-        let cleanBuybackPrice = String(data.buyback_price_per_unit)
-            .replace(/[^0-9.]/g, '')
-            .trim();
-        let buybackPriceValue = cleanBuybackPrice === '' ? 0 : parseFloat(cleanBuybackPrice);
-
-        // Prepare submission data (NO status field—it defaults to 'draft')
-        const submissionData = {
-            ...data,
-            buyback_price_per_unit: buybackPriceValue,
-        };
-
-        console.log('Submission data:', submissionData);
-
-        // Remove contract_file if not a File (on edit)
-        if (isEditing && !(data.contract_file instanceof File)) {
-            delete submissionData.contract_file;
         }
-
-        if (isEditing) {
-            put(route('contracts.update', contract.id), {
-                data: submissionData,
-                onSuccess: () => {
-                    console.log('Edit successful');
-                    window.location.href = route('contracts.show', contract.id);
-                },
-                onError: (e) => {
-                    console.error('Edit error:', e);
-                }
-            });
-        } else {
-            console.log('Posting to:', route('contracts.store'));
-            post(route('contracts.store'), {
-                data: submissionData,
-                onSuccess: () => {
-                    console.log('Create successful');
-                    window.location.href = route('contracts.index');
-                },
-                onError: (e) => {
-                    console.error('Create error:', e);
-                }
-            });
-        }
-    };
+    } // <-- Add this closing brace to properly terminate the function
+    // ...existing code...
 
     const handleBuybackPriceBlur = (e) => {
         let value = e.target.value.replace(/,/g, '');
