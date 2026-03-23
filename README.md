@@ -1,7 +1,7 @@
 <br />
 <div align="center">
   <a href="https://github.com/GreeceA/vigour-seeds-cms">
-    <img src="C:\xampp\htdocs\dashboard\SoftwareEngineering-VigourSeeds-FinalRepo\public\images\vigour-logo.png" alt="Logo" width="100%">
+    <img src="public/images/vigour-logo.png" alt="Vigour Seeds Logo" width="320">
   </a>
 
   <h3 align="center">Vigour Seeds: Enterprise Contract Management System</h3>
@@ -25,6 +25,8 @@
 
 ---
 
+![Landing Page](public/images/vigour-landingpage.png)
+
 ## 📖 About the Project
 
 **Vigour Seeds Development Inc.** is a leading company in the agriculture industry, specializing in food production, crop farming, and agricultural research and development. To support their expanding operations, they required a centralized digital solution to replace fragmented workflows. 
@@ -39,16 +41,17 @@ The **Vigour Seeds Contract Management System** is a modern, web-based platform 
 
 ### 📊 Real-Time Dashboard
 *A centralized hub providing visual analytics and immediate overviews of active contracts, inventory thresholds, and recent system activities.*
-![Dashboard Preview](https://via.placeholder.com/800x400/F2EBEB/2A1115?text=Insert+Screenshot+of+Dashboard+Here)
+![Dashboard Preview](public/images/vigour-dashboard.png)
+![Dashboard Tablet View](public/images/vigour-dashboard-tablet.png)
 
 ### 📝 Contract Lifecycle Management
 *End-to-end tracking of agricultural contracts including drafting, multi-stage reviews, activation, suspension, completion, and buyback transactions.*
-![Contract Workflow GIF](https://via.placeholder.com/800x400/F2EBEB/2A1115?text=Insert+GIF+of+Contract+Workflow+Here)
+![Contract Workflow](public/images/vigour-walkthrough.gif)
 
 ### 📱 Responsive UI & Field Operations
 *Scheduling and monitoring tools built with Tailwind CSS for field officers to log farm inspections on any device.*
-![Mobile/Field View](https://via.placeholder.com/800x400/F2EBEB/2A1115?text=Insert+Screenshot+of+Mobile+View+Here)
-
+![Mobile/Field View](public/images/vigour-inventory-phone.png)
+![Inventory Ledger Tablet](public/images/vigour-invetoryledger-tablet.png)
 ---
 
 ## ✨ Key Modules & Features
