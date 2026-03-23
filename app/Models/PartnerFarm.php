@@ -26,5 +26,9 @@ class PartnerFarm extends Model
     public function contracts()
     {
         return $this->hasMany(\App\Models\Contract::class, 'farm_id');
+    // Relationship with contracts
+    public function contracts()
+    {
+        return $this->hasMany(Contract::class, 'farm_id');
     }
 }
