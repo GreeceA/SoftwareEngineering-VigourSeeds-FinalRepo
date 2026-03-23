@@ -25,13 +25,22 @@ class AdminUserSeeder extends Seeder
             // Update existing admin with all permissions
             $adminRole = Role::where('name', 'admin')->first();
             if ($adminRole) {
+                // Sync admin role with all permissions (including partner permissions)
+                $allPermissions = Permission::all();
+                $adminRole->syncPermissions($allPermissions);
+                
+                // Assign admin role to user
                 $existingAdmin->syncRoles([$adminRole]);
-                $this->command->info('✅ Existing admin assigned to admin role');
+                $this->command->info('✅ Existing admin assigned to admin role with all permissions');
             } else {
+                // If no admin role exists, give all permissions directly
                 $allPermissions = Permission::all();
                 $existingAdmin->syncPermissions($allPermissions);
                 $this->command->info('✅ Existing admin given all permissions directly');
             }
+            
+            // Clear permission cache
+            app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
             
             $this->command->info('✅ Existing admin user updated successfully!');
             return;
@@ -52,15 +61,22 @@ class AdminUserSeeder extends Seeder
         $adminRole = Role::where('name', 'admin')->first();
         
         if ($adminRole) {
+            // Ensure admin role has all permissions (including partner permissions)
+            $allPermissions = Permission::all();
+            $adminRole->syncPermissions($allPermissions);
+            
             // Assign admin role to user
             $adminUser->assignRole($adminRole);
-            $this->command->info('✅ Admin user assigned to admin role');
+            $this->command->info('✅ Admin user assigned to admin role with all permissions');
         } else {
             // If no admin role exists, give all permissions directly
             $allPermissions = Permission::all();
             $adminUser->givePermissionTo($allPermissions);
             $this->command->info('✅ Admin user given all permissions directly');
         }
+
+        // Clear permission cache
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
 
         $this->command->info('🎉 Admin account created successfully!');
         $this->command->info('📧 Email: admin@vigourseeds.com');

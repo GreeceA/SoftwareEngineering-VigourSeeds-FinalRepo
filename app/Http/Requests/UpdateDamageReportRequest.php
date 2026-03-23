@@ -6,19 +6,32 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateDamageReportRequest extends FormRequest
 {
-    public function authorize()
+    public function authorize(): bool
     {
-        return true; // Change if you want to restrict access
+        return true;
     }
 
-   public function rules()
+    public function rules(): array
     {
         return [
-            'field_visit_ID' => ['required', 'exists:field_visits,field_visit_ID'],
-            'stage' => ['required', 'string', 'max:100'],
-            'type_damage' => ['required', 'string', 'max:100'],
-            'severity_damage' => ['required', 'in:low,medium,high,critical'],
-            'notes' => ['nullable', 'string', 'max:2000'],
+            'stage' => 'required|string|in:Emergence,Vegetative,Tasseling,Silking,Maturity,Harvest',
+            'type_damage' => 'required|string|in:pest,disease,weather,mechanical,other',
+            'severity_damage' => 'required|string|in:low,medium,high,critical',
+            'notes' => 'required|string|max:1000',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'stage.required' => 'Please select a growth stage.',
+            'stage.in' => 'Invalid growth stage selected.',
+            'type_damage.required' => 'Please select a damage type.',
+            'type_damage.in' => 'Invalid damage type selected.',
+            'severity_damage.required' => 'Please select a severity level.',
+            'severity_damage.in' => 'Invalid severity level selected.',
+            'notes.required' => 'Please provide damage description and notes.',
+            'notes.max' => 'Notes cannot exceed 1000 characters.',
         ];
     }
 }

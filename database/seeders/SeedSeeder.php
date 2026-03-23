@@ -23,7 +23,7 @@ class SeedSeeder extends Seeder
             [
                 'seed_variety'         => 'Open-Pollinated Varieties (OPV)',
                 'status'               => 'active',
-                'price_per_unit'       => 1.50,
+                'price_per_unit'       => 150,
                 'growth_cycle'         => 105,
                 'storage_requirements' => 'Cool, dry place',
                 'soil_type'            => 'clay', 
@@ -36,7 +36,7 @@ class SeedSeeder extends Seeder
             [
                 'seed_variety'         => 'KK168',
                 'status'               => 'active',
-                'price_per_unit'       => 2.80,
+                'price_per_unit'       => 280,
                 'growth_cycle'         => 110,
                 'storage_requirements' => 'Cool, dry place',
                 'soil_type'            => 'loam',
@@ -47,7 +47,7 @@ class SeedSeeder extends Seeder
             [
                 'seed_variety'         => 'Teosinte 200',
                 'status'               => 'active',
-                'price_per_unit'       => 3.00,
+                'price_per_unit'       => 300,
                 'growth_cycle'         => 115,
                 'storage_requirements' => 'Cool, dry place',
                 'soil_type'            => 'clay',
@@ -60,7 +60,7 @@ class SeedSeeder extends Seeder
             [
                 'seed_variety'         => 'Maize D30',
                 'status'               => 'active',
-                'price_per_unit'       => 3.20,
+                'price_per_unit'       => 320,
                 'growth_cycle'         => 100,
                 'storage_requirements' => 'Cool, dry place',
                 'soil_type'            => 'loam',
@@ -71,7 +71,7 @@ class SeedSeeder extends Seeder
             [
                 'seed_variety'         => 'Maiswerte',
                 'status'               => 'active',
-                'price_per_unit'       => 3.10,
+                'price_per_unit'       => 310,
                 'growth_cycle'         => 108,
                 'storage_requirements' => 'Cool, dry place',
                 'soil_type'            => 'sandy',
@@ -82,7 +82,7 @@ class SeedSeeder extends Seeder
             [
                 'seed_variety'         => 'Mais-tisa',
                 'status'               => 'active',
-                'price_per_unit'       => 3.15,
+                'price_per_unit'       => 315,
                 'growth_cycle'         => 112,
                 'storage_requirements' => 'Cool, dry place',
                 'soil_type'            => 'loam',
@@ -95,7 +95,7 @@ class SeedSeeder extends Seeder
             [
                 'seed_variety'         => 'Golden Harvest 45',
                 'status'               => 'active',
-                'price_per_unit'       => 2.95,
+                'price_per_unit'       => 295,
                 'growth_cycle'         => 95,
                 'storage_requirements' => 'Cool, dry place away from direct sunlight',
                 'soil_type'            => 'loam',
@@ -106,7 +106,7 @@ class SeedSeeder extends Seeder
             [
                 'seed_variety'         => 'Premium Yellow',
                 'status'               => 'active',
-                'price_per_unit'       => 3.25,
+                'price_per_unit'       => 325,
                 'growth_cycle'         => 118,
                 'storage_requirements' => 'Cool, dry place',
                 'soil_type'            => 'clay',
@@ -117,7 +117,7 @@ class SeedSeeder extends Seeder
             [
                 'seed_variety'         => 'Super Sweet 78',
                 'status'               => 'active',
-                'price_per_unit'       => 3.40,
+                'price_per_unit'       => 340,
                 'growth_cycle'         => 85,
                 'storage_requirements' => 'Refrigerated storage recommended',
                 'soil_type'            => 'sandy',
@@ -128,7 +128,7 @@ class SeedSeeder extends Seeder
             [
                 'seed_variety'         => 'DroughtMaster Pro',
                 'status'               => 'active',
-                'price_per_unit'       => 2.85,
+                'price_per_unit'       => 285,
                 'growth_cycle'         => 120,
                 'storage_requirements' => 'Cool, dry place',
                 'soil_type'            => 'sandy',
@@ -139,7 +139,7 @@ class SeedSeeder extends Seeder
             [
                 'seed_variety'         => 'Tropical Giant',
                 'status'               => 'active',
-                'price_per_unit'       => 3.10,
+                'price_per_unit'       => 310,
                 'growth_cycle'         => 125,
                 'storage_requirements' => 'Cool, dry place with good ventilation',
                 'soil_type'            => 'loam',
@@ -150,7 +150,7 @@ class SeedSeeder extends Seeder
             [
                 'seed_variety'         => 'QuickGrow 60',
                 'status'               => 'active',
-                'price_per_unit'       => 2.75,
+                'price_per_unit'       => 275,
                 'growth_cycle'         => 75,
                 'storage_requirements' => 'Room temperature, dry environment',
                 'soil_type'            => 'silty',
@@ -161,7 +161,7 @@ class SeedSeeder extends Seeder
             [
                 'seed_variety'         => 'Organic Heirloom',
                 'status'               => 'active',
-                'price_per_unit'       => 4.20,
+                'price_per_unit'       => 420,
                 'growth_cycle'         => 110,
                 'storage_requirements' => 'Cool, dark place in airtight containers',
                 'soil_type'            => 'loam',
@@ -172,7 +172,7 @@ class SeedSeeder extends Seeder
             [
                 'seed_variety'         => 'High-Yield Plus',
                 'status'               => 'active',
-                'price_per_unit'       => 3.55,
+                'price_per_unit'       => 355.50,
                 'growth_cycle'         => 105,
                 'storage_requirements' => 'Cool, dry place',
                 'soil_type'            => 'clay',
@@ -183,7 +183,7 @@ class SeedSeeder extends Seeder
             [
                 'seed_variety'         => 'Pioneer 33',
                 'status'               => 'active',
-                'price_per_unit'       => 3.30,
+                'price_per_unit'       => 330,
                 'growth_cycle'         => 98,
                 'storage_requirements' => 'Cool, dry place',
                 'soil_type'            => 'sandy',
@@ -196,7 +196,7 @@ class SeedSeeder extends Seeder
             [
                 'seed_variety'         => 'Legacy Red',
                 'status'               => 'archived',
-                'price_per_unit'       => 2.50,
+                'price_per_unit'       => 250,
                 'growth_cycle'         => 130,
                 'storage_requirements' => 'Cool, dry place',
                 'soil_type'            => 'clay',
@@ -207,7 +207,7 @@ class SeedSeeder extends Seeder
             [
                 'seed_variety'         => 'Classic White',
                 'status'               => 'archived',
-                'price_per_unit'       => 2.30,
+                'price_per_unit'       => 230,
                 'growth_cycle'         => 140,
                 'storage_requirements' => 'Cool, dry place',
                 'soil_type'            => 'loam',
@@ -218,7 +218,7 @@ class SeedSeeder extends Seeder
             [
                 'seed_variety'         => 'Heritage Blue',
                 'status'               => 'archived',
-                'price_per_unit'       => 2.80,
+                'price_per_unit'       => 280,
                 'growth_cycle'         => 135,
                 'storage_requirements' => 'Cool, dry place',
                 'soil_type'            => 'silty',
@@ -229,7 +229,7 @@ class SeedSeeder extends Seeder
             [
                 'seed_variety'         => 'Traditional Mix',
                 'status'               => 'archived',
-                'price_per_unit'       => 2.20,
+                'price_per_unit'       => 220,
                 'growth_cycle'         => 128,
                 'storage_requirements' => 'Cool, dry place',
                 'soil_type'            => 'sandy',
@@ -240,7 +240,7 @@ class SeedSeeder extends Seeder
             [
                 'seed_variety'         => 'Vintage Yellow',
                 'status'               => 'archived',
-                'price_per_unit'       => 2.40,
+                'price_per_unit'       => 240,
                 'growth_cycle'         => 145,
                 'storage_requirements' => 'Cool, dry place',
                 'soil_type'            => 'clay',

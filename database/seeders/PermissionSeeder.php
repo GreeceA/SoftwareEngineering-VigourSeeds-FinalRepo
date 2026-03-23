@@ -13,7 +13,10 @@ class PermissionSeeder extends Seeder
      */
     public function run(): void
     {
-        // Core permissions for users (PROTECTED - cannot be deleted)
+        // Clear cached permissions
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+
+        // User Management Permissions (PROTECTED - cannot be deleted)
         $userPermissions = [
             'view users',
             'create users',
@@ -21,7 +24,7 @@ class PermissionSeeder extends Seeder
             'deactivate users',
         ];
 
-        // Core permissions for roles (PROTECTED - cannot be deleted)
+        // Role & Permission Management (PROTECTED - cannot be deleted)
         $rolePermissions = [
             'view roles',
             'create roles',
@@ -29,43 +32,100 @@ class PermissionSeeder extends Seeder
             'delete roles',
         ];
 
-        // Core permissions for permissions (PROTECTED - cannot be deleted)
         $permissionPermissions = [
-            'view permissions',
-            'create permissions',
-            'edit permissions',
-            'delete permissions',
+            'view permissions'
         ];
 
-        // Combine all core permissions
-        $corePermissions = array_merge($userPermissions, $rolePermissions, $permissionPermissions);
+        // Partner Management Permissions (PROTECTED - cannot be deleted)
+        $partnerPermissions = [
+            'view partners',
+            'create partners',
+            'edit partners',
+            'archive partners',
+        ];
 
-        // Create core permissions if they don't exist (marked as protected)
-        foreach ($corePermissions as $permission) {
+        // Seed Management Permissions (PROTECTED - cannot be deleted)
+        $seedPermissions = [
+            'view seeds',
+            'create seeds',
+            'edit seeds',
+            'archive seeds',
+        ];
+
+        // Item Management Permissions (PROTECTED - cannot be deleted)
+        $itemPermissions = [
+            'view items',
+            'create items',
+            'edit items',
+            'archive items',
+        ];
+
+        // Contract Management Permissions (PROTECTED - cannot be deleted)
+        $contractPermissions = [
+            'view contracts',
+            'create contracts',
+            'edit contracts',
+            'delete contracts',
+            // Granular contract workflow permissions
+            'submit contract for review',
+            'activate contract',
+            'suspend contract',
+            'terminate contract',
+            'complete contract',
+            'cancel contract',
+        ];
+
+        // Inventory Management Permissions (PROTECTED - cannot be deleted)
+        $inventoryPermissions = [
+            'view inventory',
+            'create inventory',
+            'create partner order',
+            'fulfill partner order',
+            'record buyback transaction',
+        ];
+
+        // Field Visit Management Permissions (PROTECTED - cannot be deleted)
+        $fieldVisitPermissions = [
+            'view field visit',
+            'create field visit',
+            'edit field visit',
+            'complete field visit',
+            'cancel field visit',
+        ];
+
+        // Combine all permissions
+        $allPermissions = array_merge(
+            $userPermissions,
+            $rolePermissions,
+            $permissionPermissions,
+            $partnerPermissions,
+            $seedPermissions,
+            $itemPermissions,
+            $contractPermissions,
+            $inventoryPermissions,
+            $fieldVisitPermissions
+        );
+
+        // Create all permissions if they don't exist
+        foreach ($allPermissions as $permission) {
             Permission::firstOrCreate(
                 ['name' => $permission],
-                ['guard_name' => 'web'] // This ensures they're marked as core system permissions
+                ['guard_name' => 'web']
             );
         }
 
         // Create core roles if they don't exist (PROTECTED - cannot be deleted)
         $adminRole = Role::firstOrCreate(['name' => 'admin']);
-        $managerRole = Role::firstOrCreate(['name' => 'manager']);
         $employeeRole = Role::firstOrCreate(['name' => 'employee']);
 
-        // Give admin role all permissions
-        $adminRole->syncPermissions($corePermissions);
+        // Give admin role ALL permissions
+        $adminRole->syncPermissions($allPermissions);
 
-        // Give manager role some permissions
-        $managerRole->syncPermissions([
-            'view users', 'create users', 'edit users',
-            'view roles'
-        ]);
+        // Employee role has NO permissions by default
+        $employeeRole->syncPermissions([]);
 
-        // Give employee role minimal permissions
-        $employeeRole->syncPermissions(['view users']);
-
-        $this->command->info('✅ Core permissions and roles created successfully!');
-        $this->command->info('🔒 Protected from deletion: All core permissions and roles');
+        $this->command->info('✅ All permissions created successfully!');
+        $this->command->info('🔒 Admin role has all permissions');
+        $this->command->info('👤 Employee role has no permissions (assign as needed)');
     }
 }

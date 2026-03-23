@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Inertia\Inertia;
 use Inertia\Response;
+use Spatie\Permission\Models\Role; 
 
 class RegisteredUserController extends Controller
 {
@@ -44,12 +45,15 @@ class RegisteredUserController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
+        // Ensure the employee role exists and assign it via Spatie
+        Role::firstOrCreate(['name' => 'employee']);
+        $user->assignRole('employee'); // Spatie method
+
         event(new Registered($user));
 
         Auth::login($user);
 
-        // Redirect to Google connection confirmation page instead of directly to dashboard
-        return redirect()->route('register.google-connect');
+        return redirect(route('dashboard', absolute: false));
     }
 
     /**

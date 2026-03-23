@@ -537,17 +537,6 @@ export default function PartnerForm({ partner = null }) {
 
     return (
         <div className="p-6">
-            <div className="px-6 pt-6">
-                <nav className="text-sm text-gray-600">
-                    <Link
-                        href={route('dashboard')} 
-                        className="text-[#37692F] hover:underline"
-                    >
-                        Home
-                    </Link>{" "}
-                    / <Link href={route('partners.index')} className="text-[#37692F] hover:underline">Partners</Link> / <span>{partner ? 'Edit' : 'Create'} Partner</span>
-                </nav>
-            </div>
 
             <div className="mt-4 rounded-lg bg-white p-6 shadow-lg">
                 <h1 className="mb-6 text-2xl font-semibold text-gray-800">
@@ -818,7 +807,7 @@ export default function PartnerForm({ partner = null }) {
                                         <h4 className="font-medium text-gray-700">
                                             Farm #{idx + 1} {farm.location_name && `- ${farm.location_name}`}
                                         </h4>
-                                        {idx > 0 && (
+                                        {idx > 0 && !farm.contract_id && (
                                             <button
                                                 type="button"
                                                 onClick={() => removeFarm(idx)}
@@ -989,7 +978,7 @@ export default function PartnerForm({ partner = null }) {
                                 </span>
                             </div>
                             <p className="mt-1 text-xs text-gray-500">
-                                Format: BN-YYYY#####REG
+                                Enter 11-digit Number (Format: BN-YYYY#####REG)
                             </p>
                             {(touched.registration_number || showErrors) && (localErrors.registration_number || regUniqueError) && (
                                 <p className="mt-1 text-sm text-red-600">

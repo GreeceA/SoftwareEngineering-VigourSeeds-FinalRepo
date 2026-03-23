@@ -2,12 +2,15 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { debounce } from 'lodash';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
+import Breadcrumb from '@/Components/Breadcrumb';
 import { FunnelIcon, ChevronDownIcon, ArrowsUpDownIcon, CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
 import CompleteVisitModal from './handleComplete';
 import CancelVisitModal from './handleCancel';
+import Vlogo from '@/assets/vigour-logo.png';
 
 export default function Index({ auth, fieldVisits, filters, contracts }) {
     const { flash } = usePage().props;
+    const permissions = auth?.user?.can || [];
     const [search, setSearch] = useState(filters.search || '');
     const [status, setStatus] = useState(filters.status || '');
     const [contractId, setContractId] = useState(filters.contract_id || '');
@@ -132,34 +135,76 @@ export default function Index({ auth, fieldVisits, filters, contracts }) {
     };
 
     return (
-        <AuthenticatedLayout
-            user={auth.user}
-            header={
-                <h2 className="text-[25px] font-[800]" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                    <span className="text-[#37692F] font-[800]">VIGOUR SEEDS</span>
-                    <span className="text-[#333333] font-[400]"> | Field Visit Management</span>
-                </h2>
-            }
-        >
+        <AuthenticatedLayout user={auth.user}>
             <Head title="Field Visit Management" />
-            
-            <div className="px-6 pt-6">
-                <nav className="text-sm text-gray-600">
-                    <Link
-                        href={route('dashboard')}
-                        className="text-[#37692F] hover:underline"
-                    >
-                        Home
-                    </Link>{" "}
-                    / <span>Field Visit Management</span>
-                </nav>
+
+            {/* Modern Page Header with Integrated Breadcrumb */}
+            <div className="relative bg-gradient-to-br from-white via-green-50/30 to-white border-b border-gray-200 overflow-hidden">
+                {/* Subtle decorative elements */}
+                <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-[#8fbc8f]/10 to-transparent rounded-full blur-3xl"></div>
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-[#a8d5a8]/10 to-transparent rounded-full blur-2xl"></div>
+                
+                <div className="relative px-6 py-6">
+                    {/* Breadcrumb */}
+                    <Breadcrumb 
+                        items={[
+                            { 
+                                label: 'Home', 
+                                href: route('dashboard'),
+                                icon: <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/></svg>
+                            },
+                            { label: 'Field Visit Management' }
+                        ]}
+                    />
+
+                    {/* Header Content */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                            {/* Icon */}
+                            <div className="flex-shrink-0">
+                                <div className="w-16 h-16 bg-gradient-to-br from-[#37692F] to-[#4a8a3f] rounded-2xl flex items-center justify-center shadow-lg shadow-green-900/20">
+                                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                                    </svg>
+                                </div>
+                            </div>
+                            
+                            {/* Title & Description */}
+                            <div>
+                                <h1 className="text-3xl font-bold text-gray-900 mb-1">Field Visit Management System</h1>
+                                <p className="text-gray-600">Monitor and track field visits and inspections</p>
+                            </div>
+                        </div>
+
+                        {/* Stats Badge */}
+                        <div className="hidden lg:flex items-center space-x-2 bg-lime-50 border border-lime-200 rounded-lg px-4 py-2">
+                            <svg className="w-5 h-5 text-lime-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                            </svg>
+                            <span className="text-sm font-medium text-lime-700">{fieldVisits?.data?.length || 0} Visits</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div className="p-6">
-                {/* Header Section and Controls */}
-                <div className="mb-6 flex items-center justify-between">
-                    <h1 className="text-2xl font-semibold text-gray-800">Field Visit Management System</h1>
+                {/* Filters & Actions Section */}
+                <div className="mb-6 flex items-center justify-end">
                     <div className="flex space-x-3">
+                        <button
+                            onClick={() => window.location.href = route('field-visits.export.pdf', {
+                                status,
+                                contract_id: contractId,
+                                date_from: dateFrom,
+                                date_to: dateTo,
+                            })}
+                            className="flex items-center px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#37692F] bg-white"
+                        >
+                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                            </svg>
+                            Export as PDF
+                        </button>
                         {/* Filter Dropdown */}
                         <div className="relative" ref={filterRef}>
                             <button
@@ -171,7 +216,7 @@ export default function Index({ auth, fieldVisits, filters, contracts }) {
                                 <ChevronDownIcon className="ml-2 h-4 w-4 text-gray-500" />
                             </button>
                             {showFilterDropdown && (
-                                <div className="absolute right-0 z-10 mt-2 w-80 rounded-md border border-gray-200 bg-white p-4 shadow-lg">
+                                <div className="absolute left-0 z-10 mt-2 w-80 rounded-md border border-gray-200 bg-white p-4 shadow-lg">
                                     <div className="space-y-4">
                                         {/* Status Filter */}
                                         <div>
@@ -286,25 +331,27 @@ export default function Index({ auth, fieldVisits, filters, contracts }) {
                         </div>
 
                         {/* Create Field Visit Button */}
-                        <Link
-                            href={route('field-visits.create')}
-                            className="flex items-center rounded-md bg-[#37692F] px-4 py-2 text-white hover:bg-[#2a5624]"
-                        >
-                            <svg
-                                className="mr-2 h-5 w-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
+                        {permissions.includes('create field visit') && (
+                            <Link
+                                href={route('field-visits.create')}
+                                className="flex items-center rounded-md bg-[#37692F] px-4 py-2 text-white hover:bg-[#2a5624]"
                             >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                                />
-                            </svg>
-                            Create Visit
-                        </Link>
+                                <svg
+                                    className="mr-2 h-5 w-5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                                    />
+                                </svg>
+                                Create Visit
+                            </Link>
+                        )}
                     </div>
                 </div>
 
@@ -357,11 +404,11 @@ export default function Index({ auth, fieldVisits, filters, contracts }) {
                                         <td className="px-6 py-4">
                                             <div className="font-poppins text-[13px] font-normal text-gray-900">
                                                 {visit.date_visit
-                                                    ? (function(d){
-                                                          const dt = new Date(d);
-                                                          return isNaN(dt) ? d : dt.toISOString().slice(0,10);
-                                                      })(visit.date_visit)
-                                                      : 'N/A'}
+                                                    ? (function (d) {
+                                                        const dt = new Date(d);
+                                                        return isNaN(dt) ? d : dt.toISOString().slice(0, 10);
+                                                    })(visit.date_visit)
+                                                    : 'N/A'}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4">
@@ -382,17 +429,20 @@ export default function Index({ auth, fieldVisits, filters, contracts }) {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex space-x-3">
+                                                {/* View Button - Always available */}
                                                 <Link
                                                     href={route('field-visits.show', visit.field_visit_ID)}
                                                     className="text-blue-600 transition-colors duration-200 hover:text-blue-800"
                                                     title="View Details"
                                                 >
                                                     <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                                     </svg>
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                    </svg>
                                                 </Link>
-                                                {visit.status === 'ongoing' && (
+
+                                                {/* Complete & Cancel Buttons - Only for ongoing visits */}
+                                                {visit.status === 'ongoing' && permissions.includes('edit field visit') && (
                                                     <>
                                                         <button
                                                             onClick={() => handleComplete(visit.field_visit_ID)}
@@ -476,10 +526,9 @@ export default function Index({ auth, fieldVisits, filters, contracts }) {
                                             preserveScroll
                                             preserveState
                                             className={
-                                                `border px-3 py-2 text-sm font-medium ${
-                                                    link.active
-                                                        ? 'z-10 border-[#37692F] bg-[#37692F] text-white'
-                                                        : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
+                                                `border px-3 py-2 text-sm font-medium ${link.active
+                                                    ? 'z-10 border-[#37692F] bg-[#37692F] text-white'
+                                                    : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
                                                 } ${!link.url ? 'pointer-events-none opacity-50' : ''}`
                                             }
                                             dangerouslySetInnerHTML={{ __html: link.label }}

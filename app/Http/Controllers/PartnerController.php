@@ -7,9 +7,22 @@ use App\Models\Partner;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
+use Barryvdh\DomPDF\Facade\Pdf;
 
-class PartnerController extends Controller
+class PartnerController extends Controller implements HasMiddleware
 {
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:view partners', only: ['index', 'show']),
+            new Middleware('permission:create partners', only: ['create', 'store']),
+            new Middleware('permission:edit partners', only: ['edit', 'update']),
+            new Middleware('permission:archive partners', only: ['deactivate', 'reactivate']),
+        ];
+    }
+
     public function index(Request $request)
     {
         $perPage = $request->input('per_page', 10);
@@ -38,12 +51,27 @@ class PartnerController extends Controller
 
         $partners = $query->paginate($perPage)->withQueryString();
 
+        $partners->getCollection()->transform(function ($partner) {
+            if ($partner->avatar && !str_starts_with($partner->avatar, 'http')) {
+                $partner->avatar = asset($partner->avatar);
+            }
+            // Add contracts array for frontend modal
+            $partner->contracts = $partner->contracts()->get()->map(function ($contract) {
+                return [
+                    'id' => $contract->id,
+                    'name' => $contract->contract_name,
+                    'status' => $contract->status,
+                    'start_date' => $contract->signing_date,
+                    'end_date' => $contract->expiration_date,
+                    'value' => $contract->buyback_price_per_unit,
+                ];
+            });
+            return $partner;
+        });
+
         return Inertia::render('Partners/Index', [
             'partners' => $partners,
             'filters' => $request->only(['search', 'status', 'partner_type', 'per_page', 'sort_by', 'sort_dir']),
-            'auth' => [
-                'user' => $request->user(),
-            ],
         ]);
     }
 
@@ -60,8 +88,8 @@ class PartnerController extends Controller
         if ($request->partner_type === 'organization' && $request->contact_persons) {
             foreach ($request->contact_persons as $contact) {
                 $partner->contactPersons()->create([
-                    'name'         => $contact['name'],
-                    'email'        => $contact['email'] ?? null,
+                    'name' => $contact['name'],
+                    'email' => $contact['email'] ?? null,
                     'phone_number' => $contact['phone_number'] ?? null,
                 ]);
             }
@@ -72,9 +100,9 @@ class PartnerController extends Controller
             foreach ($request->farms as $farm) {
                 $partner->farms()->create([
                     'location_name' => $farm['location_name'],
-                    'address'       => $farm['address'],
-                    'area_size'     => $farm['area_size'] ?? null,
-                    'soil_type'     => $farm['soil_type'] ?? null,
+                    'address' => $farm['address'],
+                    'area_size' => $farm['area_size'] ?? null,
+                    'soil_type' => $farm['soil_type'] ?? null,
                 ]);
             }
         }
@@ -85,58 +113,63 @@ class PartnerController extends Controller
     // Display the specified partner.
     public function show(Partner $partner)
     {
-        $partner->load(['contactPersons', 'farms']);
+        $partner->load(['contactPersons', 'farms', 'contracts']); // Add 'contracts' relationship
 
         return Inertia::render('Partners/Show', [
             'partner' => [
                 ...$partner->toArray(),
                 'contact_persons' => $partner->contactPersons->map(function ($c) {
                     return [
-                        'name'         => $c->name,
-                        'email'        => $c->email,
+                        'name' => $c->name,
+                        'email' => $c->email,
                         'phone_number' => $c->phone_number,
                     ];
                 }),
                 'farms' => $partner->farms->map(function ($f) {
                     return [
                         'location_name' => $f->location_name,
-                        'address'       => $f->address,
-                        'area_size'     => $f->area_size,
-                        'soil_type'     => $f->soil_type,
+                        'address' => $f->address,
+                        'area_size' => $f->area_size,
+                        'soil_type' => $f->soil_type,
                     ];
                 }),
-            ],
-            'auth' => [
-                'user' => auth()->user(),
+                'contracts' => $partner->contracts->map(function ($contract) {
+                    return [
+                        'id' => $contract->id,
+                        'name' => $contract->contract_name,
+                        'status' => $contract->status,
+                        'start_date' => $contract->signing_date,
+                        'end_date' => $contract->expiration_date,
+                        'value' => $contract->buyback_price_per_unit, // or another field for contract value
+                    ];
+                }),
             ],
         ]);
     }
 
     public function edit(Partner $partner)
     {
-        $partner->load(['contactPersons', 'farms']);
+        $partner->load(['contactPersons', 'farms.contracts']);
 
         return Inertia::render('Partners/Edit', [
             'partner' => [
                 ...$partner->toArray(),
                 'contact_persons' => $partner->contactPersons->map(function ($c) {
                     return [
-                        'name'         => $c->name,
-                        'email'        => $c->email,
+                        'name' => $c->name,
+                        'email' => $c->email,
                         'phone_number' => $c->phone_number,
                     ];
                 }),
                 'farms' => $partner->farms->map(function ($f) {
                     return [
                         'location_name' => $f->location_name,
-                        'address'       => $f->address,
-                        'area_size'     => $f->area_size,
-                        'soil_type'     => $f->soil_type,
+                        'address' => $f->address,
+                        'area_size' => $f->area_size,
+                        'soil_type' => $f->soil_type,
+                        'contract_id' => $f->contracts->isNotEmpty() ? $f->contracts->first()->id : null,
                     ];
                 }),
-            ],
-            'auth' => [
-                'user' => auth()->user(),
             ],
         ]);
     }
@@ -151,13 +184,33 @@ class PartnerController extends Controller
         if ($request->partner_type === 'organization' && $request->contact_persons) {
             foreach ($request->contact_persons as $contact) {
                 $partner->contactPersons()->create([
-                    'name'         => $contact['name'],
-                    'email'        => $contact['email'] ?? null,
+                    'name' => $contact['name'],
+                    'email' => $contact['email'] ?? null,
                     'phone_number' => $contact['phone_number'] ?? null,
                 ]);
             }
         }
 
+        // Farms
+        foreach ($partner->farms as $farm) {
+            // Check if farm is used in any contract
+            $isUsed = $farm->contracts()->exists();
+            if (!$isUsed) {
+                $farm->delete();
+            }
+            // If used, skip deletion
+        }
+
+        if ($request->farms && is_array($request->farms)) {
+            foreach ($request->farms as $farmData) {
+                // Only create new farm if not already existing
+                if (empty($farmData['id'])) {
+                    $partner->farms()->create([
+                        'location_name' => $farmData['location_name'],
+                        'address' => $farmData['address'],
+                        'area_size' => $farmData['area_size'] ?? null,
+                        'soil_type' => $farmData['soil_type'] ?? null,
+                    ]);
         // Farms - UPDATE existing farms instead of deleting them to preserve contracts
         if ($request->farms && is_array($request->farms)) {
             $submittedFarmIds = [];
@@ -205,9 +258,17 @@ class PartnerController extends Controller
         //     ->with('success', 'Partner deleted successfully.');
     }
 
-    //  Status Modification 
+    // Status Modification
     public function deactivate(Partner $partner)
     {
+        // Check for ongoing contracts
+        $ongoingStatuses = ['draft', 'under_review', 'active', 'suspended'];
+        $hasOngoingContract = $partner->contracts()->whereIn('status', $ongoingStatuses)->exists();
+
+        if ($hasOngoingContract) {
+            return redirect()->back()->with('error', 'Cannot archive partner: There are ongoing contracts (draft, under review, active, or suspended).');
+        }
+
         $partner->status = 'inactive';
         $partner->save();
 
@@ -288,5 +349,37 @@ class PartnerController extends Controller
         ]);
 
         return response()->json(['status' => 'ok']);
+    }
+
+    public function export(Request $request)
+    {
+        $format = $request->query('format', 'pdf');
+
+        // Get all partners
+        $partners = Partner::select('id', 'name', 'email', 'partner_type', 'phone', 'status', 'created_at')
+            ->orderBy('id', 'asc')
+            ->get();
+
+        if ($format === 'pdf') {
+            $pdf = Pdf::loadView('exports.partners_pdf', compact('partners'))
+                ->setPaper('a4', 'landscape');
+            return $pdf->download('VigourSeed_PartnerList_' . now()->format('Y-m-d') . '.pdf');
+        }
+    }
+
+    public function exportProfile(Partner $partner)
+    {
+        $partner->load(['contactPersons', 'farms']);
+
+        $pdf = Pdf::loadView('exports.partner_profile_pdf', [
+            'partner' => $partner,
+            'contacts' => $partner->contactPersons,
+            'farms' => $partner->farms,
+            'user' => auth()->user(),
+        ])->setPaper('a4', 'landscape');
+
+        return response($pdf->output(), 200)
+            ->header('Content-Type', 'application/pdf')
+            ->header('Content-Disposition', 'attachment; filename="VigourSeed_Partner_' . $partner->id . '_' . now()->format('Y-m-d') . '.pdf"');
     }
 }

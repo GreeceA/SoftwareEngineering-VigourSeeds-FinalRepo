@@ -8,31 +8,40 @@ class UpdateFieldVisitRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        return true; 
     }
 
+    /**
+     * Get the validation rules that apply to the request.
+     */
     public function rules(): array
     {
         return [
-            'contract_ID' => ['required', 'exists:contracts,id'],
-            'farm_ID' => ['required', 'exists:partner_farms,id'],
-            'user_ID' => ['nullable', 'exists:users,id'],
-            'date_visit' => ['required', 'date'],
-            'status' => ['required', 'in:ongoing,completed,cancelled'],
-            'remarks' => ['nullable', 'string', 'max:2000'],
+            // Cannot change contract_ID or farm_ID - these are locked after creation
+
+            // You can re-assign the visit to another user
+            'user_ID' => 'required|integer|exists:users,id',
+
+            // You can reschedule the visit (but only to today or future)
+            'date_visit' => 'required|date|after_or_equal:today',
+
+            // This is the main reason for editing:
+            // to mark it as 'completed' or 'cancelled'
+            'status' => 'required|string|in:ongoing,completed,cancelled',
+
+            // You can always add or change remarks
+            'remarks' => 'nullable|string|max:2000',
         ];
     }
 
     public function messages(): array
     {
         return [
-            'contract_ID.required' => 'Please select a contract.',
-            'contract_ID.exists' => 'The selected contract does not exist.',
-            'farm_ID.required' => 'Please select a farm.',
-            'farm_ID.exists' => 'The selected farm does not exist.',
+            'user_ID.required' => 'Please assign a user to this field visit.',
             'user_ID.exists' => 'The selected user does not exist.',
             'date_visit.required' => 'Visit date is required.',
             'date_visit.date' => 'Visit date must be a valid date.',
+            'date_visit.after_or_equal' => 'Visit date cannot be in the past. Please select today or a future date.',
             'status.required' => 'Status is required.',
             'status.in' => 'Status must be ongoing, completed, or cancelled.',
         ];

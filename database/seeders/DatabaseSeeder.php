@@ -13,8 +13,8 @@ class DatabaseSeeder extends Seeder
         // Call core seeders for permissions and initial users
         $this->call([
             PermissionSeeder::class,
-            AdminUserSeeder::class,
-            TestUsersSeeder::class,
+            RolePermissionSeeder::class, // Comprehensive role setup
+            TestAccountsSeeder::class, // Test accounts for all roles
         ]);
 
         // Call functional data seeders
@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
             SeedSeeder::class,
             PartnerSeeder::class,
             ItemSeeder::class,
+            InventoryTransactionSeeder::class,
         ]);
     }
 }

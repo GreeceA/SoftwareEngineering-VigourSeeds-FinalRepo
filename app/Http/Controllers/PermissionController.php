@@ -14,7 +14,13 @@ class PermissionController extends Controller implements HasMiddleware
     protected const PROTECTED_PERMISSIONS = [
         'view users', 'create users', 'edit users', 'deactivate users',
         'view roles', 'create roles', 'edit roles', 'delete roles',
-        'view permissions', 'create permissions', 'edit permissions', 'delete permissions'
+        'view permissions',
+        'view partners', 'create partners', 'edit partners', 'archive partners',
+        'view seeds', 'create seeds', 'edit seeds', 'archive seeds',
+        'view items', 'create items', 'edit items', 'archive items',
+        'view contracts', 'create contracts', 'edit contracts', 'delete contracts',
+        'view inventory', 'create inventory',
+        'view field visit', 'create field visit', 'edit field visit',
     ];
 
     public static function middleware(): array

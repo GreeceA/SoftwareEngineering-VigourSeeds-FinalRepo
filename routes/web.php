@@ -4,7 +4,6 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-
 // Controllers
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserController;
@@ -18,9 +17,14 @@ use App\Http\Controllers\ItemController;
 use App\Http\Controllers\FieldVisitController;
 use App\Http\Controllers\GrowthReportController;
 use App\Http\Controllers\DamageReportController;
-
-
-
+use App\Http\Controllers\InventoryTransactionController;
+use App\Http\Controllers\PartnerOrderController;
+use App\Http\Controllers\BuybackController;
+use App\Http\Controllers\Auth\EmailVerificationPromptController;
+use App\Http\Controllers\Auth\EmailVerificationNotificationController;
+use Illuminate\Foundation\Auth\EmailVerificationRequest;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\NotificationController;
 
 // -----------------
 // Public Routes
@@ -38,9 +42,10 @@ Route::get('/', function () {
 // Authenticated Routes
 // -----------------
 Route::middleware(['auth'])->group(function () {
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    
     // Dashboard
-    Route::get('/dashboard', fn () => Inertia::render('Dashboard'))
-        ->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Profile
     Route::prefix('profile')->name('profile.')->group(function () {
@@ -49,11 +54,33 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/', [ProfileController::class, 'destroy'])->name('destroy');
     });
 
+    Route::post('/profile/avatar', [ProfileController::class, 'updateAvatar'])->name('profile.avatar.update');
+    
+    // Email Verification
+    // Show verification notice (uses EmailVerificationPromptController::__invoke)
+    Route::get('/verify-email', EmailVerificationPromptController::class)
+        ->name('verification.notice');
+
+    // Resend verification link
+    Route::post('/email/verification-notification', [EmailVerificationNotificationController::class, 'store'])
+        ->middleware('throttle:6,1')
+        ->name('verification.send');
+
+    // Verify email (signed URL)
+    Route::get('/email/verify/{id}/{hash}', function (EmailVerificationRequest $request) {
+        $request->fulfill();
+        return Redirect::route('profile.edit');
+    })->middleware(['auth', 'signed'])->name('verification.verify');
+
     // Permissions
     Route::resource('permissions', PermissionController::class)->except(['show']);
 
     // Roles
     Route::resource('roles', RoleController::class)->except(['show']);
+
+    // Notifications
+    Route::post('/notifications/{id}/mark-as-read', [NotificationController::class, 'markAsRead'])
+        ->name('notifications.mark-as-read');
 
     // Users
     Route::prefix('users')->name('users.')->group(function () {
@@ -67,57 +94,88 @@ Route::middleware(['auth'])->group(function () {
         // Roles & Permissions
         Route::get('/roles', [UserController::class, 'roles'])->name('roles');
         Route::get('/permissions', [UserController::class, 'permissions'])->name('permissions');
-
+        Route::delete('/users/permissions/{permission}', [PermissionController::class, 'destroy'])->name('users.permissions.destroy');
         // Activation
         Route::post('/{user}/deactivate', [UserController::class, 'deactivate'])->name('deactivate');
         Route::post('/{user}/reactivate', [UserController::class, 'reactivate'])->name('reactivate');
     });
 
+    Route::get('/users/export', [UserController::class, 'export'])
+        ->middleware(['auth', 'permission:view users'])
+        ->name('users.export');
+    
     // Partners
     Route::resource('partners', PartnerController::class)->except(['show']);
     Route::post('partners/{partner}/deactivate', [PartnerController::class, 'deactivate'])->name('partners.deactivate');
     Route::post('partners/{partner}/reactivate', [PartnerController::class, 'reactivate'])->name('partners.reactivate');
     Route::get('partners/{partner}', [PartnerController::class, 'show'])->name('partners.show');
-        // Validation routes - Partner fields
-        Route::post('/check/partner/name', [PartnerController::class, 'checkName'])->name('partners.checkName');
-        Route::post('/check/partner/email', [PartnerController::class, 'checkEmail'])->name('partners.checkEmail');
-        Route::post('/check/partner/registration', [PartnerController::class, 'checkRegistrationNumber'])->name('partners.checkRegistration');
-        Route::post('/check/partner/taxid', [PartnerController::class, 'checkTaxId'])->name('partners.checkTaxId');
+    // Validation routes - Partner fields
+    Route::post('/check/partner/name', [PartnerController::class, 'checkName'])->name('partners.checkName');
+    Route::post('/check/partner/email', [PartnerController::class, 'checkEmail'])->name('partners.checkEmail');
+    Route::post('/check/partner/registration', [PartnerController::class, 'checkRegistrationNumber'])->name('partners.checkRegistration');
+    Route::post('/check/partner/taxid', [PartnerController::class, 'checkTaxId'])->name('partners.checkTaxId');
+    // Export routes - Partners
+    Route::get('partners-export', [PartnerController::class, 'export'])
+        ->name('partners.export')
+        ->middleware('permission:view partners');
+    Route::get('partners/{partner}/export', [PartnerController::class, 'exportProfile'])
+        ->name('partners.exportProfile')
+        ->middleware('permission:view partners');
 
     // Contracts
+    Route::get('/contracts/export/pdf', [ContractController::class, 'exportContractsPDF'])->name('contracts.export.pdf');
+    Route::get('/contracts/{contract}/report', [ContractController::class, 'exportContractProfilePDF'])
+        ->name('contracts.report')
+        ->middleware(['permission:view contracts']);
     Route::resource('contracts', ContractController::class);
-    Route::post('contracts/{contract}/change-status', [ContractController::class, 'changeStatus'])
+    Route::post('contracts/{contract}/status', [ContractController::class, 'changeStatus'])
         ->name('contracts.change-status');
     Route::get('partners/search', [ContractController::class, 'searchPartners'])
         ->name('partners.search');
     Route::post('/contracts/{contract}/cancel', [ContractController::class, 'destroy'])->name('contracts.cancel');
     Route::get('/contracts/preview-pdf/{filename}', [ContractController::class, 'previewDocxAsPdf']);
-        // Download routes - Contract files
-            Route::get('/contracts/download-pdf/{filename}', [ContractController::class, 'downloadAsPdf']);
-            Route::get('/contracts/download-docx/{filename}', [ContractController::class, 'downloadAsDocx']);
-    Route::post('/contracts/{contract}/send-email', [ContractController::class, 'sendEmail'])->name('contracts.sendEmail');
+    // Download routes - Contract files
+    Route::get('/contracts/download-pdf/{filename}', [ContractController::class, 'downloadAsPdf']);
+    Route::get('/contracts/download-docx/{filename}', [ContractController::class, 'downloadAsDocx']);
+    Route::post('contracts/{contract}/email', [ContractController::class, 'sendEmail'])
+        ->name('contracts.sendEmail');
     Route::get('/partner-portal/contracts/{id}', [ContractController::class, 'showPartner'])->name('partner.contracts.show');
     Route::post('/partner-portal/contracts/{id}/verify', [ContractController::class, 'verifyPartner'])->name('partner.contracts.verify');
-    Route::post('/contracts/check-name-unique', [ContractController::class, 'checkNameUnique'])->name('contracts.checkNameUnique');
-    
+    Route::post('contracts/check-name', [ContractController::class, 'checkNameUnique'])
+        ->name('contracts.checkNameUnique');
+
     // Seeds
+    // Export routes - Seeds 
+    Route::get('/seeds/export', [SeedController::class, 'export'])->name('seeds.export');
+    Route::get('/seeds/{seed}/export-profile', [SeedController::class, 'exportProfile'])->name('seeds.exportProfile');
+
     Route::resource('seeds', SeedController::class);
     Route::patch('seeds/{seed}/archive', [SeedController::class, 'archive'])->name('seeds.archive');
     Route::patch('seeds/{seed}/restore', [SeedController::class, 'restore'])->name('seeds.restore');
     Route::delete('seeds/{seed}', [SeedController::class, 'destroy'])->name('seeds.destroy');
-    Route::get('/seeds/{seed}', [SeedController::class, 'show'])->name('seeds.show');
-        // Validation routes - Seed fields
-        Route::post('/check/seed/variety', [SeedController::class, 'checkVariety'])->name('seeds.checkVariety');
 
+    // Validation routes - Seed fields
+    Route::post('/check/seed/variety', [SeedController::class, 'checkVariety'])->name('seeds.checkVariety');
+            
     // Items
+    // Export routes - Items 
+    Route::get('/items/export', [ItemController::class, 'export'])->name('items.export');
+    Route::get('/items/{item}/export-profile', [ItemController::class, 'exportProfile'])->name('items.exportProfile');
+
     Route::resource('items', ItemController::class);
     Route::patch('items/{item}/archive', [ItemController::class, 'archive'])->name('items.archive');
     Route::patch('items/{item}/activate', [ItemController::class, 'activate'])->name('items.activate');
-    Route::get('/items/{item}', [ItemController::class, 'show'])->name('items.show');
-        // Validation routes - Item fields
-        Route::post('/check/item/name', [ItemController::class, 'checkName'])->name('items.checkName');
+
+    // Validation routes - Item fields
+    Route::post('/check/item/name', [ItemController::class, 'checkName'])->name('items.checkName');
 
     // Field Visits + Reports
+    Route::get('/field-visits/export/pdf', [FieldVisitController::class, 'exportFieldVisitsPDF'])
+        ->name('field-visits.export.pdf')
+        ->middleware('permission:view field visit');
+    Route::get('/field-visits/{field_visit}/export-profile', [FieldVisitController::class, 'exportProfile'])
+        ->name('field-visits.exportProfile')
+        ->middleware('permission:view field visit');
     Route::resource('field-visits', FieldVisitController::class);
     Route::post('field-visits/{id}/complete', [FieldVisitController::class, 'complete'])
         ->name('field-visits.complete');
@@ -133,7 +191,141 @@ Route::middleware(['auth'])->group(function () {
     // Damage Reports Resource Routes (limited actions)
     Route::resource('damage-reports', DamageReportController::class)
         ->only(['index', 'show', 'edit', 'update', 'destroy']);
-    });
+
+    // Growth Reports
+    Route::get('/growth-reports', [GrowthReportController::class, 'index'])
+        ->name('growth-reports.index')
+        ->middleware('permission:view field visit');
+    
+    Route::get('/growth-reports/{growthReport}', [GrowthReportController::class, 'show'])
+        ->name('growth-reports.show')
+        ->middleware('permission:view field visit');
+    
+    Route::get('/growth-reports/{growthReport}/edit', [GrowthReportController::class, 'edit'])
+        ->name('growth-reports.edit')
+        ->middleware('permission:edit field visit');
+    
+    Route::put('/growth-reports/{growthReport}', [GrowthReportController::class, 'update'])
+        ->name('growth-reports.update')
+        ->middleware('permission:edit field visit');
+    
+    Route::delete('/growth-reports/{growthReport}', [GrowthReportController::class, 'destroy'])
+        ->name('growth-reports.destroy')
+        ->middleware('permission:edit field visit');
+    
+    // Damage Reports
+    Route::get('/damage-reports', [DamageReportController::class, 'index'])
+        ->name('damage-reports.index')
+        ->middleware('permission:view field visit');
+    
+    Route::get('/damage-reports/{damageReport}', [DamageReportController::class, 'show'])
+        ->name('damage-reports.show')
+        ->middleware('permission:view field visit');
+    
+    Route::get('/damage-reports/{damageReport}/edit', [DamageReportController::class, 'edit'])
+        ->name('damage-reports.edit')
+        ->middleware('permission:edit field visit');
+    
+    Route::put('/damage-reports/{damageReport}', [DamageReportController::class, 'update'])
+        ->name('damage-reports.update')
+        ->middleware('permission:edit field visit');
+    
+    Route::delete('/damage-reports/{damageReport}', [DamageReportController::class, 'destroy'])
+        ->name('damage-reports.destroy')
+        ->middleware('permission:edit field visit');
+
+    // Inventory Transactions
+    // Inventory Dashboard
+    Route::get('/inventory/export/dashboard', [InventoryTransactionController::class, 'exportDashboard'])->name('inventory.export.dashboard');
+    Route::get('/inventory/ledger/export', [InventoryTransactionController::class, 'exportLedger'])->name('inventory.ledger.export');
+    Route::get('/inventory/{productType}/{productId}/export-ledger', [InventoryTransactionController::class, 'exportProductLedger'])
+        ->name('inventory.exportProductLedger')
+        ->middleware('permission:view inventory');
+        
+    Route::get('/inventory/dashboard', [InventoryTransactionController::class, 'dashboard'])
+        ->name('inventory.dashboard');
+    
+    // Inventory Ledger (All Transactions)
+    Route::get('/inventory/ledger', [InventoryTransactionController::class, 'index'])
+        ->name('inventory.ledger');
+    
+    // Stock-In (Inbound)
+    Route::get('/inventory/inbound', [InventoryTransactionController::class, 'createInbound'])
+        ->name('inventory.inbound.create');
+    Route::post('/inventory/inbound', [InventoryTransactionController::class, 'storeInbound'])
+        ->name('inventory.inbound.store');
+    
+    // Stock-Out (Outbound)
+    Route::get('/inventory/outbound', [InventoryTransactionController::class, 'createOutbound'])->name('inventory.outbound.create');
+    Route::post('/inventory/outbound', [InventoryTransactionController::class, 'storeOutbound'])->name('inventory.outbound.store');
+    
+    // Inventory Adjustments
+    Route::get('/inventory/adjustment/create', [InventoryTransactionController::class, 'createAdjustment'])
+        ->name('inventory.adjustment.create');
+    Route::post('/inventory/adjustment', [InventoryTransactionController::class, 'storeAdjustment'])
+        ->name('inventory.adjustment.store');
+    
+    // Show specific product
+    Route::get('/inventory/{productType}/{productId}', [InventoryTransactionController::class, 'show'])
+        ->name('inventory.show');
+        
+    // ============================================
+    // PARTNER ORDERS ROUTES
+    // ============================================
+    Route::get('/partner-orders/export', [PartnerOrderController::class, 'export'])->name('partner-orders.export');
+    Route::get('/partner-orders/{id}/export-delivery-history', [PartnerOrderController::class, 'exportDeliveryHistory'])->name('partner-orders.exportDeliveryHistory');
+
+    // List all partner orders
+    Route::get('/partner-orders', [PartnerOrderController::class, 'index'])
+        ->name('partner-orders.index');
+    
+    // Create new partner order
+    Route::get('/partner-orders/create', [PartnerOrderController::class, 'create'])
+        ->name('partner-orders.create');
+    Route::post('/partner-orders', [PartnerOrderController::class, 'store'])
+        ->name('partner-orders.store');
+    
+    // Generate order from contract
+    Route::post('/partner-orders/generate-from-contract', [PartnerOrderController::class, 'generateFromContract'])
+        ->name('partner-orders.generate-from-contract');
+    
+    // View specific partner order
+    Route::get('/partner-orders/{partnerOrder}', [PartnerOrderController::class, 'show'])
+        ->name('partner-orders.show');
+    
+    // Update partner order status
+    Route::put('/partner-orders/{partnerOrder}/status', [PartnerOrderController::class, 'updateStatus'])
+        ->name('partner-orders.update-status');
+    
+    // Cancel partner order
+    Route::put('/partner-orders/{partnerOrder}/cancel', [PartnerOrderController::class, 'cancel'])
+        ->name('partner-orders.cancel');
+    
+    // ============================================
+    // BUYBACK ROUTES
+    // ============================================
+    Route::get('/buybacks/export', [\App\Http\Controllers\BuybackController::class, 'exportBuybackPDF'])
+        ->name('buybacks.export');
+    Route::get('/buybacks/{contract}/export-delivery-history', [\App\Http\Controllers\BuybackController::class, 'exportBuybackDeliveryTransactionHistory'])
+        ->name('buybacks.exportBuybackDeliveryHistory');
+    // Buyback overview
+    Route::get('/buybacks', [BuybackController::class, 'index'])
+        ->name('buybacks.index');
+    
+    // Record buyback delivery
+    Route::get('/buybacks/inbound', [BuybackController::class, 'createInbound'])
+        ->name('buybacks.inbound.create');
+    Route::post('/buybacks/inbound', [BuybackController::class, 'storeInbound'])
+        ->name('buybacks.inbound.store');
+    
+    // View buyback details for contract
+    Route::get('/buybacks/contract/{contract}', [BuybackController::class, 'show'])
+        ->name('buybacks.show');
+    
+    // Get buyback history (AJAX)
+    Route::get('/buybacks/contract/{contractId}/history', [BuybackController::class, 'getContractHistory'])
+        ->name('buybacks.contract.history');
+}); 
 
 // -----------------
 // Google OAuth Routes

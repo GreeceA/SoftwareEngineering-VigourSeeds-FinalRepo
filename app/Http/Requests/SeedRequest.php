@@ -15,7 +15,7 @@ class SeedRequest extends FormRequest
     public function rules(): array
     {
         $isUpdate = $this->route('seed') !== null;
-        
+
         $rules = [
             'seed_variety' => [
                 'required',

@@ -1,12 +1,16 @@
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import React, { useState, useRef, useEffect } from 'react';
 import { debounce } from 'lodash';
 import ArchiveModal from './ArchiveItemsModal';
 import ActivateModal from './ActivateItemsModal';
-import { ArchiveBoxIcon, ChevronDownIcon, FunnelIcon, ArrowsUpDownIcon } from '@heroicons/react/24/outline';
+import { ArchiveBoxIcon, ChevronDownIcon, FunnelIcon, ArrowsUpDownIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import Vlogo from '@/assets/vigour-logo.png';
 
 export default function Index({ auth, items, filters }) {
+    const { auth: authData } = usePage().props;
+    const permissions = authData?.user?.can || [];
+
     const [search, setSearch] = useState(filters.search || '');
     const [filter, setFilter] = useState(filters.status || 'all');
     const [sortBy, setSortBy] = useState(filters.sort_by || 'id');
@@ -17,7 +21,9 @@ export default function Index({ auth, items, filters }) {
     const [showActivateModal, setShowActivateModal] = useState(false);
     const [selectedItem, setSelectedItem] = useState(null);
     const [perPage, setPerPage] = useState(filters.per_page || 10);
-
+    const [showExportDropdown, setShowExportDropdown] = useState(false);
+    
+    const exportRef = useRef(null);
     const filterRef = useRef(null);
     const sortRef = useRef(null);
 
@@ -25,11 +31,16 @@ export default function Index({ auth, items, filters }) {
         const handleClickOutside = (event) => {
             if (filterRef.current && !filterRef.current.contains(event.target)) setShowFilterDropdown(false);
             if (sortRef.current && !sortRef.current.contains(event.target)) setShowSortDropdown(false);
+            if (exportRef.current && !exportRef.current.contains(event.target)) setShowExportDropdown(false);
         };
         document.addEventListener('mousedown', handleClickOutside);
         return () => document.removeEventListener('mousedown', handleClickOutside);
     }, []);
 
+    const handleExport = (format) => {
+        window.location.href = route('items.export', { format });
+        setShowExportDropdown(false);
+    };
     // Always fetch from backend on search/filter/sort/perPage change
     const fetchItems = (params = {}) => {
         router.get(route('items.index'), {
@@ -102,39 +113,96 @@ export default function Index({ auth, items, filters }) {
         setSelectedItem(null);
     };
 
-    // NOTE: Removed getPageNumber helper as we now rely on Inertia Link
-
     return (
-        <AuthenticatedLayout
-            user={auth.user}
-            header={
-                <h2 className="text-[25px] font-[800]" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                    <span className="text-[#37692F] font-[800]">VIGOUR SEEDS</span>
-                    <span className="text-[#333333] font-[400]"> | Items Management</span>
-                </h2>
-            }
-        >
+        <AuthenticatedLayout user={auth.user}>
             <Head title="Items Management" />
 
-            {/* Breadcrumb */}
-            <div className="px-6 pt-6">
-                <nav className="text-sm text-gray-600">
-                    <Link
-                        href={route('dashboard')}
-                        className="text-[#37692F] hover:underline"
-                    >
-                        Home
-                    </Link>{" "}
-                    / <span>Items Management</span>
-                </nav>
+            {/* Modern Page Header with Integrated Breadcrumb */}
+            <div className="relative bg-gradient-to-br from-white via-green-50/30 to-white border-b border-gray-200 overflow-hidden">
+                {/* Subtle decorative elements */}
+                <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-[#8fbc8f]/10 to-transparent rounded-full blur-3xl"></div>
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-[#a8d5a8]/10 to-transparent rounded-full blur-2xl"></div>
+                
+                <div className="relative px-6 py-6">
+                    {/* Breadcrumb */}
+                    <nav className="flex items-center space-x-2 text-sm mb-4">
+                        <a href={route('dashboard')} className="text-gray-500 hover:text-[#37692F] transition-colors duration-200 flex items-center">
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                            </svg>
+                            Home
+                        </a>
+                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                        <span className="text-[#37692F] font-medium">Items Management</span>
+                    </nav>
+
+                    {/* Header Content */}
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                            {/* Icon */}
+                            <div className="flex-shrink-0">
+                                <div className="w-16 h-16 bg-gradient-to-br from-[#37692F] to-[#4a8a3f] rounded-2xl flex items-center justify-center shadow-lg shadow-green-900/20">
+                                    <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                    </svg>
+                                </div>
+                            </div>
+                            
+                            {/* Title & Description */}
+                            <div>
+                                <h1 className="text-3xl font-bold text-gray-900 mb-1">Items Management System</h1>
+                                <p className="text-gray-600">Track and manage inventory items and supplies</p>
+                            </div>
+                        </div>
+
+                        {/* Stats Badge */}
+                        <div className="hidden lg:flex items-center space-x-2 bg-teal-50 border border-teal-200 rounded-lg px-4 py-2">
+                            <svg className="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                            </svg>
+                            <span className="text-sm font-medium text-teal-700">{items?.data?.length || 0} Items</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div className="p-6">
-                {/* Header Section */}
-                <div className="mb-6 flex items-center justify-between">
-                    <h1 className="text-2xl font-semibold text-gray-800">Items Management System</h1>
+                {/* Filters & Actions Section */}
+                <div className="mb-6 flex items-center justify-end">
                     <div className="flex space-x-3">
-                        {/* Status Filter Dropdown */}
+                        {/* Export Dropdown */}
+                        <div className="relative" ref={exportRef}>
+                            <button
+                                onClick={() => { 
+                                    setShowExportDropdown(!showExportDropdown); 
+                                    setShowFilterDropdown(false); 
+                                    setShowSortDropdown(false); 
+                                }}
+                                className="flex items-center px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#37692F] bg-white"
+                            >
+                                <ArrowDownTrayIcon className="w-4 h-4 mr-2 text-gray-500" />
+                                Export
+                                <ChevronDownIcon className="w-4 h-4 ml-2 text-gray-500" />
+                            </button>
+                            {showExportDropdown && (
+                                <div className="absolute left-0 mt-2 w-48 bg-white rounded-md shadow-lg border border-gray-200 z-10">
+                                    <div className="py-1">
+                                        <button
+                                            onClick={() => handleExport('pdf')}
+                                            className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100 text-gray-700 flex items-center"
+                                        >
+                                            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                            </svg>
+                                            Export as PDF
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        {/* Filter Dropdown */}
                         <div className="relative" ref={filterRef}>
                             <button
                                 onClick={() => {
@@ -148,7 +216,7 @@ export default function Index({ auth, items, filters }) {
                                 <ChevronDownIcon className="ml-2 h-4 w-4 text-gray-500" />
                             </button>
                             {showFilterDropdown && (
-                                <div className="absolute right-0 z-10 mt-2 w-48 rounded-md border border-gray-200 bg-white shadow-lg">
+                                <div className="absolute left-0 z-10 mt-2 w-48 rounded-md border border-gray-200 bg-white shadow-lg">
                                     <div className="py-1">
                                         {['all', 'active', 'archived'].map((status) => (
                                             <button
@@ -182,7 +250,7 @@ export default function Index({ auth, items, filters }) {
                                 <ChevronDownIcon className="ml-2 h-4 w-4 text-gray-500" />
                             </button>
                             {showSortDropdown && (
-                                <div className="absolute right-0 z-10 mt-2 w-56 rounded-md border border-gray-200 bg-white shadow-lg">
+                                <div className="absolute left-0 z-10 mt-2 w-56 rounded-md border border-gray-200 bg-white shadow-lg">
                                     <div className="py-1">
                                         <button
                                             onClick={() => { setSortBy('id'); setSortDir('desc'); setShowSortDropdown(false); fetchItems({ sort_by: 'id', sort_dir: 'desc', page: 1 }); }}
@@ -243,26 +311,28 @@ export default function Index({ auth, items, filters }) {
                             </svg>
                         </div>
 
-                        {/* Add Item Button */}
-                        <Link
-                            href={route('items.create')}
-                            className="flex items-center rounded-md bg-[#37692F] px-4 py-2 text-white hover:bg-[#2a5624]"
-                        >
-                            <svg
-                                className="mr-2 h-5 w-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
+                        {/* Add Item Button - Only show if user has 'create items' permission */}
+                        {permissions.includes('create items') && (
+                            <Link
+                                href={route('items.create')}
+                                className="flex items-center rounded-md bg-[#37692F] px-4 py-2 text-white hover:bg-[#2a5624]"
                             >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
-                                />
-                            </svg>
-                            Add Item
-                        </Link>
+                                <svg
+                                    className="mr-2 h-5 w-5"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        strokeWidth={2}
+                                        d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                                    />
+                                </svg>
+                                Add Item
+                            </Link>
+                        )}
                     </div>
                 </div>
 
@@ -325,51 +395,57 @@ export default function Index({ auth, items, filters }) {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex space-x-2">
-                                                {item.status === 'archived' ? (
-                                                    <button
+                                                {/* Edit Button - Only show if user has 'edit items' permission AND item is active */}
+                                                {item.status === 'active' ? (
+                                                    permissions.includes('edit items') ? (
+                                                        <Link
+                                                            href={route('items.edit', item.id)}
+                                                            className="text-blue-600 transition-colors duration-200 hover:text-blue-800"
+                                                            title="Edit Item"
+                                                        >
+                                                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                                            </svg>
+                                                        </Link>
+                                                    ) : null
+                                                ) : (
+                                                    <span
                                                         className="cursor-not-allowed text-gray-400"
                                                         title="Cannot edit archived item"
-                                                        disabled
                                                     >
                                                         <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                                         </svg>
-                                                    </button>
-                                                ) : (
-                                                    <Link
-                                                        href={route('items.edit', item.id)}
-                                                        className="text-blue-600 transition-colors duration-200 hover:text-blue-800"
-                                                        title="Edit Item"
-                                                    >
-                                                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                                        </svg>
-                                                    </Link>
+                                                    </span>
                                                 )}
-                                                {item.status === 'active' ? (
-                                                    <button
-                                                        className="text-yellow-600 transition-colors duration-200 hover:text-yellow-800"
-                                                        onClick={() => {
-                                                            setSelectedItem(item);
-                                                            setShowArchiveModal(true);
-                                                        }}
-                                                        title="Archive Item"
-                                                    >
-                                                        <ArchiveBoxIcon className="h-5 w-5" />
-                                                    </button>
-                                                ) : (
-                                                    <button
-                                                        className="text-green-600 transition-colors duration-200 hover:text-green-800"
-                                                        onClick={() => {
-                                                            setSelectedItem(item);
-                                                            setShowActivateModal(true);
-                                                        }}
-                                                        title="Activate Item"
-                                                    >
-                                                        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                                        </svg>
-                                                    </button>
+
+                                                {/* Archive/Activate Button - Only show if user has 'archive items' permission */}
+                                                {permissions.includes('archive items') && (
+                                                    item.status === 'active' ? (
+                                                        <button
+                                                            className="text-yellow-600 transition-colors duration-200 hover:text-yellow-800"
+                                                            onClick={() => {
+                                                                setSelectedItem(item);
+                                                                setShowArchiveModal(true);
+                                                            }}
+                                                            title="Archive Item"
+                                                        >
+                                                            <ArchiveBoxIcon className="h-5 w-5" />
+                                                        </button>
+                                                    ) : (
+                                                        <button
+                                                            className="text-green-600 transition-colors duration-200 hover:text-green-800"
+                                                            onClick={() => {
+                                                                setSelectedItem(item);
+                                                                setShowActivateModal(true);
+                                                            }}
+                                                            title="Activate Item"
+                                                        >
+                                                            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                                            </svg>
+                                                        </button>
+                                                    )
                                                 )}
                                             </div>
                                         </td>
@@ -386,9 +462,8 @@ export default function Index({ auth, items, filters }) {
                     </table>
                 </div>
 
-                {/* Pagination and Per Page Controls */}
+                {/* Pagination */}
                 <div className="mt-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    {/* Per Page Selector */}
                     <div className="relative flex items-center space-x-2">
                         <span className="text-sm text-gray-700">Show</span>
                         <div className="relative">
@@ -408,25 +483,23 @@ export default function Index({ auth, items, filters }) {
                         <span className="text-sm text-gray-700">entries</span>
                     </div>
 
-                    {/* Pagination Controls (FIXED) */}
                     {items && items.links && items.links.length > 1 && (
                         <div className="flex w-full justify-center md:w-auto">
                             <nav className="inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
                                 {items.links.map((link, idx) => {
                                     const href = link.url ? link.url.replace(/&amp;/g, '&') : null;
                                     return (
-                                        <Link // Changed from <button> to <Link>
+                                        <Link
                                             key={idx}
                                             href={href || ''}
                                             preserveScroll
                                             preserveState
-                                            // The disabled logic will now apply to the Link component's styles
                                             className={
                                                 `border px-3 py-2 text-sm font-medium ${
                                                     link.active
                                                         ? 'z-10 border-[#37692F] bg-[#37692F] text-white'
                                                         : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
-                                                } ${!link.url ? 'pointer-events-none opacity-50 cursor-not-allowed' : ''}` // Added pointer-events-none and cursor style
+                                                } ${!link.url ? 'pointer-events-none opacity-50' : ''}`
                                             }
                                             dangerouslySetInnerHTML={{ __html: link.label }}
                                         />

@@ -7,40 +7,45 @@ use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
 {
-    /**
-     * The root template that is loaded on the first page visit.
-     *
-     * @var string
-     */
     protected $rootView = 'app';
 
-    /**
-     * Determine the current asset version.
-     */
     public function version(Request $request): ?string
     {
         return parent::version($request);
     }
 
-    /**
-     * Define the props that are shared by default.
-     *
-     * @return array<string, mixed>
-     */
     public function share(Request $request): array
     {
-        return array_merge(parent::share($request), [
+        $user = $request->user();
+
+        // Convert avatar to full URL if it exists
+        $avatarUrl = null;
+        if ($user && $user->avatar) {
+            $avatarUrl = str_starts_with($user->avatar, 'http') 
+                ? $user->avatar 
+                : asset($user->avatar);
+        }
+
+        return [
+            ...parent::share($request),
             'auth' => [
-                'user' => $request->user() ? array_merge($request->user()->toArray(), [
-                    // Always fetch fresh permissions from database
-                    'can' => $request->user()->fresh()->getAllPermissions()->pluck('name')->toArray(),
-                ]) : null,
+                'user' => $user ? [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'first_name' => $user->first_name,
+                    'last_name' => $user->last_name,
+                    'email' => $user->email,
+                    'email_verified_at' => $user->email_verified_at,
+                    'avatar' => $avatarUrl,
+                    // Load permissions and roles with the user
+                    'can' => $user->getAllPermissions()->pluck('name')->toArray(),
+                    'roles' => $user->getRoleNames()->toArray(),
+                ] : null,
             ],
-            'flash' => [
-                'success' => fn () => $request->session()->get('success'),
-                'error'   => fn () => $request->session()->get('error'),
-                'refresh_permissions' => fn () => $request->session()->get('refresh_permissions'),
-            ],
-        ]);
+            'notifications' => $user ? $user->unreadNotifications()
+                ->latest()
+                ->take(5)
+                ->get() : [],
+        ];
     }
 }

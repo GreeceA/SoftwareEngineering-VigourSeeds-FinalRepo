@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Laravel\Socialite\Facades\Socialite;
+use Spatie\Permission\Models\Role;
 
 class GoogleController extends Controller
 {
@@ -50,6 +51,11 @@ class GoogleController extends Controller
                     // Don't update first_name and last_name if user already exists
                     // This preserves the names entered during registration
                 ]);
+                
+                // Check if user is deactivated
+                if ($user->status === 'inactive') {
+                    return redirect()->route('login')->with('error', 'Your account has been deactivated. Please contact an administrator.');
+                }
             } else {
                 // New user - use Google name as fallback
                 $user = User::create([
@@ -62,6 +68,10 @@ class GoogleController extends Controller
                     'avatar' => $googleUser->getAvatar(),
                     'email_verified_at' => now(),
                 ]);
+
+                // Assign Spatie role for new users
+                Role::firstOrCreate(['name' => 'employee']);
+                $user->assignRole('employee');
             }
 
             Auth::login($user, true);

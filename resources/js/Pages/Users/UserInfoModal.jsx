@@ -1,4 +1,3 @@
-// UserInfoModal.jsx
 export default function UserInfoModal({ user, onClose }) {
     if (!user) return null;
 
@@ -48,7 +47,11 @@ export default function UserInfoModal({ user, onClose }) {
                     {/* Name and Title */}
                     <div className="text-center">
                         <h2 className="text-2xl font-bold text-gray-800">{user.name}</h2>
-                        <p className="text-[#37692F] font-medium mt-1">{user.role}</p>
+                        <p className="text-[#37692F] font-medium mt-1">
+                            {user.roles && user.roles.length > 0 
+                                ? user.roles[0].name.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
+                                : user.role}
+                        </p>
                     </div>
 
                     {/* Stats */}
@@ -57,14 +60,10 @@ export default function UserInfoModal({ user, onClose }) {
                             <div className="text-2xl font-bold text-[#37692F]">{calculateYears(user.created_at)}</div>
                             <div className="text-xs text-gray-500 mt-1">Years in Company</div>
                         </div>
-                        <div className="text-center flex-1 border-r border-gray-200">
-                            {/* Add FORMULA to connect how many contract the user is invloved */}
-                            <div className="text-2xl font-bold text-[#37692F]">5</div>
-                            <div className="text-xs text-gray-500 mt-1">Contracts</div>
-                        </div>
                         <div className="text-center flex-1">
-                            {/* Add FORMULA to connect how many Field Visitaion the user has done */}
-                            <div className="text-2xl font-bold text-[#37692F]">69</div>
+                            <div className="text-2xl font-bold text-[#37692F]">
+                                {user.field_visits_count ?? 0}
+                            </div>
                             <div className="text-xs text-gray-500 mt-1">Field Visited</div>
                         </div>
                     </div>
@@ -87,7 +86,7 @@ export default function UserInfoModal({ user, onClose }) {
                         </div>
                     </div>
 
-                    {/* Department Section */}
+                    {/* Department Section
                     <div className="w-full mt-4">
                         <h3 className="text-sm font-semibold text-gray-700 mb-2">Department</h3>
                         <div className="bg-gray-50 rounded-lg p-3">
@@ -95,7 +94,7 @@ export default function UserInfoModal({ user, onClose }) {
                                 <span className="text-sm font-medium">{user.department || 'N/A'}</span>
                             </div>
                         </div>
-                    </div>
+                    </div> */}
                 </div>
             </div>
         </div>

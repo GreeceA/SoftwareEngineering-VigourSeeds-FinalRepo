@@ -1,202 +1,283 @@
 import React from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 
-export default function Show({ auth, seed }) {
-    // Static contract data for demonstration
-    const associatedContracts = [
-        {
-            id: 1,
-            contract_name: "Premium Seed Supply Agreement",
-            status: "active",
-            start_date: "2023-06-10",
-            end_date: "2024-06-09",
-            seed_amount: 500,
-            unit: "kg"
-        },
-        {
-            id: 2,
-            contract_name: "Organic Seed Distribution",
-            status: "inactive",
-            start_date: "2022-03-15",
-            end_date: "2023-03-14",
-            seed_amount: 1200,
-            unit: "sack"
-        },
-        {
-            id: 3,
-            contract_name: "Hybrid Seed Partnership",
-            status: "active",
-            start_date: "2023-09-01",
-            end_date: "2024-08-31",
-            seed_amount: 3.5,
-            unit: "ton"
-        }
-    ];
+export default function Show({ auth, seed, associatedContracts }) {
+    const { auth: authData } = usePage().props;
+    const permissions = authData?.user?.can || [];
 
-    const dateFormatter = (dateString) => new Date(dateString).toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: 'numeric'
-    });
+    const dateFormatter = (dateString) => {
+        if (!dateString) return 'N/A';
+        return new Date(dateString).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        });
+    };
+
+    // Adapted for seed status
+    const getStatusColor = (status) => {
+        switch (status) {
+            case 'active': return 'bg-green-100 text-green-800 border-green-200';
+            case 'archived': return 'bg-red-100 text-red-800 border-red-200';
+            default: return 'bg-gray-100 text-gray-800 border-gray-200';
+        }
+    };
+
+    // Add this function for contract status colors
+    const getContractStatusColor = (status) => {
+        switch (status) {
+            case 'active': return 'bg-green-100 text-green-800 border-green-200';
+            case 'draft': return 'bg-gray-100 text-gray-800 border-gray-200';
+            case 'under_review': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+            case 'suspended': return 'bg-orange-100 text-orange-800 border-orange-200';
+            case 'terminated': return 'bg-red-100 text-red-800 border-red-200';
+            case 'cancelled': return 'bg-red-100 text-red-800 border-red-200';
+            case 'completed': return 'bg-blue-100 text-blue-800 border-blue-200';
+            default: return 'bg-gray-100 text-gray-800 border-gray-200';
+        }
+    };
 
     return (
-        <AuthenticatedLayout
-            user={auth.user}
-            header={
-                <h2 className="text-[25px] font-[800]" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                    <span className="text-[#37692F] font-[800]">VIGOUR SEEDS</span>
-                    <span className="text-[#333333] font-[400]"> | Seed Details</span>
-                </h2>
-            }
-        >
-            <Head title={`Seed: ${seed.seed_variety}`} />
-            <div className="px-6 pt-6">
-                <nav className="text-sm text-gray-600">
-                    <Link
-                        href={route('dashboard')}
-                        className="text-[#37692F] hover:underline"
-                    >
-                        Home
-                    </Link>{" "}
-                    /{" "}
-                    <Link
-                        href={route('seeds.index')}
-                        className="text-[#37692F] hover:underline"
-                    >
-                        Seeds
-                    </Link>{" "}
-                    / <span>{seed.seed_variety}</span>
-                </nav>
+        <AuthenticatedLayout user={auth.user}>
+            <Head title={seed.seed_variety} />
+            
+            {/* Modern Page Header */}
+            <div className="relative bg-gradient-to-br from-white via-green-50/30 to-white border-b border-gray-200 overflow-hidden">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-[#8fbc8f]/10 to-transparent rounded-full blur-3xl"></div>
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-gradient-to-tr from-[#a8d5a8]/10 to-transparent rounded-full blur-2xl"></div>
+                
+                <div className="relative px-6 py-6">
+                    <nav className="flex items-center space-x-2 text-sm mb-4">
+                        <a href={route('dashboard')} className="text-gray-500 hover:text-[#37692F] transition-colors duration-200 flex items-center">
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                            </svg>
+                            Home
+                        </a>
+                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                        <Link href={route('seeds.index')} className="text-gray-500 hover:text-[#37692F] transition-colors duration-200">
+                            Seeds
+                        </Link>
+                        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                        <span className="text-[#37692F] font-medium truncate max-w-xs">{seed.seed_variety}</span>
+                    </nav>
+
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                            <div className="flex-shrink-0">
+                                <div className="w-16 h-16 bg-gradient-to-br from-[#37692F] to-[#4a8a3f] rounded-2xl flex items-center justify-center shadow-lg shadow-green-900/20">
+                                    <span className="text-2xl font-bold text-white">{seed.seed_variety.charAt(0).toUpperCase()}</span>
+                                </div>
+                            </div>
+                            <div>
+                                <h1 className="text-3xl font-bold text-gray-900 mb-1">{seed.seed_variety}</h1>
+                                <p className="text-gray-600">View complete seed details and associated contracts</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div className="p-6">
-                {/* Header Section */}
-                <div className="mb-6 flex items-center justify-between">
-                    <h1 className="text-2xl font-semibold text-gray-800">Seed Information</h1>
-                    <div className="flex space-x-3">
-                        {seed.status !== 'archived' && (
+                {/* Action Buttons and Status Badge */}
+                <div className="mb-8">
+                    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                        <div className="flex items-center space-x-4">
+                            {/* Seed Status Badge */}
+                            <span className={`inline-flex items-center rounded-full border px-3 py-1 text-sm font-medium ${getStatusColor(seed.status)}`}>
+                                <div className={`w-2 h-2 rounded-full mr-2 ${seed.status === 'active' ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                                {seed.status.charAt(0).toUpperCase() + seed.status.slice(1)}
+                            </span>
+                        </div>
+                        
+                        <div className="flex flex-wrap gap-3">
+                            <button
+                                type="button"
+                                onClick={() => window.location.href = route('seeds.exportProfile', seed.id)}
+                                className="flex items-center rounded-xl bg-gradient-to-r from-[#37692F] to-[#4a8a3f] px-5 py-3 text-white font-medium hover:from-[#2a5624] hover:to-[#37692F] transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                                title="Export Seed Profile PDF"
+                            >
+                                {/* Correct Download Icon */}
+                                <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                Export PDF
+                            </button>
+                            {permissions.includes('edit seeds') && seed.status !== 'archived' && (
+                                <Link
+                                    href={route('seeds.edit', seed.id)}
+                                    className="flex items-center rounded-xl bg-gradient-to-r from-[#37692F] to-[#4a8a3f] px-5 py-3 text-white font-medium hover:from-[#2a5624] hover:to-[#37692F] transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                                >
+                                    <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                    Edit Seed
+                                </Link>
+                            )}
                             <Link
-                                href={route('seeds.edit', seed.id)}
-                                className="flex items-center rounded-md bg-[#37692F] px-4 py-2 text-white hover:bg-[#2a5624]"
+                                href={route('seeds.index')}
+                                className="flex items-center rounded-xl bg-gradient-to-r from-gray-500 to-gray-600 px-5 py-3 text-white font-medium hover:from-gray-600 hover:to-gray-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
                             >
                                 <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                                 </svg>
-                                Edit Seed
+                                Back to List
                             </Link>
-                        )}
-                        <Link
-                            href={route('seeds.index')}
-                            className="flex items-center rounded-md bg-gray-500 px-4 py-2 text-white hover:bg-gray-600"
-                        >
-                            <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                            </svg>
-                            Back to List
-                        </Link>
+                        </div>
                     </div>
                 </div>
 
                 {/* Main Content Grid */}
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                    {/* Basic Information Card */}
-                    <div className="rounded-lg bg-white p-6 shadow-lg">
-                        <h2 className="mb-4 border-b pb-2 text-lg font-semibold text-gray-800">Basic Information</h2>
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    
+                    {/* Basic Information */}
+                    <div className="rounded-2xl bg-gradient-to-br from-white to-gray-50 p-6 shadow-xl border border-gray-100">
+                        <div className="flex items-center space-x-3 mb-6">
+                            <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
+                                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <h2 className="text-xl font-bold text-gray-800">Basic Information</h2>
+                        </div>
                         
-                        <div className="space-y-4">
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">Seed Variety</label>
-                                <p className="font-poppins text-sm font-normal text-gray-900">{seed.seed_variety}</p>
+                        <div className="space-y-5">
+                            <div className="p-4 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200">
+                                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500">Seed Variety</label>
+                                <p className="text-lg font-semibold text-gray-900">{seed.seed_variety}</p>
                             </div>
 
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">Status</label>
-                                <span className={`inline-flex rounded-full px-3 py-1 text-xs font-poppins font-normal ${
-                                    seed.status === 'active' 
-                                        ? 'bg-green-100 text-green-700' 
-                                        : 'bg-red-100 text-red-700'
-                                }`}>
-                                    {seed.status.charAt(0).toUpperCase() + seed.status.slice(1)}
-                                </span>
-                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="p-4 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200">
+                                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500">Status</label>
+                                    <span className={`inline-flex items-center rounded-full px-3 py-1.5 text-sm font-medium ${getStatusColor(seed.status)}`}>
+                                        {seed.status.charAt(0).toUpperCase() + seed.status.slice(1)}
+                                    </span>
+                                </div>
 
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">Price per Unit</label>
-                                <p className="font-poppins text-sm font-normal text-gray-900">₱{seed.price_per_unit}</p>
+                                <div className="p-4 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200">
+                                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500">Price per Kg</label>
+                                    <p className="text-gray-900 font-semibold">Php {Number(seed.price_per_unit).toFixed(2)}</p>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Growth Information Card */}
-                    <div className="rounded-lg bg-white p-6 shadow-lg">
-                        <h2 className="mb-4 border-b pb-2 text-lg font-semibold text-gray-800">Growth Information</h2>
+                    {/* Growth & Storage Card */}
+                    <div className="rounded-2xl bg-gradient-to-br from-white to-gray-50 p-6 shadow-xl border border-gray-100">
+                        <div className="flex items-center space-x-3 mb-6">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
+                                <svg className="w-5 h-5 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                                </svg>
+                            </div>
+                            <h2 className="text-xl font-bold text-gray-800">Growth & Storage</h2>
+                        </div>
                         
-                        <div className="space-y-4">
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">Growth Cycle</label>
-                                <p className="font-poppins text-sm font-normal text-gray-900">{seed.growth_cycle} days</p>
+                        <div className="space-y-5">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="p-4 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200">
+                                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500">Growth Cycle</label>
+                                    <p className="text-gray-900 font-semibold">{seed.growth_cycle} days</p>
+                                </div>
+                                <div className="p-4 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200">
+                                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500">Soil Type</label>
+                                    <p className="text-gray-900 font-semibold">{seed.soil_type.charAt(0).toUpperCase() + seed.soil_type.slice(1)}</p>
+                                </div>
                             </div>
 
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">Soil Type Preference</label>
-                                <p className="font-poppins text-sm font-normal text-gray-900">{seed.soil_type}</p>
-                            </div>
-
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">Storage Requirements</label>
-                                <p className="font-poppins text-sm font-normal text-gray-900">{seed.storage_requirements}</p>
+                            <div className="p-4 rounded-xl bg-white border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-200">
+                                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500">Storage Requirements</label>
+                                <p className="text-gray-900 whitespace-pre-wrap">{seed.storage_requirements}</p>
                             </div>
                         </div>
                     </div>
 
                     {/* Notes Card */}
                     {seed.notes && (
-                        <div className="md:col-span-2 rounded-lg bg-white p-6 shadow-lg">
-                            <h2 className="mb-4 border-b pb-2 text-lg font-semibold text-gray-800">Notes</h2>
-                            <p className="whitespace-pre-wrap font-poppins text-sm font-normal text-gray-900">{seed.notes}</p>
+                        <div className="lg:col-span-2 rounded-2xl bg-gradient-to-br from-white to-gray-50 p-6 shadow-xl border border-gray-100">
+                            <div className="flex items-center space-x-3 mb-6">
+                                <div className="w-10 h-10 rounded-xl bg-yellow-50 flex items-center justify-center">
+                                    <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                </div>
+                                <h2 className="text-xl font-bold text-gray-800">Notes</h2>
+                            </div>
+                            <div className="p-4 rounded-xl bg-white border border-gray-100 shadow-sm">
+                                <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{seed.notes}</p>
+                            </div>
                         </div>
                     )}
 
                     {/* Associated Contracts Card */}
-                    <div className="md:col-span-2 rounded-lg bg-white p-6 shadow-lg">
-                        <h2 className="mb-4 border-b pb-2 text-lg font-semibold text-gray-800">Associated Contracts</h2>
+                    <div className="lg:col-span-2 rounded-2xl bg-gradient-to-br from-white to-gray-50 p-6 shadow-xl border border-gray-100">
+                        <div className="flex items-center space-x-3 mb-6">
+                            <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center">
+                                <svg className="w-5 h-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                            </div>
+                            <h2 className="text-xl font-bold text-gray-800">Associated Contracts ({associatedContracts.length})</h2>
+                        </div>
                         
                         {associatedContracts.length > 0 ? (
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left text-sm">
-                                    <thead className="text-xs uppercase bg-gray-100 text-gray-700">
+                            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                                <table className="w-full text-left">
+                                    <thead className="bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
                                         <tr>
-                                            <th className="px-4 py-3 font-poppins font-medium">Contract Name</th>
-                                            <th className="px-4 py-3 font-poppins font-medium">Status</th>
-                                            <th className="px-4 py-3 font-poppins font-medium">Duration</th>
-                                            <th className="px-4 py-3 font-poppins font-medium">Seed Amount</th>
-                                            <th className="px-4 py-3 font-poppins font-medium">Unit</th>
+                                            {['Contract Name', 'Partner', 'Status', 'Duration', 'Seed Amount', 'Expected Buyback'].map((header) => (
+                                                <th key={header} className="px-6 py-4 text-xs font-semibold uppercase tracking-wide text-gray-700">
+                                                    {header}
+                                                </th>
+                                            ))}
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-gray-200">
+                                    <tbody className="divide-y divide-gray-100">
                                         {associatedContracts.map((contract) => (
-                                            <tr key={contract.id} className="hover:bg-gray-50">
-                                                <td className="px-4 py-3 font-poppins font-normal text-gray-900">
-                                                    {contract.contract_name}
+                                            <tr key={contract.id} className="hover:bg-gray-50 transition-colors duration-150">
+                                                <td className="px-6 py-4">
+                                                    <div className="flex items-center space-x-3">
+                                                        <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0">
+                                                            <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                            </svg>
+                                                        </div>
+                                                        <Link
+                                                            href={route('contracts.show', contract.id)}
+                                                            className="font-medium text-blue-700 hover:text-[#37692F] hover:underline"
+                                                            title={`View contract: ${contract.contract_name}`}
+                                                        >
+                                                            {contract.contract_name}
+                                                        </Link>
+                                                    </div>
                                                 </td>
-                                                <td className="px-4 py-3">
-                                                    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-poppins font-normal ${
-                                                        contract.status === "active" 
-                                                            ? "bg-green-100 text-green-700" 
-                                                            : "bg-red-100 text-red-700"
-                                                    }`}>
-                                                        {contract.status === "active" ? "Active" : "Inactive"}
+                                                <td className="px-6 py-4 text-sm text-gray-700 font-medium">
+                                                    {contract.partner_name}
+                                                </td>
+                                                <td className="px-6 py-4">
+                                                    <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${getContractStatusColor(contract.status)}`}>
+                                                        <div className={`w-2 h-2 rounded-full mr-2 ${contract.status === 'active' ? 'bg-green-500' : 'bg-gray-500'}`}></div>
+                                                        {contract.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
                                                     </span>
                                                 </td>
-                                                <td className="px-4 py-3 font-poppins font-normal text-gray-600">
+                                                <td className="px-6 py-4 text-sm text-gray-600">
                                                     {dateFormatter(contract.start_date)} - {dateFormatter(contract.end_date)}
                                                 </td>
-                                                <td className="px-4 py-3 font-poppins font-normal text-gray-900">
-                                                    {contract.seed_amount}
+                                                <td className="px-6 py-4">
+                                                    <span className="font-semibold text-gray-800 text-sm">
+                                                        {Number(contract.seed_amount).toLocaleString()} {contract.unit}
+                                                    </span>
                                                 </td>
-                                                <td className="px-4 py-3 font-poppins font-normal text-gray-900">
-                                                    {contract.unit}
+                                                <td className="px-6 py-4">
+                                                    <span className="font-semibold text-gray-800 text-sm">
+                                                        {Number(contract.expected_buyback_amount).toLocaleString()} {contract.buyback_unit}
+                                                    </span>
                                                 </td>
                                             </tr>
                                         ))}
@@ -204,15 +285,32 @@ export default function Show({ auth, seed }) {
                                 </table>
                             </div>
                         ) : (
-                            <p className="font-poppins text-sm font-normal text-gray-500">No contracts associated with this partner.</p>
+                            <div className="text-center py-12">
+                                <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-4">
+                                    <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                </div>
+                                <p className="text-gray-500 font-medium">No contracts associated with this seed.</p>
+                            </div>
                         )}
                     </div>
                 </div>
 
                 {/* Timestamps */}
-                <div className="mt-6 font-poppins text-sm font-normal text-gray-500">
-                    <p>Created: {dateFormatter(seed.created_at)}</p>
-                    <p>Last Updated: {dateFormatter(seed.updated_at)}</p>
+                <div className="mt-8 flex flex-wrap gap-6 text-sm text-gray-500">
+                    <div className="flex items-center space-x-2 bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>Created: <strong className="text-gray-700">{dateFormatter(seed.created_at)}</strong></span>
+                    </div>
+                    <div className="flex items-center space-x-2 bg-white rounded-xl px-4 py-3 shadow-sm border border-gray-100">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                        <span>Last Updated: <strong className="text-gray-700">{dateFormatter(seed.updated_at)}</strong></span>
+                    </div>
                 </div>
             </div>
         </AuthenticatedLayout>
