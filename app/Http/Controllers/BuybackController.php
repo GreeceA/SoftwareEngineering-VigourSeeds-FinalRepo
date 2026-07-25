@@ -143,38 +143,31 @@ class BuybackController extends Controller implements HasMiddleware
     {
         $validated = $request->validate([
             'contract_id' => 'required|exists:contracts,id',
-            'corn_product_id' => 'required|exists:corn_products,id',
+            'corn_product_id' => 'nullable|exists:corn_products,id',
             'qty' => 'required|numeric|min:0.01',
             'unit' => 'required|in:kg,ton,sack',
-            'delivery_date' => 'required|date|before_or_equal:today',
+            'delivery_date' => 'required|date',
             'notes' => 'nullable|string',
         ]);
 
         DB::beginTransaction();
         try {
-            $contract = Contract::with('contractSeedCommitments')->findOrFail($validated['contract_id']);
-            $cornProduct = CornProduct::findOrFail($validated['corn_product_id']);
+            $contract = Contract::with(['contractSeedCommitments.seed.cornProduct', 'buybackTransactions', 'partner'])->findOrFail($validated['contract_id']);
 
-            // ✅ VALIDATE DELIVERY DATE AGAINST CONTRACT DATES
-            // Use startOfDay() to compare dates without time component
+            $cornProduct = null;
+            if (!empty($validated['corn_product_id'])) {
+                $cornProduct = CornProduct::find($validated['corn_product_id']);
+            }
+
+            if (!$cornProduct) {
+                $cornProduct = $contract->contractSeedCommitments->first()?->seed?->cornProduct
+                    ?? CornProduct::active()->first()
+                    ?? CornProduct::first();
+            }
+
+            // Warn if delivery date is after contract expiration, but allow it.
             $deliveryDate = \Carbon\Carbon::parse($validated['delivery_date'])->startOfDay();
-            $effectiveDate = $contract->effective_date ? \Carbon\Carbon::parse($contract->effective_date)->startOfDay() : null;
             $expirationDate = $contract->expiration_date ? \Carbon\Carbon::parse($contract->expiration_date)->startOfDay() : null;
-            $today = \Carbon\Carbon::today()->endOfDay();
-
-            // 1. Check if delivery date is before contract effective date
-            if ($effectiveDate && $deliveryDate->lt($effectiveDate)) {
-                return back()->withInput()
-                    ->with('error', "Delivery date ({$deliveryDate->format('Y-m-d')}) cannot be before contract effective date ({$effectiveDate->format('Y-m-d')}).");
-            }
-
-            // 2. Check if delivery date is in the future
-            if ($deliveryDate->gt($today)) {
-                return back()->withInput()
-                    ->with('error', "Delivery date cannot be in the future. Please select today or an earlier date.");
-            }
-
-            // 3. Warn if delivery date is after contract expiration (but allow)
             $expirationWarning = null;
             if ($expirationDate && $deliveryDate->gt($expirationDate)) {
                 $expirationWarning = "Note: Delivery date ({$deliveryDate->format('Y-m-d')}) is after contract expiration ({$expirationDate->format('Y-m-d')}). Consider renewing the contract.";
@@ -202,7 +195,7 @@ class BuybackController extends Controller implements HasMiddleware
             // Create buyback transaction
             $transaction = BuybackTransaction::create([
                 'contract_id' => $validated['contract_id'],
-                'corn_product_id' => $validated['corn_product_id'],
+                'corn_product_id' => $cornProduct->id,
                 'qty' => $validated['qty'],
                 'unit' => $validated['unit'],
                 'delivery_date' => $validated['delivery_date'],
@@ -215,7 +208,7 @@ class BuybackController extends Controller implements HasMiddleware
             // Create inventory transaction record
             \App\Models\InventoryTransaction::create([
                 'product_type' => 'App\\Models\\CornProduct',
-                'product_id' => $validated['corn_product_id'],
+                'product_id' => $cornProduct->id,
                 'transaction_type' => 'inbound',
                 'qty' => $validated['qty'],
                 'unit' => $validated['unit'],

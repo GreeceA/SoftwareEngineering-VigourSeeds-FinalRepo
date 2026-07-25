@@ -3,6 +3,14 @@ import { Leaf, Calendar, AlertTriangle, CheckCircle, Package, TrendingUp } from 
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { usePage, router } from '@inertiajs/react';
 
+const getLocalDateString = (date = new Date()) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+};
+
 const BuybackInboundForm = () => {
     const { auth, contracts = [], cornProducts = [], flash = {}, prefilledContractId } = usePage().props;
     
@@ -11,14 +19,13 @@ const BuybackInboundForm = () => {
         corn_product_id: '',
         qty: '',
         unit: 'kg',
-        delivery_date: new Date().toISOString().split('T')[0],
+        delivery_date: getLocalDateString(),
         notes: ''
     });
 
     const [showWarning, setShowWarning] = useState(false);
     const [selectedContract, setSelectedContract] = useState(null);
     const [submitting, setSubmitting] = useState(false);
-    const [deliveryDateError, setDeliveryDateError] = useState('');
     const [showExpirationWarning, setShowExpirationWarning] = useState(false);
 
     // Handle prefilled contract on component mount
@@ -88,14 +95,17 @@ const BuybackInboundForm = () => {
         e.preventDefault();
         setSubmitting(true);
 
-        router.post(route('buybacks.inbound.store'), formData, {
+        router.post(route('buybacks.inbound.store'), {
+            ...formData,
+            contract_id: selectedContract?.id || formData.contract_id,
+        }, {
             onSuccess: () => {
                 setFormData({
                     contract_id: '',
                     corn_product_id: '',
                     qty: '',
                     unit: 'kg',
-                    delivery_date: new Date().toISOString().split('T')[0],
+                    delivery_date: getLocalDateString(),
                     notes: ''
                 });
                 setSelectedContract(null);
@@ -107,41 +117,21 @@ const BuybackInboundForm = () => {
 
     useEffect(() => {
         if (selectedContract && formData.delivery_date) {
-            const deliveryDate = new Date(formData.delivery_date);
-            const effectiveDate = new Date(selectedContract.effective_date);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
-            if (deliveryDate < effectiveDate) {
-                setDeliveryDateError(
-                    `Date must be between contract start date (${selectedContract.effective_date}) and today`
-                );
-            } else if (deliveryDate > today) {
-                setDeliveryDateError(
-                    `Date must be between contract start date (${selectedContract.effective_date}) and today`
-                );
-            } else {
-                setDeliveryDateError('');
-            }
-
-            const expirationDate = new Date(selectedContract.expiration_date);
-            if (deliveryDate > expirationDate) {
+            const expirationDate = selectedContract.expiration_date;
+            if (expirationDate && formData.delivery_date > expirationDate) {
                 setShowExpirationWarning(true);
             } else {
                 setShowExpirationWarning(false);
             }
         } else {
-            setDeliveryDateError('');
             setShowExpirationWarning(false);
         }
     }, [formData.delivery_date, selectedContract]);
 
     const isFormValid =
-        formData.contract_id &&
-        formData.corn_product_id &&
+        (selectedContract?.id || formData.contract_id) &&
         formData.qty >= 0.01 &&
-        formData.delivery_date &&
-        !deliveryDateError;
+        formData.delivery_date;
 
     const estimatedValue =
         selectedContract && formData.qty
@@ -276,8 +266,6 @@ const BuybackInboundForm = () => {
                                         readOnly
                                         disabled
                                     />
-                                    {/* Hidden input to submit the corn_product_id */}
-                                    <input type="hidden" name="corn_product_id" value={formData.corn_product_id} />
                                     <p className="text-xs text-gray-500 mt-1">
                                         Corn product is auto-selected based on the contract's seed and cannot be changed.
                                     </p>
@@ -346,12 +334,6 @@ const BuybackInboundForm = () => {
                                     </div>
                                 </div>
 
-                                {deliveryDateError && (
-                                    <p className="text-xs text-red-500 mb-3">
-                                        {deliveryDateError}
-                                    </p>
-                                )}
-
                                 <div className="mb-6">
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                         Delivery Date <span className="text-red-500">*</span>
@@ -362,15 +344,10 @@ const BuybackInboundForm = () => {
                                             type="date"
                                             value={formData.delivery_date}
                                             onChange={(e) => setFormData({...formData, delivery_date: e.target.value})}
-                                            min={selectedContract?.effective_date || undefined}
-                                            max={new Date().toISOString().split('T')[0]}
                                             className="w-full pl-11 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                                             required
                                         />
                                     </div>
-                                    <p className="text-xs text-gray-500 mt-1">
-                                        Date must be between contract start date ({selectedContract?.effective_date}) and today
-                                    </p>
                                 </div>
 
                                 {showExpirationWarning && (
@@ -433,7 +410,7 @@ const BuybackInboundForm = () => {
                         <div className="flex gap-3">
                             <button
                                 type="submit"
-                                disabled={!isFormValid || submitting || !!deliveryDateError}
+                                disabled={!isFormValid || submitting}
                                 className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-medium flex items-center justify-center gap-2 transition"
                             >
                                 <Package size={20} />

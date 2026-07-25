@@ -164,6 +164,34 @@ After setup, you'll have **11 test accounts** (one for each role). All use passw
 php artisan migrate:fresh --seed
 ```
 
+### "Unknown database" / "Tablespace already exists" / "Table already exists" loop
+If `php artisan migrate:fresh --seed` fails with errors like:
+- `SQLSTATE[HY000] [1049] Unknown database 'vigour_seeds_system'`
+- `SQLSTATE[HY000]: General error: 1813 Tablespace for table '...' exists. Please DISCARD the tablespace before IMPORT`
+- `SQLSTATE[42S01]: Base table or view already exists`
+
+This usually means MySQL has leftover/orphaned table files that don't match its internal state (common after an interrupted migration, a manual table drop, or editing files in the MySQL `data` folder directly).
+
+**Fix:**
+1. Make sure only one MySQL server is running on port 3306:
+   ```bash
+   netstat -ano | findstr :3306
+   ```
+2. Fully drop and recreate the database (not just the tables):
+   ```bash
+   "C:\xampp\mysql\bin\mysql.exe" -u root -e "DROP DATABASE vigour_seeds_system; CREATE DATABASE vigour_seeds_system;"
+   ```
+3. Confirm it's actually empty before migrating:
+   ```bash
+   "C:\xampp\mysql\bin\mysql.exe" -u root -e "SHOW TABLES FROM vigour_seeds_system;"
+   ```
+4. Then run:
+   ```bash
+   php artisan migrate:fresh --seed
+   ```
+
+⚠️ **Don't** try to fix this by deleting or swapping the MySQL `data` folder, or by copying in XAMPP's `mysql/backup` folder — that folder is not guaranteed to be empty (it may contain an old snapshot of your actual databases) and can make the desync worse, not better. Dropping and recreating the specific database via SQL is the safe fix.
+
 ### Permission Caches
 ```bash
 # Clear permission caches
